@@ -8,6 +8,7 @@ import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import MilestoneManagement from './pages/MilestoneManagement';
+import Customer from './pages/Customer';
 
 export default function App() {
   return (
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
+          <Route path="customers" element={<Customer />} />
           <Route path="milestones" element={<MilestoneManagement />} />
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />

@@ -3,6 +3,5 @@ from .models import Milestone
 
 @admin.register(Milestone)
 class MilestoneAdmin(admin.ModelAdmin):
-    list_display = ['title', 'project', 'assignee', 'status', 'priority', 'due_date']
-    list_filter = ['status', 'priority']
-    search_fields = ['title', 'project']
+    list_display = ['item_description', 'project', 'seq_number', 'scheduled_start_of_erection']
+    search_fields = ['item_description', 'seq_number']

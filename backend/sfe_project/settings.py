@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'employees',
     'projects',
     'milestones',
+    'customers',
 ]
 
 MIDDLEWARE = [
@@ -99,9 +100,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    os.getenv('CORS_ORIGIN', 'http://localhost:3000'),
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # DRF
@@ -123,3 +122,6 @@ SIMPLE_JWT = {
     'ROTATE_REFRESH_TOKENS': True,
     'AUTH_HEADER_TYPES': ('Bearer',),
 }
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

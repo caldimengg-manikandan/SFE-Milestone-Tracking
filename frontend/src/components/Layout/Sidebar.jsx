@@ -24,6 +24,7 @@ const navSections = [
   {
     label: 'MANAGEMENT',
     items: [
+      { name: 'Customer Master', path: '/customers', icon: Building2 },
       { name: 'Employee Master', path: '/employees', icon: Users },
       { name: 'Project Master', path: '/projects', icon: FolderKanban },
       { name: 'Milestones', path: '/milestones', icon: Flag, badge: 3 },

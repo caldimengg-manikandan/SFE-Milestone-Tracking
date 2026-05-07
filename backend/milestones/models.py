@@ -1,16 +1,28 @@
 from django.db import models
+from projects.models import Project
 
 class Milestone(models.Model):
-    STATUS_CHOICES = [('Pending', 'Pending'), ('In Progress', 'In Progress'), ('Completed', 'Completed'), ('Overdue', 'Overdue')]
-    PRIORITY_CHOICES = [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High'), ('Critical', 'Critical')]
-
-    title = models.CharField(max_length=300)
-    project = models.CharField(max_length=300)
-    assignee = models.CharField(max_length=200, blank=True)
-    due_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Pending')
-    priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
-    description = models.TextField(blank=True)
+    project = models.ForeignKey(Project, on_delete=models.CASCADE, related_name='milestones')
+    seq_number = models.CharField(max_length=50, blank=True)
+    tons = models.FloatField(default=0)
+    item_description = models.CharField(max_length=300)
+    scheduled_ofa_date = models.DateField(null=True, blank=True)
+    actual_ofa_date = models.DateField(null=True, blank=True)
+    scheduled_bfa_date = models.DateField(null=True, blank=True)
+    actual_bfa_date = models.DateField(null=True, blank=True)
+    scheduled_field_measure_date = models.DateField(null=True, blank=True)
+    rts_date = models.DateField(null=True, blank=True)
+    days = models.CharField(max_length=100, blank=True)
+    shop_lead_time_weeks = models.IntegerField(default=0)
+    scheduled_start_of_erection = models.DateField(null=True, blank=True)
+    shop_hours = models.FloatField(default=0)
+    field_hours = models.FloatField(default=0)
+    status_location = models.CharField(max_length=100, blank=True)
+    material_finish = models.CharField(max_length=100, blank=True)
+    detailer_vendor = models.CharField(max_length=100, blank=True)
+    dwg_status = models.CharField(max_length=100, blank=True)
+    notes = models.TextField(blank=True)
+    
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -19,4 +31,4 @@ class Milestone(models.Model):
         ordering = ['-created_at']
 
     def __str__(self):
-        return f"{self.title} — {self.project}"
+        return f"{self.item_description} - {self.project.job_number}"

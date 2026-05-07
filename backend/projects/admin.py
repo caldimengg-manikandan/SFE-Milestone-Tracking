@@ -3,6 +3,6 @@ from .models import Project
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'client', 'status', 'progress']
+    list_display = ['job_number', 'customer', 'status', 'progress']
     list_filter = ['status']
-    search_fields = ['name', 'code', 'client']
+    search_fields = ['job_number', 'customer']

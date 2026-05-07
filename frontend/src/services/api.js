@@ -73,4 +73,14 @@ export const dashboardAPI = {
   getStats: () => api.get('/dashboard/stats/'),
 };
 
+/* ── Customers ── */
+export const customerAPI = {
+  getAll: (params = {}) => api.get('/customers/', { params }),
+  getCustomerCodes: () => api.get('/customers/'),
+  getById: (id) => api.get(`/customers/${id}/`),
+  createCustomer: (data) => api.post('/customers/', data),
+  updateCustomer: (id, data) => api.put(`/customers/${id}/`, data),
+  deleteCustomer: (id) => api.delete(`/customers/${id}/`),
+};
+
 export default api;
