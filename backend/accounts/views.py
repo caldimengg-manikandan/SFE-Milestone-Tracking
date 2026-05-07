@@ -10,9 +10,14 @@ from .models import User
 @permission_classes([AllowAny])
 def login_view(request):
     """Authenticate user and return JWT token."""
+    print(f"DEBUG: Login attempt for email: {request.data.get('email')}")
     serializer = LoginSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    if not serializer.is_valid():
+        print(f"DEBUG: Serializer invalid: {serializer.errors}")
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     user = serializer.validated_data['user']
+    print(f"DEBUG: Login successful for user: {user.email}")
     refresh = RefreshToken.for_user(user)
     return Response({
         'token': str(refresh.access_token),

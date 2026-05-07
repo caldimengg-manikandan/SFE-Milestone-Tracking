@@ -86,7 +86,7 @@ export default function Header({ onMenuClick }) {
       </div>
 
       {/* Search Bar */}
-      <div className="flex-1 max-w-md ml-auto lg:ml-8">
+      <div className="hidden md:flex items-center max-w-md w-full lg:ml-8">
         <div
           className={`
             relative flex items-center rounded-xl border transition-all duration-300
@@ -111,7 +111,7 @@ export default function Header({ onMenuClick }) {
       </div>
 
       {/* Right Actions */}
-      <div className="flex items-center gap-1 sm:gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 ml-auto">
         {/* Notifications */}
         <div className="relative" ref={notifRef}>
           <button

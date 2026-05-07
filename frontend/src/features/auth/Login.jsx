@@ -21,12 +21,21 @@ export default function Login() {
     if (!form.email || !form.password) { setError('Please fill all fields'); return; }
     setLoading(true);
     try {
-      const res = await authAPI.login(form);
+      const res = await authAPI.login({
+        email: form.email.trim(),
+        password: form.password.trim()
+      });
       sessionStorage.setItem('token', res.data.token);
       sessionStorage.setItem('user', JSON.stringify(res.data.user));
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid credentials');
+      const errorData = err.response?.data;
+      if (typeof errorData === 'object') {
+        const firstError = Object.values(errorData)[0];
+        setError(Array.isArray(firstError) ? firstError[0] : (errorData.message || errorData.detail || 'Invalid credentials'));
+      } else {
+        setError('Connection error. Is the backend running?');
+      }
     } finally {
       setLoading(false);
     }

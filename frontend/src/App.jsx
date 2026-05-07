@@ -7,6 +7,7 @@ import ResetPassword from './features/auth/ResetPassword';
 import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
+import StructuralSchedule from './pages/StructuralSchedule';
 import MilestoneManagement from './pages/MilestoneManagement';
 
 export default function App() {
@@ -31,6 +32,7 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
+          <Route path="schedules" element={<StructuralSchedule />} />
           <Route path="milestones" element={<MilestoneManagement />} />
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />

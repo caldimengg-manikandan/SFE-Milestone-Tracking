@@ -207,10 +207,25 @@
   animation: slideUp 0.35s ease-out;
 }
 
+.animate-slide-down {
+  animation: slideDown 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
     transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
   }
   to {
     opacity: 1;

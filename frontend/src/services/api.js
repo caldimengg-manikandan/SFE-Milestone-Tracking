@@ -1,10 +1,6 @@
 import axios from 'axios';
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === 'localhost'
-    ? 'http://localhost:8000/api'
-    : '/api');
+export const API_BASE_URL = 'http://127.0.0.1:8000/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -66,6 +62,16 @@ export const milestoneAPI = {
   create: (data) => api.post('/milestones/', data),
   update: (id, data) => api.put(`/milestones/${id}/`, data),
   delete: (id) => api.delete(`/milestones/${id}/`),
+};
+
+/* ── Schedules ── */
+export const scheduleAPI = {
+  getAll: (params = {}) => api.get('/projects/schedules/', { params }),
+  getById: (id) => api.get(`/projects/schedules/${id}/`),
+  create: (data) => api.post('/projects/schedules/', data),
+  update: (id, data) => api.put(`/projects/schedules/${id}/`, data),
+  batchUpdate: (data) => api.post('/projects/schedules/batch_update/', data), // Note: Need to check if backend supports batch
+  delete: (id) => api.delete(`/projects/schedules/${id}/`),
 };
 
 /* ── Dashboard ── */

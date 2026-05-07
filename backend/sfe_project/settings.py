@@ -20,7 +20,9 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     # Third-party
     'rest_framework',
+    'django_filters',
     'corsheaders',
+
     # Local apps
     'accounts',
     'employees',
@@ -99,9 +101,7 @@ STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
-CORS_ALLOWED_ORIGINS = [
-    os.getenv('CORS_ORIGIN', 'http://localhost:3000'),
-]
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
 # DRF

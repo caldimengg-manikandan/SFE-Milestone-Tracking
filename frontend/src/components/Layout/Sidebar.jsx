@@ -11,6 +11,8 @@ import {
   LogOut,
   X,
   Building2,
+  Calendar,
+  ChevronDown,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -25,7 +27,14 @@ const navSections = [
     label: 'MANAGEMENT',
     items: [
       { name: 'Employee Master', path: '/employees', icon: Users },
-      { name: 'Project Master', path: '/projects', icon: FolderKanban },
+      { 
+        name: 'Project Master', 
+        path: '/projects', 
+        icon: FolderKanban,
+        subItems: [
+          { name: 'Structural Schedule', path: '/schedules', icon: Calendar },
+        ]
+      },
       { name: 'Milestones', path: '/milestones', icon: Flag, badge: 3 },
     ],
   },
@@ -144,63 +153,15 @@ export default function Sidebar({
 
               {/* Nav Items */}
               <div className="space-y-1">
-                {section.items.map((item) => {
-                  const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-
-                  return (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      onClick={onCloseMobile}
-                      className={`
-                        sidebar-nav-item group
-                        ${isActive ? 'active' : ''}
-                        ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
-                      `}
-                    >
-                      <Icon
-                        className={`nav-icon w-[20px] h-[20px] shrink-0 ${
-                          isActive ? 'text-amber-400' : ''
-                        }`}
-                        strokeWidth={isActive ? 2 : 1.75}
-                      />
-
-                      {/* Label — hidden when collapsed on desktop */}
-                      <span
-                        className={`text-[13.5px] font-medium truncate transition-all duration-300 ${
-                          isCollapsed ? 'lg:hidden' : ''
-                        }`}
-                      >
-                        {item.name}
-                      </span>
-
-                      {/* Badge */}
-                      {item.badge && !isCollapsed && (
-                        <span className="ml-auto shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500/90 text-[10px] font-bold text-white shadow-sm">
-                          {item.badge}
-                        </span>
-                      )}
-
-                      {/* Badge dot for collapsed */}
-                      {item.badge && isCollapsed && (
-                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 lg:block hidden" />
-                      )}
-
-                      {/* Tooltip — collapsed desktop only */}
-                      {isCollapsed && (
-                        <div className="sidebar-tooltip hidden lg:block">
-                          {item.name}
-                          {item.badge && (
-                            <span className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-white">
-                              {item.badge}
-                            </span>
-                          )}
-                        </div>
-                      )}
-                    </NavLink>
-                  );
-                })}
+                {section.items.map((item) => (
+                  <SidebarItem 
+                    key={item.path} 
+                    item={item} 
+                    isCollapsed={isCollapsed} 
+                    onCloseMobile={onCloseMobile}
+                    location={location}
+                  />
+                ))}
               </div>
             </div>
           ))}
@@ -271,5 +232,98 @@ export default function Sidebar({
         </button>
       </aside>
     </>
+  );
+}
+
+function SidebarItem({ item, isCollapsed, onCloseMobile, location }) {
+  const [isOpen, setIsOpen] = useState(
+    item.subItems ? location.pathname.startsWith(item.path) || item.subItems.some(si => location.pathname === si.path) : false
+  );
+  
+  const Icon = item.icon;
+  const hasSubItems = item.subItems && item.subItems.length > 0;
+  const isActive = location.pathname === item.path || (hasSubItems && item.subItems.some(si => location.pathname === si.path));
+
+  const toggleOpen = (e) => {
+    if (hasSubItems) {
+      setIsOpen(!isOpen);
+    }
+  };
+
+  return (
+    <div className="space-y-1">
+      <NavLink
+        to={item.path}
+        onClick={(e) => {
+          if (hasSubItems && !isCollapsed) {
+            toggleOpen(e);
+          } else {
+            onCloseMobile();
+          }
+        }}
+        className={`
+          sidebar-nav-item group relative
+          ${isActive ? 'active' : ''}
+          ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
+        `}
+      >
+        <Icon
+          className={`nav-icon w-[20px] h-[20px] shrink-0 ${
+            isActive ? 'text-amber-400' : ''
+          }`}
+          strokeWidth={isActive ? 2 : 1.75}
+        />
+
+        {!isCollapsed && (
+          <span className="text-[13.5px] font-medium truncate flex-1 ml-3 transition-all duration-300">
+            {item.name}
+          </span>
+        )}
+
+        {hasSubItems && !isCollapsed && (
+          <ChevronDown 
+            className={`w-4 h-4 text-slate-500 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+          />
+        )}
+
+        {item.badge && !isCollapsed && (
+          <span className="ml-auto shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500/90 text-[10px] font-bold text-white shadow-sm">
+            {item.badge}
+          </span>
+        )}
+
+        {isCollapsed && (
+          <div className="sidebar-tooltip hidden lg:block">
+            {item.name}
+          </div>
+        )}
+      </NavLink>
+
+      {hasSubItems && isOpen && !isCollapsed && (
+        <div className="pl-9 space-y-1 animate-slide-down">
+          {item.subItems.map((sub) => {
+            const SubIcon = sub.icon;
+            const isSubActive = location.pathname === sub.path;
+            
+            return (
+              <NavLink
+                key={sub.path}
+                to={sub.path}
+                onClick={onCloseMobile}
+                className={`
+                  flex items-center gap-3 px-3 py-2 rounded-xl text-[12.5px] font-medium transition-all
+                  ${isSubActive 
+                    ? 'bg-white/10 text-amber-400' 
+                    : 'text-slate-400 hover:text-slate-200 hover:bg-white/5'}
+                `}
+              >
+                <SubIcon className="w-4 h-4" />
+                <span>{sub.name}</span>
+              </NavLink>
+            );
+          })}
+        </div>
+      )}
+    </div>
   );
 }
