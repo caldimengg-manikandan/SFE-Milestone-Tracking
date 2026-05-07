@@ -7,7 +7,11 @@ import ResetPassword from './features/auth/ResetPassword';
 import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
-import MilestoneManagement from './pages/MilestoneManagement';
+import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
+import PriorityPlate from './pages/Production/PriorityPlate';
+import AnglePriority from './pages/Production/AnglePriority';
+import StructuralPriority from './pages/Production/StructuralPriority';
+import StructuralSchedule from './pages/StructuralSchedule';
 
 export default function App() {
   return (
@@ -31,7 +35,14 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
-          <Route path="milestones" element={<MilestoneManagement />} />
+          <Route path="structural-schedule" element={<StructuralSchedule />} />
+          
+          {/* Production Management Routes */}
+          <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
+          <Route path="production/priority-plate" element={<PriorityPlate />} />
+          <Route path="production/angle-priority" element={<AnglePriority />} />
+          <Route path="production/structural-priority" element={<StructuralPriority />} />
+
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />

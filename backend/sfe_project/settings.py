@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'employees',
     'projects',
     'milestones',
+    'production',
 ]
 
 MIDDLEWARE = [
@@ -100,7 +101,10 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # CORS
 CORS_ALLOWED_ORIGINS = [
-    os.getenv('CORS_ORIGIN', 'http://localhost:3000'),
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:3001",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

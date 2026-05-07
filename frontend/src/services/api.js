@@ -1,47 +1,45 @@
 import axios from 'axios';
 
-export const API_BASE_URL =
-  import.meta.env.VITE_API_URL ||
-  (window.location.hostname === 'localhost'
-    ? 'http://localhost:8000/api'
-    : '/api');
-
 const api = axios.create({
-  baseURL: API_BASE_URL,
-  headers: { 'Content-Type': 'application/json' },
+  baseURL: 'http://localhost:8000/api',
+  headers: {
+    'Content-Type': 'application/json',
+  },
 });
 
-// Attach JWT token to every request
-api.interceptors.request.use((config) => {
-  const token = sessionStorage.getItem('token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
-
-// Handle 401 — auto redirect to login
-api.interceptors.response.use(
-  (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      sessionStorage.clear();
-      window.location.href = '/login';
+// Add a request interceptor to include the JWT token from sessionStorage
+api.interceptors.request.use(
+  (config) => {
+    const token = sessionStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
-    return Promise.reject(err);
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
   }
 );
 
-/* ── Auth ── */
+// Add a response interceptor to handle token expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 401) {
+      // Logic for session timeout could go here
+    }
+    return Promise.reject(error);
+  }
+);
+
+/* ── Authentication API ── */
 export const authAPI = {
-  login: (creds) => api.post('/auth/login/', creds),
-  register: (data) => api.post('/auth/register/', data),
+  login: (data) => api.post('/auth/login/', data),
   forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
   resetPassword: (data) => api.post('/auth/reset-password/', data),
-  me: () => api.get('/auth/me/'),
 };
 
-/* ── Employees ── */
+/* ── Employee API ── */
 export const employeeAPI = {
   getAll: (params = {}) => api.get('/employees/', { params }),
   getById: (id) => api.get(`/employees/${id}/`),
@@ -50,27 +48,40 @@ export const employeeAPI = {
   delete: (id) => api.delete(`/employees/${id}/`),
 };
 
-/* ── Projects ── */
+/* ── Project API ── */
 export const projectAPI = {
-  getAll: (params = {}) => api.get('/projects/', { params }),
+  getAll: () => api.get('/projects/'),
   getById: (id) => api.get(`/projects/${id}/`),
   create: (data) => api.post('/projects/', data),
   update: (id, data) => api.put(`/projects/${id}/`, data),
   delete: (id) => api.delete(`/projects/${id}/`),
 };
 
-/* ── Milestones ── */
-export const milestoneAPI = {
-  getAll: (params = {}) => api.get('/milestones/', { params }),
-  getById: (id) => api.get(`/milestones/${id}/`),
-  create: (data) => api.post('/milestones/', data),
-  update: (id, data) => api.put(`/milestones/${id}/`, data),
-  delete: (id) => api.delete(`/milestones/${id}/`),
+/* ── Structural Schedule API ── */
+export const scheduleAPI = {
+  getAll: (params = {}) => api.get('/projects/structural-schedules/', { params }),
+  create: (data) => api.post('/projects/structural-schedules/', data),
+  update: (id, data) => api.put(`/projects/structural-schedules/${id}/`, data),
+  delete: (id) => api.delete(`/projects/structural-schedules/${id}/`),
 };
 
-/* ── Dashboard ── */
-export const dashboardAPI = {
-  getStats: () => api.get('/dashboard/stats/'),
+/* ── Production Schedule API ── */
+export const productionAPI = {
+  getSchedules: () => api.get('/production/schedules/'),
+  getScheduleById: (id) => api.get(`/production/schedules/${id}/`),
+  createSchedule: (data) => api.post('/production/schedules/', data),
+  updateSchedule: (id, data) => api.put(`/production/schedules/${id}/`, data),
+  deleteSchedule: (id) => api.delete(`/production/schedules/${id}/`),
+  getItems: (params = {}) => api.get('/production/items/', { params }),
+};
+
+/* ── Production Priority API (Generic for Plate, Angle, Structural) ── */
+export const priorityAPI = {
+  getAll: (params = {}) => api.get('/production/priorities/', { params }),
+  getById: (id) => api.get(`/production/priorities/${id}/`),
+  create: (data) => api.post('/production/priorities/', data),
+  update: (id, data) => api.put(`/production/priorities/${id}/`, data),
+  delete: (id) => api.delete(`/production/priorities/${id}/`),
 };
 
 export default api;

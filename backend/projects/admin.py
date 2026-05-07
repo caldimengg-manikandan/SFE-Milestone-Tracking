@@ -1,8 +1,19 @@
 from django.contrib import admin
-from .models import Project
+from .models import Project, StructuralScheduleItem
+
+class StructuralScheduleItemInline(admin.TabularInline):
+    model = StructuralScheduleItem
+    extra = 1
 
 @admin.register(Project)
 class ProjectAdmin(admin.ModelAdmin):
-    list_display = ['code', 'name', 'client', 'status', 'progress']
+    list_display = ['code', 'name', 'customer_name', 'project_manager_name', 'status', 'total_ton']
     list_filter = ['status']
-    search_fields = ['name', 'code', 'client']
+    search_fields = ['name', 'code', 'customer_name']
+    inlines = [StructuralScheduleItemInline]
+
+@admin.register(StructuralScheduleItem)
+class StructuralScheduleItemAdmin(admin.ModelAdmin):
+    list_display = ['project', 'seq_no', 'tons', 'scheduled_erection_date', 'status']
+    list_filter = ['project', 'status']
+    search_fields = ['seq_no', 'item_description']

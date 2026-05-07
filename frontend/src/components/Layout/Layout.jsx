@@ -25,7 +25,7 @@ export default function Layout() {
   }, [isMobileOpen]);
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-white">
       {/* Sidebar */}
       <Sidebar
         isCollapsed={isCollapsed}
@@ -38,7 +38,7 @@ export default function Layout() {
       <div
         className={`
           transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${isCollapsed ? 'lg:ml-[78px]' : 'lg:ml-[272px]'}
+          ${isCollapsed ? 'lg:ml-[78px]' : 'lg:ml-[240px]'}
         `}
       >
         <Header onMenuClick={() => setIsMobileOpen(true)} />
