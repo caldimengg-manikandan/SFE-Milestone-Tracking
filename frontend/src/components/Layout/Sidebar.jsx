@@ -11,6 +11,11 @@ import {
   LogOut,
   X,
   Building2,
+  FileSpreadsheet,
+  ListChecks,
+  Layers,
+  Square,
+  Box,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -25,8 +30,22 @@ const navSections = [
     label: 'MANAGEMENT',
     items: [
       { name: 'Employee Master', path: '/employees', icon: Users },
+    ],
+  },
+  {
+    label: 'PROJECT MANAGEMENT',
+    items: [
       { name: 'Project Master', path: '/projects', icon: FolderKanban },
-      { name: 'Milestones', path: '/milestones', icon: Flag, badge: 3 },
+      { name: 'Structural Schedule', path: '/structural-schedule', icon: FileSpreadsheet },
+    ],
+  },
+  {
+    label: 'PRODUCTION MANAGEMENT',
+    items: [
+      { name: 'Production Priority Schedule', path: '/production/priority-schedule', icon: ListChecks },
+      { name: 'Priority Plate', path: '/production/priority-plate', icon: Layers },
+      { name: 'Angle Priority', path: '/production/angle-priority', icon: Square },
+      { name: 'Structural Priority', path: '/production/structural-priority', icon: Box },
     ],
   },
   {
@@ -81,8 +100,8 @@ export default function Sidebar({
           border-r border-white/[0.06]
           flex flex-col
           transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
-          ${isCollapsed ? 'lg:w-[78px]' : 'lg:w-[272px]'}
-          w-[272px]
+          ${isCollapsed ? 'lg:w-[78px]' : 'lg:w-[240px]'}
+          w-[240px]
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
@@ -255,10 +274,11 @@ export default function Sidebar({
             hidden lg:flex items-center justify-center
             absolute -right-3 top-[82px]
             w-6 h-6 rounded-full
-            bg-[#1e293b] border border-white/10
-            text-slate-400 hover:text-white hover:bg-[#334155]
+            bg-gradient-to-br from-amber-400 to-orange-500
+            border border-amber-500/20
+            text-white hover:scale-110
             transition-all duration-200
-            shadow-md
+            shadow-lg shadow-orange-500/40
             z-50
           "
           aria-label={isCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}

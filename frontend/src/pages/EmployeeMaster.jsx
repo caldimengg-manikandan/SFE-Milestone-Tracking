@@ -1,33 +1,120 @@
-import { useState } from 'react';
-import { Users, Plus, Search, Edit2, Trash2, X, ChevronDown, Download, Filter } from 'lucide-react';
-
-const mockEmployees = [
-  { id: 1, name: 'Rajesh Kumar', empId: 'SFE-001', department: 'Fabrication', designation: 'Senior Engineer', phone: '+91 98765 43210', email: 'rajesh@steelfab.com', status: 'Active', joinDate: '2024-03-15' },
-  { id: 2, name: 'Priya Sharma', empId: 'SFE-002', department: 'Design', designation: 'Lead Designer', phone: '+91 98765 43211', email: 'priya@steelfab.com', status: 'Active', joinDate: '2024-05-20' },
-  { id: 3, name: 'Arun Patel', empId: 'SFE-003', department: 'Quality', designation: 'QC Inspector', phone: '+91 98765 43212', email: 'arun@steelfab.com', status: 'Active', joinDate: '2024-08-10' },
-  { id: 4, name: 'Meena Iyer', empId: 'SFE-004', department: 'Admin', designation: 'HR Manager', phone: '+91 98765 43213', email: 'meena@steelfab.com', status: 'On Leave', joinDate: '2023-11-01' },
-  { id: 5, name: 'Vikram Singh', empId: 'SFE-005', department: 'Operations', designation: 'Site Supervisor', phone: '+91 98765 43214', email: 'vikram@steelfab.com', status: 'Active', joinDate: '2025-01-12' },
-];
+import { useState, useEffect } from 'react';
+import { Users, Plus, Search, Edit2, Trash2, X, ChevronDown, Download, Filter, Loader2, Mail, Phone, MapPin, Briefcase } from 'lucide-react';
+import { employeeAPI } from '../services/api';
 
 const departments = ['All', 'Fabrication', 'Design', 'Quality', 'Admin', 'Operations'];
 
 export default function EmployeeMaster() {
-  const [employees] = useState(mockEmployees);
+  const [employees, setEmployees] = useState([]);
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [editEmployee, setEditEmployee] = useState(null);
   const [activeTab, setActiveTab] = useState('personal');
 
+  const [form, setForm] = useState({
+    name: '',
+    emp_id: '',
+    personnel_number: '',
+    department: '',
+    designation: '',
+    email: '',
+    phone: '',
+    location: '',
+    ssn: '',
+    dob: '',
+    gender: '',
+    marital_status: '',
+    status: 'Active'
+  });
+
+  const fetchEmployees = async () => {
+    try {
+      setLoading(true);
+      const params = {};
+      if (deptFilter !== 'All') params.department = deptFilter;
+      const response = await employeeAPI.getAll(params);
+      setEmployees(response.data.results || response.data);
+    } catch (error) {
+      console.error('Error fetching employees:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchEmployees();
+  }, [deptFilter]);
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this employee?')) {
+      try {
+        await employeeAPI.delete(id);
+        fetchEmployees();
+      } catch (error) {
+        alert('Failed to delete employee');
+      }
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      if (editEmployee) {
+        await employeeAPI.update(editEmployee.id, form);
+      } else {
+        await employeeAPI.create(form);
+      }
+      setShowModal(false);
+      fetchEmployees();
+    } catch (error) {
+      const msg = error.response?.data ? Object.values(error.response.data).flat().join(' ') : 'Failed to save employee';
+      alert(msg);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openAdd = () => {
+    setEditEmployee(null);
+    setForm({
+      name: '', emp_id: '', personnel_number: '', department: '', designation: '',
+      email: '', phone: '', location: '', ssn: '', dob: '', gender: '',
+      marital_status: '', status: 'Active'
+    });
+    setActiveTab('personal');
+    setShowModal(true);
+  };
+
+  const openEdit = (emp) => {
+    setEditEmployee(emp);
+    setForm({
+      name: emp.name || '',
+      emp_id: emp.emp_id || '',
+      personnel_number: emp.personnel_number || '',
+      department: emp.department || '',
+      designation: emp.designation || '',
+      email: emp.email || '',
+      phone: emp.phone || '',
+      location: emp.location || '',
+      ssn: emp.ssn || '',
+      dob: emp.dob || '',
+      gender: emp.gender || '',
+      marital_status: emp.marital_status || '',
+      status: emp.status || 'Active'
+    });
+    setActiveTab('personal');
+    setShowModal(true);
+  };
+
   const filtered = employees.filter(
     (e) =>
-      (deptFilter === 'All' || e.department === deptFilter) &&
-      (e.name.toLowerCase().includes(search.toLowerCase()) ||
-        e.empId.toLowerCase().includes(search.toLowerCase()))
+      e.name.toLowerCase().includes(search.toLowerCase()) ||
+      e.emp_id.toLowerCase().includes(search.toLowerCase())
   );
-
-  const openAdd = () => { setActiveTab('personal'); setEditEmployee(null); setShowModal(true); };
-  const openEdit = (emp) => { setActiveTab('personal'); setEditEmployee(emp); setShowModal(true); };
 
   return (
     <div className="space-y-6">
@@ -39,14 +126,14 @@ export default function EmployeeMaster() {
         </div>
         <button
           onClick={openAdd}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all hover:shadow-xl"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all hover:shadow-xl transform hover:scale-[1.02]"
         >
           <Plus className="w-4 h-4" /> Add Employee
         </button>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
+      <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
@@ -54,7 +141,7 @@ export default function EmployeeMaster() {
             placeholder="Search by name or ID..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
           />
         </div>
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
@@ -62,10 +149,10 @@ export default function EmployeeMaster() {
             <button
               key={d}
               onClick={() => setDeptFilter(d)}
-              className={`px-3 py-2 rounded-lg text-xs font-semibold whitespace-nowrap transition-all ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
                 deptFilter === d
-                  ? 'bg-amber-500 text-white shadow-sm'
-                  : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-300 hover:text-amber-600'
+                  ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
+                  : 'bg-white text-slate-500 border border-slate-300 hover:border-amber-300 hover:text-amber-600'
               }`}
             >
               {d}
@@ -75,240 +162,263 @@ export default function EmployeeMaster() {
       </div>
 
       {/* Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-card overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-300 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/50">
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Employee</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden md:table-cell">Department</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden lg:table-cell">Designation</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider hidden xl:table-cell">Contact</th>
-                <th className="text-left px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                <th className="text-right px-5 py-3.5 text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+              <tr className="border-b border-slate-300 bg-white">
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employee</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Dept / Designation</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Contact Info</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                <th className="text-right px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((emp) => (
-                <tr key={emp.id} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-5 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-amber-100 to-orange-100 flex items-center justify-center text-xs font-bold text-amber-700 shrink-0">
-                        {emp.name.split(' ').map((n) => n[0]).join('')}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-semibold text-slate-800 truncate">{emp.name}</p>
-                        <p className="text-xs text-slate-400">{emp.empId}</p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-5 py-4 hidden md:table-cell">
-                    <span className="text-slate-600">{emp.department}</span>
-                  </td>
-                  <td className="px-5 py-4 hidden lg:table-cell">
-                    <span className="text-slate-600">{emp.designation}</span>
-                  </td>
-                  <td className="px-5 py-4 hidden xl:table-cell">
-                    <p className="text-slate-600">{emp.email}</p>
-                    <p className="text-xs text-slate-400">{emp.phone}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold ${
-                      emp.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                    }`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                      {emp.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex items-center justify-end gap-1">
-                      <button onClick={() => openEdit(emp)} className="p-2 rounded-lg text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" title="Edit">
-                        <Edit2 className="w-4 h-4" />
-                      </button>
-                      <button className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Delete">
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              {filtered.length === 0 && (
+              {loading ? (
+                <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" /><p className="text-xs font-bold text-slate-400">Loading records...</p></td></tr>
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-5 py-12 text-center">
-                    <Users className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                    <p className="text-sm font-semibold text-slate-500">No employees found</p>
-                    <p className="text-xs text-slate-400 mt-1">Try adjusting your search or filters</p>
+                  <td colSpan={5} className="px-5 py-20 text-center">
+                    <div className="w-16 h-16 bg-white rounded-none flex items-center justify-center mx-auto mb-4"><Users className="w-8 h-8 text-slate-200" /></div>
+                    <p className="text-sm font-bold text-slate-800">No employees found</p>
+                    <p className="text-xs text-slate-400 mt-1">Add your first employee to get started</p>
                   </td>
                 </tr>
+              ) : (
+                filtered.map((emp) => (
+                  <tr key={emp.id} className="hover:bg-white transition-colors group">
+                    <td className="px-6 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-xs font-black text-slate-600 shadow-inner group-hover:from-amber-100 group-hover:to-orange-100 group-hover:text-amber-700 transition-all">
+                          {emp.name.split(' ').map((n) => n[0]).join('').toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 truncate">{emp.name}</p>
+                          <p className="text-[10px] font-black text-amber-600 uppercase tracking-widest">{emp.emp_id}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 hidden md:table-cell">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs"><Briefcase className="w-3 h-3 text-slate-400" /> {emp.designation}</div>
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{emp.department}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5 hidden xl:table-cell">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-1.5 text-slate-600 text-xs"><Mail className="w-3 h-3 text-slate-400" /> {emp.email}</div>
+                        <div className="flex items-center gap-1.5 text-slate-600 text-xs font-mono"><Phone className="w-3 h-3 text-slate-400" /> {emp.phone || '-'}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
+                        emp.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                      }`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                        {emp.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEdit(emp)} className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(emp.id)} className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
-        </div>
-        {/* Footer */}
-        <div className="flex items-center justify-between px-5 py-3 border-t border-slate-100 bg-slate-50/30">
-          <p className="text-xs text-slate-500">Showing <strong>{filtered.length}</strong> of {employees.length} employees</p>
-          <div className="flex gap-1">
-            <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 transition-colors">Previous</button>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-500 text-white">1</button>
-            <button className="px-3 py-1.5 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100 transition-colors">Next</button>
-          </div>
         </div>
       </div>
 
       {/* Modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden border border-white/20">
             {/* Modal Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50/50">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                  <Users className="w-5 h-5 text-white" />
+            <div className="flex items-center justify-between px-10 py-8 border-b border-slate-300 bg-white">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-xl shadow-amber-500/20">
+                  <Users className="w-7 h-7 text-white" />
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">{editEmployee ? 'Edit Employee' : 'Add New Employee'}</h3>
-                  <p className="text-xs text-slate-500">Fill in the details to {editEmployee ? 'update' : 'register'} an employee</p>
+                  <h3 className="text-2xl font-black text-slate-900 tracking-tight">{editEmployee ? 'Update Profile' : 'Register Employee'}</h3>
+                  <p className="text-sm text-slate-500 font-medium">Manage corporate identity and profile details</p>
                 </div>
               </div>
-              <button onClick={() => setShowModal(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all">
-                <X className="w-5 h-5" />
+              <button onClick={() => setShowModal(false)} className="p-3 rounded-2xl text-slate-400 hover:text-slate-600 hover:bg-white transition-all">
+                <X className="w-6 h-6" />
               </button>
             </div>
 
             {/* Tab Navigation */}
-            <div className="flex px-6 border-b border-slate-100 bg-white">
-              <button
-                onClick={() => setActiveTab('personal')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 ${
-                  activeTab === 'personal'
-                    ? 'border-amber-500 text-amber-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Personal Information
-              </button>
-              <button
-                onClick={() => setActiveTab('employment')}
-                className={`flex items-center gap-2 px-4 py-3 text-sm font-semibold transition-all border-b-2 ${
-                  activeTab === 'employment'
-                    ? 'border-amber-500 text-amber-600'
-                    : 'border-transparent text-slate-500 hover:text-slate-700'
-                }`}
-              >
-                Employment Details
-              </button>
+            <div className="flex px-10 border-b border-slate-300 bg-white">
+              {['personal', 'employment'].map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all border-b-4 ${
+                    activeTab === tab ? 'border-amber-500 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                  }`}
+                >
+                  {tab === 'personal' ? 'Personal Profile' : 'Professional Info'}
+                </button>
+              ))}
             </div>
 
             {/* Modal Content */}
-            <div className="p-8 overflow-y-auto custom-scrollbar">
-              {activeTab === 'personal' ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Full Name</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="e.g. Rajesh Kumar"
-                      defaultValue={editEmployee?.name}
-                    />
+            <form onSubmit={handleSave} className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="p-10">
+                {activeTab === 'personal' ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Full Name</label>
+                      <input
+                        required
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="John Doe"
+                        value={form.name}
+                        onChange={e => setForm({...form, name: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="john@company.com"
+                        value={form.email}
+                        onChange={e => setForm({...form, email: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Phone Number</label>
+                      <input
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="+1 (555) 000-0000"
+                        value={form.phone}
+                        onChange={e => setForm({...form, phone: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location</label>
+                      <input
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="New York, USA"
+                        value={form.location}
+                        onChange={e => setForm({...form, location: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
+                      <input
+                        type="date"
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        value={form.dob}
+                        onChange={e => setForm({...form, dob: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
+                      <select 
+                        value={form.gender}
+                        onChange={e => setForm({...form, gender: e.target.value})}
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
+                      >
+                        <option value="">Select Gender</option>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Location</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="e.g. Mumbai, India"
-                      defaultValue={editEmployee?.location}
-                    />
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-fade-in">
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Employee ID</label>
+                      <input
+                        required
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="SFE-000"
+                        value={form.emp_id}
+                        onChange={e => setForm({...form, emp_id: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Designation</label>
+                      <input
+                        required
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
+                        placeholder="Project Manager"
+                        value={form.designation}
+                        onChange={e => setForm({...form, designation: e.target.value})}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
+                      <select 
+                        required
+                        value={form.department}
+                        onChange={e => setForm({...form, department: e.target.value})}
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
+                      >
+                        <option value="">Select Dept</option>
+                        {departments.filter(d => d !== 'All').map(d => (
+                          <option key={d} value={d}>{d}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label>
+                      <select 
+                        value={form.status}
+                        onChange={e => setForm({...form, status: e.target.value})}
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
+                      >
+                        <option value="Active">Active</option>
+                        <option value="On Leave">On Leave</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Social Security Number (SSN)</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="XXX-XX-XXXX"
-                      defaultValue={editEmployee?.ssn}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Date of Birth</label>
-                    <input
-                      type="date"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      defaultValue={editEmployee?.dob}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Gender</label>
-                    <select className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none appearance-none">
-                      <option value="">Select Gender</option>
-                      <option value="male">Male</option>
-                      <option value="female">Female</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Marital Status</label>
-                    <select className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none appearance-none">
-                      <option value="">Select Status</option>
-                      <option value="single">Single</option>
-                      <option value="married">Married</option>
-                      <option value="divorced">Divorced</option>
-                      <option value="widowed">Widowed</option>
-                    </select>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 animate-fade-in">
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Employee ID</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="e.g. SFE-001"
-                      defaultValue={editEmployee?.empId}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Personnel Number</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="e.g. PN-12345"
-                      defaultValue={editEmployee?.personnelNumber}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Designation</label>
-                    <input
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none"
-                      placeholder="e.g. Senior Engineer"
-                      defaultValue={editEmployee?.designation}
-                    />
-                  </div>
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">Department</label>
-                    <select className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 transition-all outline-none appearance-none">
-                      <option value="">Select Department</option>
-                      {departments.filter(d => d !== 'All').map(d => (
-                        <option key={d} value={d}>{d}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-              )}
-            </div>
+                )}
+              </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/30">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-bold text-slate-600 hover:bg-white hover:border-slate-300 transition-all"
-              >
-                Cancel
-              </button>
-              <button className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-[#0c1222] to-[#1a1a2e] text-white text-sm font-bold shadow-lg hover:shadow-xl transition-all transform hover:scale-[1.02] active:scale-[0.98]">
-                {editEmployee ? 'Save Changes' : 'Create Employee'}
-              </button>
-            </div>
+              {/* Modal Footer */}
+              <div className="flex justify-end gap-4 px-10 py-8 border-t border-slate-300 bg-white mt-auto">
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-8 py-3.5 rounded-2xl border border-slate-300 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-white hover:border-slate-300 transition-all shadow-sm"
+                >
+                  Discard
+                </button>
+                <button 
+                  type="submit"
+                  disabled={saving}
+                  className="px-10 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  {saving ? 'Processing...' : editEmployee ? 'Update Profile' : 'Create Identity'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+function Save({ className, ...props }) {
+  return (
+    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} {...props}>
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <polyline points="17 21 17 13 7 13 7 21" />
+      <polyline points="7 3 7 8 15 8" />
+    </svg>
   );
 }

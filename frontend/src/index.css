@@ -21,7 +21,7 @@
 
   body {
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #f8fafc;
+    background-color: #ffffff;
     color: #1e293b;
     min-height: 100vh;
     overflow-x: hidden;
@@ -29,6 +29,16 @@
 
   #root {
     min-height: 100vh;
+  }
+
+  /* Global Square Styling */
+  button, 
+  input, 
+  select, 
+  textarea, 
+  div, 
+  a {
+    border-radius: 0 !important;
   }
 }
 
