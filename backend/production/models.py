@@ -53,6 +53,8 @@ class ProductionPriorityItem(models.Model):
     complete_run_date = models.DateField(null=True, blank=True)
     is_complete = models.BooleanField(default=False)
     notes = models.TextField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.job_number} - {self.sequence_number}"
