@@ -26,44 +26,38 @@ class DashboardStatsView(APIView):
         completed_jobs = ProductionPriorityItem.objects.filter(is_complete=True).count()
         efficiency_rate = (completed_jobs / total_jobs * 100) if total_jobs > 0 else 0
 
-        # 2. Production Throughput (Monthly trends for last 7 months)
-        # We'll use complete_run_date from ProductionPriorityItem, fallback to updated_at
-        area_data = []
-        now = timezone.now()
-        for i in range(6, -1, -1):
-            # Calculate start and end of the month
-            target_date = now - timedelta(days=i*30)
-            month = target_date.month
-            year = target_date.year
-            month_name = target_date.strftime('%b')
-            
-            count = ProductionPriorityItem.objects.filter(
-                is_complete=True
-            ).filter(
-                models.Q(complete_run_date__month=month, complete_run_date__year=year) |
-                models.Q(complete_run_date__isnull=True, updated_at__month=month, updated_at__year=year)
-            ).count()
-            
-            project_count = Project.objects.filter(created_at__month=month, created_at__year=year).count()
-            
-            area_data.append({
-                'month': month_name,
-                'jobs': count,
-                'projects': project_count
-            })
+        # 2. Gantt Chart Data (Production Throughput)
+        projects = Project.objects.all().order_by('start_date')
+        gantt_tasks = []
+        months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+        
+        if projects.exists():
+            for p in projects:
+                if p.start_date and p.end_date:
+                    # Calculate start month index and duration
+                    start_month = p.start_date.month - 1
+                    duration = (p.end_date.year - p.start_date.year) * 12 + (p.end_date.month - p.start_date.month) + 1
+                    
+                    gantt_tasks.append({
+                        'id': p.id,
+                        'name': p.name,
+                        'startMonth': start_month,
+                        'duration': max(1, duration),
+                        'color': colors.get(p.status, '#94a3b8'),
+                        'priority': 'High' if p.total_ton > 100 else 'Medium'
+                    })
+        else:
+            # PROFESSIONAL MOCK DATA FOR DEMONSTRATION (Gantt only)
+            gantt_tasks = [
+                {'name': 'Commercial Hub Structure', 'startMonth': 0, 'duration': 3, 'color': '#f59e0b', 'priority': 'High'},
+                {'name': 'Industrial Warehouse Exp', 'startMonth': 3, 'duration': 4, 'color': '#6366f1', 'priority': 'Medium'},
+                {'name': 'Residential Tower B', 'startMonth': 7, 'duration': 3, 'color': '#10b981', 'priority': 'High'},
+            ]
 
-        # 3. Inventory Status (Using Project statuses for now as requested by UI)
+        # 3. Inventory Status (Using Project statuses)
         project_stats = Project.objects.values('status').annotate(count=Count('id'))
         pie_data = []
-        colors = {
-            'Completed': '#10b981',
-            'In Progress': '#f59e0b',
-            'Planning': '#6366f1',
-            'On Hold': '#ef4444',
-            'Delayed': '#6b7280'
-        }
         
-        # Map Planning to Pending for UI consistency if needed
         status_map = {
             'Planning': 'Pending',
             'In Progress': 'In Progress',
@@ -80,7 +74,7 @@ class DashboardStatsView(APIView):
                 'color': colors.get(stat['status'], '#94a3b8')
             })
 
-        # 4. Section Performance (Example using ProductionPriority module types)
+        # 4. Section Performance
         bar_data = []
         modules = ['PLATE', 'ANGLE', 'STRUCTURAL']
         for module in modules:
@@ -93,7 +87,6 @@ class DashboardStatsView(APIView):
             })
 
         # 5. Recent Activities
-        # We can use Milestones or Projects or just the latest ProductionPriorityItems
         recent_activities = []
         latest_items = ProductionPriorityItem.objects.order_by('-updated_at')[:4]
         for item in latest_items:
@@ -101,19 +94,22 @@ class DashboardStatsView(APIView):
                 'id': item.id,
                 'action': f"Job #{item.job_number} {'Completed' if item.is_complete else 'Updated'}",
                 'project': f"Seq: {item.sequence_number}",
-                'user': 'System', # Or get from audit log if available
-                'time': 'Recently', # We can format this properly
+                'user': 'System',
+                'time': item.updated_at.strftime('%H:%M %p'),
                 'type': 'success' if item.is_complete else 'info'
             })
 
         return Response({
             'stats': [
-                {'label': 'Total Employees', 'value': str(total_employees), 'change': '+0', 'up': True},
+                {'label': 'Total Employees', 'value': str(total_employees), 'change': '+0%', 'up': True},
                 {'label': 'Active Projects', 'value': str(active_projects), 'change': '+0', 'up': True},
-                {'label': 'Active Jobs', 'value': str(active_jobs), 'change': '+0', 'up': True},
-                {'label': 'Efficiency Rate', 'value': f"{int(efficiency_rate)}%", 'change': '+0', 'up': True},
+                {'label': 'Active Jobs', 'value': str(active_jobs), 'change': '+0%', 'up': True},
+                {'label': 'Efficiency Rate', 'value': f"{int(efficiency_rate)}%", 'change': '+0%', 'up': True},
             ],
-            'areaData': area_data,
+            'ganttData': {
+                'tasks': gantt_tasks,
+                'months': months
+            },
             'pieData': pie_data,
             'barData': bar_data,
             'recentActivities': recent_activities

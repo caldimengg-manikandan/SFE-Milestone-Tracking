@@ -16,6 +16,10 @@ export default function ForgotPassword() {
     try {
       await authAPI.forgotPassword(email);
       setSent(true);
+      // Automatically redirect after 1.5s to the OTP entry page
+      setTimeout(() => {
+        window.location.href = `/reset-password?email=${encodeURIComponent(email)}`;
+      }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset link');
     } finally {

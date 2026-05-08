@@ -110,30 +110,84 @@ export default function Dashboard() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Area Chart */}
-        <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
-          <div className="flex items-center justify-between mb-8">
+        {/* Gantt Chart — Production Throughput */}
+        <div className="lg:col-span-2 bg-white border border-slate-300 overflow-hidden">
+          <div className="p-8 border-bottom border-slate-100 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Production Throughput</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Job Processing Trends</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gantt Chart • Project Timelines & Prioritization</p>
             </div>
-            <BarChart3 className="w-5 h-5 text-slate-300" />
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 bg-amber-500" />
+                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">High Priority</span>
+              </div>
+              <BarChart3 className="w-5 h-5 text-slate-300" />
+            </div>
           </div>
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={data.areaData}>
-              <defs>
-                <linearGradient id="colorJobs" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.1} />
-                  <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e2e8f0', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.1)', fontSize: 10, fontWeight: 900 }} />
-              <Area type="monotone" dataKey="jobs" stroke="#f59e0b" strokeWidth={3} fillOpacity={1} fill="url(#colorJobs)" />
-            </AreaChart>
-          </ResponsiveContainer>
+
+          <div className="overflow-x-auto scrollbar-thin">
+            <div className="min-w-[800px] gantt-grid">
+              {/* Header Row 1: Quarters */}
+              <div className="gantt-header-cell gantt-pink-header flex flex-col justify-center row-span-2">
+                <span>Process / Project</span>
+              </div>
+              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 1</div>
+              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 2</div>
+              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 3</div>
+              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 4</div>
+              
+              {/* Header Row 2: Months */}
+              {data.ganttData?.months.map((m, i) => (
+                <div key={i} className="gantt-header-cell text-center py-2">
+                  {m}
+                </div>
+              ))}
+
+              {/* Task Rows */}
+              {data.ganttData?.tasks && data.ganttData.tasks.length > 0 ? (
+                data.ganttData.tasks.map((task, idx) => (
+                  <div key={idx} className="gantt-row">
+                    <div className="gantt-label-cell">
+                      <div className="flex flex-col">
+                        <span className="truncate max-w-[160px]">{task.name}</span>
+                        <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">{task.priority} Priority</span>
+                      </div>
+                    </div>
+                    {/* Grid Cells */}
+                    {Array.from({ length: 12 }).map((_, mIdx) => (
+                      <div key={mIdx} className="gantt-cell">
+                        {/* Task Bar */}
+                        {mIdx === task.startMonth && (
+                          <div 
+                            className="gantt-bar"
+                            style={{ 
+                              width: `calc(${task.duration} * 100% + (${task.duration} - 1) * 1px)`,
+                              backgroundColor: task.color + '20',
+                              borderLeft: `4px solid ${task.color}`,
+                              color: task.color
+                            }}
+                          >
+                            {task.name}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                ))
+              ) : (
+                <div className="col-span-13 flex flex-col items-center justify-center py-20 bg-slate-50/30">
+                  <Clock className="w-8 h-8 text-slate-300 mb-3" />
+                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No Active Projects Found</p>
+                  <p className="text-[9px] text-slate-400 mt-1">Start adding projects to see the timeline</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex justify-end">
+             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">© Steel Fab Enterprises • Production Intelligence Unit</p>
+          </div>
         </div>
 
         {/* Pie Chart */}
