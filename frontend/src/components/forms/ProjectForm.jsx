@@ -1,28 +1,176 @@
-import { X, Save, FolderKanban } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight } from 'lucide-react';
+import StructuralScheduleForm from './StructuralScheduleForm';
 
 export default function ProjectForm({ 
+  schedules,
+  addScheduleRow,
+  handleScheduleChange,
+  handleDeleteSchedule,
   form, 
   setForm, 
   handleSave, 
   onClose, 
   isEditing, 
   loading,
-  autocalculateManhourTon 
+  autocalculateManhourTon,
+  initialTab = "basic"
 }) {
+  const [activeTab, setActiveTab] = useState(initialTab);
+
+  const exportToPDF = () => {
+    const doc = new jsPDF('l', 'mm', 'a4');
+    
+    
+    // Title & Branding
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42); // Slate 900
+    doc.setFont(undefined, 'bold');
+    doc.text("STRUCTURAL SCHEDULE", 14, 20);
+    
+    // Horizontal Divider
+    doc.setDrawColor(203, 213, 225); // Slate 300
+    doc.setLineWidth(0.5);
+    doc.line(14, 24, 283, 24);
+
+    // Meta Grid - Column 1
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105); // Slate 600
+    doc.setFont(undefined, 'bold'); doc.text("PROJECT NAME:", 14, 32);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.name || 'N/A', 45, 32);
+
+    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("CUSTOMER:", 14, 38);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.customer_name || 'N/A', 45, 38);
+
+    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("DETAILER:", 14, 44);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.detailer_name || 'N/A', 45, 44);
+
+    // Meta Grid - Column 2
+    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 150, 32);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.code || 'N/A', 180, 32);
+
+    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.project_manager_name || 'N/A', 180, 38);
+
+    doc.setFontSize(8);
+    doc.setTextColor(148, 163, 184); // Slate 400
+    doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 230, 44);
+
+
+    const tableHeaders = [["SEQ #", "Tons", "Description", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
+    
+    const tableData = (schedules || []).map(s => [
+      s.seq_no,
+      s.tons,
+      s.item_description,
+      s.scheduled_ofa_date,
+      s.actual_ofa_date || '-',
+      s.scheduled_bfa_date,
+      s.actual_bfa_date || '-',
+      s.scheduled_field_measure_date || '-',
+      s.rts_date,
+      s.shop_lead_time_weeks,
+      s.scheduled_erection_date,
+      s.budget_shop_hours,
+      s.budget_field_hours,
+      s.actual_shop_hours,
+      s.actual_field_hours,
+      s.detailer_vendor,
+      s.dwg_status,
+      s.notes
+    ]);
+    
+    autoTable(doc, {
+      startY: 50,
+      head: tableHeaders,
+      body: tableData,
+      theme: 'grid',
+      headStyles: { fillColor: [30, 41, 59], fontSize: 6, fontStyle: 'bold' },
+      bodyStyles: { fontSize: 5 },
+      styles: { cellPadding: 1 },
+      didDrawPage: (data) => {
+        const pageSize = doc.internal.pageSize;
+        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, pageHeight - 10);
+      },
+      columnStyles: {
+        0: { cellWidth: 8 }, // SEQ
+        1: { cellWidth: 10 }, // Tons
+        2: { cellWidth: 'auto' }, // Desc
+        3: { cellWidth: 15 }, // OFA Sch
+        4: { cellWidth: 15 }, // OFA Act
+        5: { cellWidth: 15 }, // BFA Sch
+        6: { cellWidth: 15 }, // BFA Act
+        7: { cellWidth: 15 }, // FM Sch
+        8: { cellWidth: 15 }, // RTS
+        9: { cellWidth: 8 }, // Lead
+        10: { cellWidth: 15 }, // Erection
+        11: { cellWidth: 12 }, // B.Shop
+        12: { cellWidth: 12 }, // B.Field
+        13: { cellWidth: 12 }, // A.Shop
+        14: { cellWidth: 12 }, // A.Field
+        15: { cellWidth: 15 }, // Vendor
+        16: { cellWidth: 15 }, // Status
+        17: { cellWidth: 20 }  // Notes
+      }
+    });
+    
+    doc.save(`Schedule_${form.code}.pdf`);
+  };
+
+
+  // Sync tab if prop changes (e.g. switching between View Plan and Edit)
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] flex flex-col overflow-hidden">
+      <div className={`bg-white rounded-3xl shadow-2xl w-full ${activeTab === 'structural' ? 'max-w-[98vw]' : 'max-w-6xl'} max-h-[95vh] flex flex-col overflow-hidden transition-all duration-300`}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-slate-100 bg-slate-50/50">
           <div>
             <h3 className="text-xl font-bold text-slate-900">{isEditing ? 'Project Details' : 'New Project Master Setup'}</h3>
             <p className="text-xs text-slate-500 mt-0.5">{isEditing ? 'View and update project schedules' : 'Fill in the basic project details'}</p>
           </div>
-          <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white shadow-sm transition-all"><X className="w-6 h-6" /></button>
+                    <div className="flex items-center gap-2">
+            {activeTab === 'structural' && (
+              <button 
+                onClick={exportToPDF}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-bold border border-emerald-100 hover:bg-emerald-100 transition-all"
+              >
+                <Download className="w-4 h-4" /> Download PDF
+              </button>
+            )}
+            <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-white shadow-sm transition-all"><X className="w-6 h-6" /></button>
+          </div>
+        </div>
+
+
+        {/* Tabs */}
+        <div className="flex px-8 border-b border-slate-200 bg-white">
+          <button 
+            onClick={() => setActiveTab('basic')}
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'basic' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+          >
+            <LayoutTemplate className="w-4 h-4" /> Basic Details
+          </button>
+          <button 
+            onClick={() => setActiveTab('structural')}
+            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'structural' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+          >
+            <CalendarDays className="w-4 h-4" /> Structural Schedule
+          </button>
         </div>
 
         {/* Modal Body */}
-        <div className="flex-1 overflow-y-auto p-8 space-y-8">
+        <div className={`flex-1 ${activeTab === 'basic' ? 'overflow-y-auto p-8 space-y-8' : 'overflow-hidden flex flex-col p-4 bg-slate-50/50'}`}>
+          {activeTab === "basic" && (
+          <div className="space-y-6 animate-fade-in">
           {/* Basic Details Section */}
           <section className="space-y-6">
             <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
@@ -87,6 +235,32 @@ export default function ProjectForm({
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
                 />
               </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Priority</label>
+                <select 
+                  value={form.priority}
+                  onChange={e => setForm({...form, priority: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
+                <select 
+                  value={form.status}
+                  onChange={e => setForm({...form, status: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="Planning">Planning</option>
+                  <option value="In Progress">In Progress</option>
+                  <option value="Completed">Completed</option>
+                  <option value="Delayed">Delayed</option>
+                  <option value="On Hold">On Hold</option>
+                </select>
+              </div>
               <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                 <div>
                   <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>
@@ -115,18 +289,43 @@ export default function ProjectForm({
               </div>
             </div>
           </section>
+          </div>
+          )}
+
+          {activeTab === "structural" && (
+            <div className="flex-1 flex flex-col border border-slate-200 rounded-xl overflow-hidden animate-fade-in bg-white shadow-sm">
+              <StructuralScheduleForm
+                mode="edit"
+                project={form}
+                schedules={schedules}
+                addScheduleRow={addScheduleRow}
+                handleRowChange={handleScheduleChange}
+                handleDeleteRow={handleDeleteSchedule}
+                hideMetrics={false}
+              />
+            </div>
+          )}
         </div>
 
         {/* Modal Footer */}
         <div className="flex justify-end gap-3 px-8 py-5 border-t border-slate-100 bg-slate-50/50">
           <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-all shadow-sm">Cancel</button>
-          <button 
-            onClick={handleSave}
-            disabled={loading}
-            className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 text-white text-sm font-bold shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-indigo-500 transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Project</>}
-          </button>
+          {activeTab === 'basic' ? (
+            <button 
+              onClick={(e) => { e.preventDefault(); setActiveTab('structural'); }}
+              className="px-8 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2"
+            >
+              Next <ChevronRight className="w-4 h-4" />
+            </button>
+          ) : (
+            <button 
+              onClick={handleSave}
+              disabled={loading}
+              className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all flex items-center gap-2 disabled:opacity-50"
+            >
+              {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Project</>}
+            </button>
+          )}
         </div>
       </div>
     </div>

@@ -20,8 +20,8 @@
   }
 
   body {
-    font-family: 'Inter', system-ui, -apple-system, sans-serif;
-    background-color: #ffffff;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
+    background-color: #f8fafc;
     color: #1e293b;
     min-height: 100vh;
     overflow-x: hidden;
@@ -31,14 +31,12 @@
     min-height: 100vh;
   }
 
-  /* Global Square Styling */
+  /* Global Styling for Buttons & Inputs */
   button, 
   input, 
   select, 
-  textarea, 
-  div, 
-  a {
-    border-radius: 0 !important;
+  textarea {
+    border-radius: 0.5rem;
   }
 }
 

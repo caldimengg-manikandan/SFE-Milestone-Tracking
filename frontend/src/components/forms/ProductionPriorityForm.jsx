@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, ChevronLeft, ChevronRight, Calendar, Loader2 } from 'lucide-react';
-import { productionAPI, priorityAPI } from '../../services/api';
+import { projectAPI, productionAPI, priorityAPI } from '../../services/api';
 
 export default function ProductionPriorityForm({ onClose, onSuccess, editRecord, moduleType, tabs }) {
   const [activeTab, setActiveTab] = useState(0);
   const [selectedSchedule, setSelectedSchedule] = useState('');
   const [schedules, setSchedules] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(false);
   const [fetchingSchedules, setFetchingSchedules] = useState(true);
   
@@ -13,7 +14,7 @@ export default function ProductionPriorityForm({ onClose, onSuccess, editRecord,
   const [tabData, setTabData] = useState(() => {
     const initial = {};
     tabs.forEach((_, idx) => {
-        initial[idx] = { rate: '', rows: [{ job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] };
+        initial[idx] = { rate: '', rows: [{ job: '', seq: '1', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] };
     });
     return initial;
   });
@@ -30,6 +31,16 @@ export default function ProductionPriorityForm({ onClose, onSuccess, editRecord,
       }
     };
     fetchSchedules();
+    const fetchProjects = async () => {
+      try {
+        const response = await projectAPI.getAll();
+        setProjects(response.data.results || response.data);
+      } catch (error) {
+        console.error("Error fetching projects:", error);
+      }
+    };
+    fetchProjects();
+
 
     if (editRecord) {
         setSelectedSchedule(editRecord.schedule);
@@ -92,9 +103,15 @@ export default function ProductionPriorityForm({ onClose, onSuccess, editRecord,
     setTabData(newTabData);
   };
 
+  
   const addRow = () => {
-    const newRow = { job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
-    const newRows = [...tabData[activeTab].rows, newRow];
+    const currentRows = tabData[activeTab].rows;
+    // Auto-generate sequence: last seq + 1
+    const lastSeq = currentRows.length > 0 ? (parseInt(currentRows[currentRows.length - 1].seq) || 0) : 0;
+    const nextSeq = lastSeq + 1;
+    
+    const newRow = { job: '', seq: nextSeq.toString(), weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
+    const newRows = [...currentRows, newRow];
     setTabData({ ...tabData, [activeTab]: { ...tabData[activeTab], rows: newRows } });
   };
 
@@ -227,13 +244,13 @@ export default function ProductionPriorityForm({ onClose, onSuccess, editRecord,
                 <table className="w-full text-left border-collapse table-fixed">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-300">
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%]">Job</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Seq</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Weight</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">RTS Date</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Run Days</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">Start Run</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Complete Date</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[22%]">Job (Project)</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[6%] text-center">Seq #</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Weight</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">RTS Date</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Run Days</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Start Run</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[13%]">Complete Date</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notes</th>
                       <th className="px-2 py-4 w-10"></th>
                     </tr>
@@ -241,8 +258,32 @@ export default function ProductionPriorityForm({ onClose, onSuccess, editRecord,
                   <tbody className="divide-y divide-slate-100">
                     {tabData[activeTab].rows.map((row, index) => (
                       <tr key={index} className="hover:bg-white transition-colors">
-                        <td className="p-1.5"><input value={row.job} onChange={(e) => updateRow(index, 'job', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-xs transition-all" placeholder="Job #" /></td>
-                        <td className="p-1.5"><input value={row.seq} onChange={(e) => updateRow(index, 'seq', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-xs text-center" placeholder="Seq" /></td>
+                        
+                        <td className="p-1.5">
+                          <select 
+                            multiple
+                            value={(row.job || "").split(", ").filter(x => x)} 
+                            onChange={(e) => {
+                              const values = Array.from(e.target.selectedOptions, option => option.value);
+                              updateRow(index, "job", values.join(", "));
+                            }} 
+                            disabled={loading} 
+                            className="w-full px-1 py-1 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[10px] transition-all min-h-[45px] font-bold"
+                          >
+                            {projects.map(p => (
+                              <option key={p.id} value={`${p.code} - ${p.name}`}>
+                                {p.code} | {p.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="text-[8px] text-slate-400 mt-0.5 px-1 font-medium">Ctrl + Click to multi-select</div>
+                        </td>
+
+                        <td className="p-1.5 text-center">
+                          <div className="w-full py-2 px-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-center text-xs rounded-lg">
+                            {row.seq}
+                          </div>
+                        </td>
                         <td className="p-1.5"><input type="number" value={row.weight} onChange={(e) => updateRow(index, 'weight', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-xs text-center" placeholder="0" /></td>
                         <td className="p-1.5">
                           <div className="relative group">

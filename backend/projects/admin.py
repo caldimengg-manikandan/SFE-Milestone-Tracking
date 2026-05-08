@@ -14,6 +14,6 @@ class ProjectAdmin(admin.ModelAdmin):
 
 @admin.register(StructuralScheduleItem)
 class StructuralScheduleItemAdmin(admin.ModelAdmin):
-    list_display = ['project', 'seq_no', 'tons', 'scheduled_erection_date', 'status']
-    list_filter = ['project', 'status']
+    list_display = ['project', 'seq_no', 'tons', 'scheduled_erection_date', 'dwg_status']
+    list_filter = ['project', 'dwg_status']
     search_fields = ['seq_no', 'item_description']

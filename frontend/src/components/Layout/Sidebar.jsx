@@ -35,8 +35,7 @@ const navSections = [
   {
     label: 'PROJECT MANAGEMENT',
     items: [
-      { name: 'Project Master', path: '/projects', icon: FolderKanban },
-      { name: 'Structural Schedule', path: '/structural-schedule', icon: FileSpreadsheet },
+      { name: 'Project Master & Structural Schedule', path: '/projects', icon: FolderKanban },
     ],
   },
   {
@@ -187,7 +186,7 @@ export default function Sidebar({
 
                       {/* Label — hidden when collapsed on desktop */}
                       <span
-                        className={`text-[13.5px] font-medium truncate transition-all duration-300 ${
+                        className={`text-[13.5px] font-medium leading-[1.2] whitespace-normal break-words transition-all duration-300 ${
                           isCollapsed ? 'lg:hidden' : ''
                         }`}
                       >
