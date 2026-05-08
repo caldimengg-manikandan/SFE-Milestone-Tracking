@@ -189,7 +189,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
               <Calendar className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">{editRecord ? 'Edit Plate Priority' : 'New Plate Priority'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">{editRecord ? 'Edit Priority Plate' : 'New Priority Plate'}</h3>
               <p className="text-xs text-slate-500 mt-0.5">Define priorities for different plate processes</p>
             </div>
           </div>

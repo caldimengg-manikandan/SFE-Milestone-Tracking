@@ -183,9 +183,9 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
               sequence_number: r.seq || null,
               weight: r.weight || null,
               rts_date: r.rtsDate || null,
-              actual_ofa: r.actualOfa || null,
+              actual_ofa: r.actual_ofa || null,
               complete_run_date: r.completeRunDate || null,
-              actual_bfa: r.actualBfa || null,
+              actual_bfa: r.actual_bfa || null,
               notes: r.notes || null,
             })),
           };
@@ -237,7 +237,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                      </div>
                      <div>
                        <h2 className="text-white text-xl font-black tracking-tight">Schedule No: {selectedSchedNum}</h2>
-                       <p className="text-white/70 text-[9px] font-black uppercase tracking-widest">Project Assignment ID</p>
+                       <p className="text-white/70 text-[9px] font-black uppercase tracking-widest">Project {selectedSchedNum}</p>
                      </div>
                    </div>
                    <div className="w-56">
