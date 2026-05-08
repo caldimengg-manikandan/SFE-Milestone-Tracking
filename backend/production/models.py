@@ -51,6 +51,8 @@ class ProductionPriorityItem(models.Model):
     run_days = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     start_run_date = models.DateField(null=True, blank=True)
     complete_run_date = models.DateField(null=True, blank=True)
+    actual_ofa = models.DateField(null=True, blank=True)
+    actual_bfa = models.DateField(null=True, blank=True)
     is_complete = models.BooleanField(default=False)
     notes = models.TextField(null=True, blank=True)
 

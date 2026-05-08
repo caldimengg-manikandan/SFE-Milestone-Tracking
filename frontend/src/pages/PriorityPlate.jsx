@@ -77,7 +77,7 @@ export default function PriorityPlate() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">Priority Plate</h2>
+          <h2 className="text-2xl font-bold text-slate-900">Plate Priority</h2>
           <p className="text-sm text-slate-500 mt-0.5">Manage plate production priorities and tracking</p>
         </div>
         <button 

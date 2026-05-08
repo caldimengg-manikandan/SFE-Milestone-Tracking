@@ -43,9 +43,7 @@ const navSections = [
     label: 'PRODUCTION MANAGEMENT',
     items: [
       { name: 'Production Priority Schedule', path: '/production/priority-schedule', icon: ListChecks },
-      { name: 'Priority Plate', path: '/production/priority-plate', icon: Layers },
-      { name: 'Angle Priority', path: '/production/angle-priority', icon: Square },
-      { name: 'Structural Priority', path: '/production/structural-priority', icon: Box },
+      { name: 'Process Master', path: '/production/process-master', icon: Layers },
     ],
   },
   {

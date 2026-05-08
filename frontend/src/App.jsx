@@ -8,10 +8,8 @@ import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
-import PriorityPlate from './pages/Production/PriorityPlate';
-import AnglePriority from './pages/Production/AnglePriority';
-import StructuralPriority from './pages/Production/StructuralPriority';
 import StructuralSchedule from './pages/StructuralSchedule';
+import ProcessMaster from './pages/Production/ProcessMaster';
 
 export default function App() {
   return (
@@ -39,9 +37,7 @@ export default function App() {
           
           {/* Production Management Routes */}
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
-          <Route path="production/priority-plate" element={<PriorityPlate />} />
-          <Route path="production/angle-priority" element={<AnglePriority />} />
-          <Route path="production/structural-priority" element={<StructuralPriority />} />
+          <Route path="production/process-master" element={<ProcessMaster />} />
 
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
