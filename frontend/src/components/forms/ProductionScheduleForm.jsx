@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Loader2 } from 'lucide-react';
-import { productionAPI } from '../../services/api';
+import { productionAPI, projectAPI } from '../../services/api';
 
 export default function ProductionScheduleForm({ onClose, onSuccess, editSchedule }) {
   const [loading, setLoading] = useState(false);
+  const [projects, setProjects] = useState([]);
   const [header, setHeader] = useState({
     scheduleNumber: 'Schedule-' + Math.floor(10 + Math.random() * 90),
     startDate: '',
@@ -11,8 +12,15 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   });
 
   const [rows, setRows] = useState([
-    { job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }
+    { job: '', seq: '1', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }
   ]);
+
+  // Fetch projects from Project Master
+  useEffect(() => {
+    projectAPI.getAll()
+      .then(res => setProjects(res.data.results || res.data))
+      .catch(err => console.error('Error fetching projects:', err));
+  }, []);
 
   // Load existing data if editing
   useEffect(() => {
@@ -24,9 +32,9 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       });
 
       if (editSchedule.items && editSchedule.items.length > 0) {
-        setRows(editSchedule.items.map(item => ({
+        setRows(editSchedule.items.map((item, idx) => ({
           job: item.job_number,
-          seq: item.sequence_number,
+          seq: item.sequence_number || (idx + 1).toString(),
           weight: item.weight,
           quantity: item.quantity,
           rtsDate: item.rts_date || '',
@@ -38,7 +46,9 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   }, [editSchedule]);
 
   const addRow = () => {
-    setRows([...rows, { job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
+    const lastSeq = rows.length > 0 ? (parseInt(rows[rows.length - 1].seq) || 0) : 0;
+    const nextSeq = lastSeq + 1;
+    setRows([...rows, { job: '', seq: nextSeq.toString(), weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
   };
 
   const removeRow = (index) => {
@@ -166,8 +176,8 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                 <table className="w-full text-left border-collapse min-w-[1000px]">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-300">
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Job</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Seq</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-52">Job (Project)</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Seq #</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Weight</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Quantity</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">RTS Date</th>
@@ -180,22 +190,28 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                     {rows.map((row, index) => (
                       <tr key={index} className="hover:bg-white transition-colors group">
                         <td className="p-2">
-                          <input
-                            value={row.job}
-                            onChange={(e) => updateRow(index, 'job', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
-                            placeholder="Job #"
+                          <select
+                            multiple
+                            value={(row.job || '').split(', ').filter(x => x)}
+                            onChange={(e) => {
+                              const values = Array.from(e.target.selectedOptions, o => o.value);
+                              updateRow(index, 'job', values.join(', '));
+                            }}
                             disabled={loading}
-                          />
+                            className="w-full px-2 py-1 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[11px] font-bold transition-all min-h-[48px]"
+                          >
+                            {projects.map(p => (
+                              <option key={p.id} value={`${p.code} - ${p.name}`}>
+                                {p.code} | {p.name}
+                              </option>
+                            ))}
+                          </select>
+                          <div className="text-[8px] text-slate-400 mt-0.5 pl-1">Ctrl+Click to select multiple</div>
                         </td>
-                        <td className="p-2">
-                          <input
-                            value={row.seq}
-                            onChange={(e) => updateRow(index, 'seq', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
-                            placeholder="Seq"
-                            disabled={loading}
-                          />
+                        <td className="p-2 text-center">
+                          <div className="w-full py-2 px-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-center text-sm rounded-lg">
+                            {row.seq}
+                          </div>
                         </td>
                         <td className="p-2">
                           <input

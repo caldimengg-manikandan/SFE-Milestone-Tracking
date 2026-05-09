@@ -21,6 +21,10 @@ const pageTitles = {
   '/milestones': 'Milestone Management',
   '/settings': 'Settings',
   '/help': 'Help & Support',
+  '/production/priority-schedule': 'Production Priority Schedule',
+  '/production/priority-plate': 'Priority Plate',
+  '/production/angle-priority': 'Angle Priority',
+  '/production/structural-priority': 'Structural Priority',
 };
 
 export default function Header({ onMenuClick }) {

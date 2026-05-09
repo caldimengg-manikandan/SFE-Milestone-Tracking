@@ -11,7 +11,6 @@ import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySch
 import PriorityPlate from './pages/Production/PriorityPlate';
 import AnglePriority from './pages/Production/AnglePriority';
 import StructuralPriority from './pages/Production/StructuralPriority';
-import StructuralSchedule from './pages/StructuralSchedule';
 
 export default function App() {
   return (
@@ -35,7 +34,6 @@ export default function App() {
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
-          <Route path="structural-schedule" element={<StructuralSchedule />} />
           
           {/* Production Management Routes */}
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />

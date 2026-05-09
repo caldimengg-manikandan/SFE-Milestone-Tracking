@@ -22,7 +22,7 @@
   }
 
   body {
-    font-family: 'Outfit', 'Inter', system-ui, -apple-system, sans-serif;
+    font-family: 'Plus Jakarta Sans', 'Inter', system-ui, -apple-system, sans-serif;
     background-color: #f8fafc;
     color: #1e293b;
     min-height: 100vh;
@@ -33,14 +33,12 @@
     min-height: 100vh;
   }
 
-  /* Global Square Styling */
+  /* Global Styling for Buttons & Inputs */
   button, 
   input, 
   select, 
-  textarea, 
-  div, 
-  a {
-    border-radius: 0 !important;
+  textarea {
+    border-radius: 0.5rem;
   }
 }
 
