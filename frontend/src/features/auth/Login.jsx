@@ -26,7 +26,11 @@ export default function Login() {
       sessionStorage.setItem('user', JSON.stringify(res.data.user));
       navigate('/dashboard', { replace: true });
     } catch (err) {
-      setError(err.response?.data?.message || err.response?.data?.detail || 'Invalid credentials');
+      if (!err.response) {
+        setError('Server error');
+      } else {
+        setError(err.response.data?.message || err.response.data?.detail || 'Invalid credentials');
+      }
     } finally {
       setLoading(false);
     }

@@ -84,4 +84,9 @@ export const priorityAPI = {
   delete: (id) => api.delete(`/production/priorities/${id}/`),
 };
 
+/* ── Dashboard API ── */
+export const dashboardAPI = {
+  getStats: () => api.get('/dashboard/stats/'),
+};
+
 export default api;

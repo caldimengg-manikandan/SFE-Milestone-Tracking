@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100;200;300;400;500;600;700;800;900&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -224,4 +226,87 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* ============================================
+   GANTT CHART CUSTOM STYLES
+   ============================================ */
+.gantt-grid {
+  display: grid;
+  grid-template-columns: 200px repeat(12, 1fr);
+  border-left: 1px solid #e2e8f0;
+  border-top: 1px solid #e2e8f0;
+}
+
+.gantt-header-cell {
+  padding: 1rem;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  font-weight: 800;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  background-color: #f1f5f9;
+  color: #475569;
+}
+
+.gantt-row {
+  display: contents;
+}
+
+.gantt-cell {
+  height: 60px;
+  border-right: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+  position: relative;
+  background-color: white;
+}
+
+.gantt-label-cell {
+  display: flex;
+  align-items: center;
+  padding: 0 1.25rem;
+  font-weight: 600;
+  font-size: 0.75rem;
+  color: #334155;
+  background-color: #fff;
+  border-right: 2px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.gantt-bar {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 32px;
+  border-radius: 0; /* Keeping with the square theme */
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  padding: 0 0.75rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: all 0.3s ease;
+}
+
+.gantt-bar:hover {
+  transform: translateY(-50%) scale(1.02);
+  z-index: 20;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+}
+
+.gantt-pink-header {
+  background-color: #ffd1d1 !important; /* Soft pink as in reference */
+  color: #334155 !important;
+}
+
+.gantt-month-sub {
+  font-size: 0.55rem;
+  color: #64748b;
+  margin-top: 2px;
 }

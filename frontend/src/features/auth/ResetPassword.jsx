@@ -5,7 +5,12 @@ import { Building2, ArrowLeft, Loader2, Lock, Eye, EyeOff, CheckCircle2 } from '
 
 export default function ResetPassword() {
   const [searchParams] = useSearchParams();
-  const [form, setForm] = useState({ otp: '', newPassword: '', confirmPassword: '' });
+  const [form, setForm] = useState({ 
+    email: searchParams.get('email') || '', 
+    otp: '', 
+    newPassword: '', 
+    confirmPassword: '' 
+  });
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -14,6 +19,11 @@ export default function ResetPassword() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    
+    if (!form.email) {
+      setError('Email is required');
+      return;
+    }
     if (form.newPassword !== form.confirmPassword) {
       setError('Passwords do not match');
       return;
@@ -22,12 +32,13 @@ export default function ResetPassword() {
       setError('Password must be at least 6 characters');
       return;
     }
+    
     setLoading(true);
     try {
       await authAPI.resetPassword({
-        email: searchParams.get('email') || '',
+        email: form.email,
         otp: form.otp,
-        newPassword: form.newPassword,
+        new_password: form.newPassword,
       });
       setSuccess(true);
     } catch (err) {
@@ -51,9 +62,21 @@ export default function ResetPassword() {
           {!success ? (
             <>
               <h2 className="text-2xl font-bold text-slate-900">Reset password</h2>
-              <p className="text-sm text-slate-500 mt-1.5">Enter your OTP and new password below.</p>
+              <p className="text-sm text-slate-500 mt-1.5">Enter your email, OTP and new password below.</p>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
+                  <input
+                    type="email"
+                    value={form.email}
+                    onChange={(e) => setForm({ ...form, email: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                    placeholder="you@steelfab.com"
+                    required
+                  />
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-slate-700 mb-1.5">OTP Code</label>
                   <input
