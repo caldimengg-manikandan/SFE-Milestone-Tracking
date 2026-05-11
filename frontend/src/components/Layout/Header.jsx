@@ -21,6 +21,7 @@ const pageTitles = {
   '/milestones': 'Milestone Management',
   '/settings': 'Settings',
   '/help': 'Help & Support',
+  '/production/process-master': 'Process Master',
   '/production/priority-schedule': 'Production Priority Schedule',
   '/production/priority-plate': 'Priority Plate',
   '/production/angle-priority': 'Angle Priority',

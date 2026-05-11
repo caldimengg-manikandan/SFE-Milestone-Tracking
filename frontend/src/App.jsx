@@ -8,6 +8,7 @@ import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
+import ProcessMaster from './pages/Production/ProcessMaster';
 import PriorityPlate from './pages/Production/PriorityPlate';
 import AnglePriority from './pages/Production/AnglePriority';
 import StructuralPriority from './pages/Production/StructuralPriority';
@@ -36,6 +37,7 @@ export default function App() {
           <Route path="projects" element={<ProjectMaster />} />
           
           {/* Production Management Routes */}
+          <Route path="production/process-master" element={<ProcessMaster />} />
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
           <Route path="production/priority-plate" element={<PriorityPlate />} />
           <Route path="production/angle-priority" element={<AnglePriority />} />

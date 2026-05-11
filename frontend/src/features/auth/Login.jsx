@@ -4,7 +4,8 @@ import { authAPI } from '../../services/api';
 import { Building2, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const [form, setForm] = useState({ email: '', password: '' });
+  const [mode, setMode] = useState('login');
+  const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', first_name: '', last_name: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -18,18 +19,38 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.email || !form.password) { setError('Please fill all fields'); return; }
+    if (!form.email || !form.password || (mode === 'signup' && !form.confirmPassword)) {
+      setError('Please fill all required fields');
+      return;
+    }
+    if (mode === 'signup' && form.password !== form.confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+
     setLoading(true);
     try {
-      const res = await authAPI.login(form);
-      sessionStorage.setItem('token', res.data.token);
-      sessionStorage.setItem('user', JSON.stringify(res.data.user));
-      navigate('/dashboard', { replace: true });
+      if (mode === 'signup') {
+        const res = await authAPI.register({
+          email: form.email,
+          password: form.password,
+          first_name: form.first_name,
+          last_name: form.last_name,
+        });
+        sessionStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        navigate('/dashboard', { replace: true });
+      } else {
+        const res = await authAPI.login({ email: form.email, password: form.password });
+        sessionStorage.setItem('token', res.data.token);
+        sessionStorage.setItem('user', JSON.stringify(res.data.user));
+        navigate('/dashboard', { replace: true });
+      }
     } catch (err) {
       if (!err.response) {
         setError('Server error');
       } else {
-        setError(err.response.data?.message || err.response.data?.detail || 'Invalid credentials');
+        setError(err.response.data?.message || err.response.data?.detail || err.response.data?.email?.[0] || err.response.data?.password?.[0] || 'Invalid credentials');
       }
     } finally {
       setLoading(false);
@@ -97,10 +118,55 @@ export default function Login() {
             </div>
           </div>
 
-          <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">Welcome back</h2>
-          <p className="text-slate-500 mt-1.5 text-sm">Sign in to your account to continue</p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900">
+                {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+              </h2>
+              <p className="text-slate-500 mt-1.5 text-sm">
+                {mode === 'signup'
+                  ? 'Sign up to access the Milestone Management System'
+                  : 'Sign in to your account to continue'}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setMode(mode === 'signup' ? 'login' : 'signup');
+                setError('');
+              }}
+              className="text-amber-600 hover:text-amber-700 text-sm font-semibold transition-colors"
+            >
+              {mode === 'signup' ? 'Already have an account? Sign in' : 'New user? Create account'}
+            </button>
+          </div>
 
           <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+            {mode === 'signup' && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
+                  <input
+                    type="text"
+                    value={form.first_name}
+                    onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                    placeholder="John"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
+                  <input
+                    type="text"
+                    value={form.last_name}
+                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                    placeholder="Doe"
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             <div>
               <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
@@ -136,16 +202,32 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Remember + Forgot */}
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
-                <span className="text-slate-600">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
-                Forgot password?
-              </Link>
-            </div>
+            {mode === 'signup' && (
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm Password</label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={form.confirmPassword}
+                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all pr-11"
+                    placeholder="Re-enter your password"
+                  />
+                </div>
+              </div>
+            )}
+
+            {mode === 'login' && (
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
+                  <span className="text-slate-600">Remember me</span>
+                </label>
+                <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
+            )}
 
             {/* Error */}
             {error && (
@@ -162,9 +244,9 @@ export default function Login() {
               className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.01]"
             >
               {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</>
+                <><Loader2 className="w-4 h-4 animate-spin" /> {mode === 'signup' ? 'Creating account...' : 'Signing in...'}</>
               ) : (
-                <>Sign In <ArrowRight className="w-4 h-4" /></>
+                <>{mode === 'signup' ? 'Sign Up' : 'Sign In'} <ArrowRight className="w-4 h-4" /></>
               )}
             </button>
           </form>
