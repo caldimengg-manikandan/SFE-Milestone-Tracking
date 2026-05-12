@@ -7,3 +7,4 @@ router.register('structural-schedules', StructuralScheduleItemViewSet, basename=
 router.register('', ProjectViewSet, basename='projects')
 
 urlpatterns = [path('', include(router.urls))]
+

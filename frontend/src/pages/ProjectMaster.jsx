@@ -57,6 +57,7 @@ export default function ProjectMaster() {
       seq_no: '1',
       tons: '',
       item_description: '',
+      category: '',
       scheduled_erection_date: initialErectionDate,
       ...calculated,
       shop_lead_time_weeks: '0',
@@ -66,7 +67,8 @@ export default function ProjectMaster() {
       actual_field_hours: '0',
       detailer_vendor: projectData.detailer_name || '',
       dwg_status: '',
-      notes: ''
+      notes: '',
+      fabrication_details: []
     };
   };
 
@@ -137,6 +139,7 @@ export default function ProjectMaster() {
       seq_no: (maxSeq + 1).toString(),
       tons: '',
       item_description: '',
+      category: '',
       scheduled_erection_date: initialErectionDate,
       ...calculated,
       shop_lead_time_weeks: '0',
@@ -146,7 +149,8 @@ export default function ProjectMaster() {
       actual_field_hours: '0',
       detailer_vendor: form.detailer_name || '',
       dwg_status: '',
-      notes: ''
+      notes: '',
+      fabrication_details: []
     };
     setSchedules([...schedules, newRow]);
   };
@@ -220,12 +224,13 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
 
-    const tableHeaders = [["SEQ #", "Tons", "Description", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Description", "Category", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
     
     const tableData = projectSchedules.map(s => [
       s.seq_no,
       s.tons,
       s.item_description,
+      s.category || '',
       s.scheduled_ofa_date,
       s.actual_ofa_date || '-',
       s.scheduled_bfa_date,
@@ -262,22 +267,24 @@ export default function ProjectMaster() {
         0: { cellWidth: 8 }, // SEQ
         1: { cellWidth: 10 }, // Tons
         2: { cellWidth: 'auto' }, // Desc
-        3: { cellWidth: 15 }, // OFA Sch
-        4: { cellWidth: 15 }, // OFA Act
-        5: { cellWidth: 15 }, // BFA Sch
-        6: { cellWidth: 15 }, // BFA Act
-        7: { cellWidth: 15 }, // FM Sch
-        8: { cellWidth: 15 }, // RTS
-        9: { cellWidth: 8 }, // Lead
-        10: { cellWidth: 15 }, // Erection
-        11: { cellWidth: 12 }, // B.Shop
-        12: { cellWidth: 12 }, // B.Field
-        13: { cellWidth: 12 }, // A.Shop
-        14: { cellWidth: 12 }, // A.Field
-        15: { cellWidth: 15 }, // Vendor
-        16: { cellWidth: 15 }, // Status
-        17: { cellWidth: 20 }  // Notes
+        3: { cellWidth: 20 }, // Category
+        4: { cellWidth: 15 }, // OFA Sch
+        5: { cellWidth: 15 }, // OFA Act
+        6: { cellWidth: 15 }, // BFA Sch
+        7: { cellWidth: 15 }, // BFA Act
+        8: { cellWidth: 15 }, // FM Sch
+        9: { cellWidth: 15 }, // RTS
+        10: { cellWidth: 8 }, // Lead
+        11: { cellWidth: 15 }, // Erection
+        12: { cellWidth: 12 }, // B.Shop
+        13: { cellWidth: 12 }, // B.Field
+        14: { cellWidth: 12 }, // A.Shop
+        15: { cellWidth: 12 }, // A.Field
+        16: { cellWidth: 15 }, // Vendor
+        17: { cellWidth: 15 }, // Status
+        18: { cellWidth: 20 }  // Notes
       }
+
     });
     
     doc.save(`Plan_${project.code}.pdf`);
@@ -337,31 +344,52 @@ export default function ProjectMaster() {
       // Save schedules
       for (const row of schedules) {
         const schedPayload = {
-          ...row,
           project: projectId,
-          seq_no: parseInt(row.seq_no) || 1,
+          seq_no: row.seq_no || '1',
+          tons: parseFloat(row.tons) || 0,
+          item_description: row.item_description || '',
+          category: row.category || '',
+          scheduled_ofa_date: row.scheduled_ofa_date || null,
+          actual_ofa_date: row.actual_ofa_date || null,
+          scheduled_bfa_date: row.scheduled_bfa_date || null,
+          actual_bfa_date: row.actual_bfa_date || null,
+          scheduled_field_measure_date: row.scheduled_field_measure_date || null,
+          rts_date: row.rts_date || null,
           shop_lead_time_weeks: parseInt(row.shop_lead_time_weeks) || 0,
+          scheduled_erection_date: row.scheduled_erection_date || null,
           budget_shop_hours: parseFloat(row.budget_shop_hours) || 0,
           budget_field_hours: parseFloat(row.budget_field_hours) || 0,
           actual_shop_hours: parseFloat(row.actual_shop_hours) || 0,
           actual_field_hours: parseFloat(row.actual_field_hours) || 0,
+          detailer_vendor: row.detailer_vendor || '',
+          dwg_status: row.dwg_status || '',
+          notes: row.notes || '',
+          fabrication_details: (row.fabrication_details || []).map(d => ({
+            pieces: d.pieces,
+            material_size: d.material_size,
+            dimension: d.dimension,
+            machine: d.machine
+          }))
         };
+
         if (row.is_new) {
-          delete schedPayload.id;
-          delete schedPayload.is_new;
           await scheduleAPI.create(schedPayload);
         } else {
           await scheduleAPI.update(row.id, schedPayload);
         }
       }
+
       fetchAllSchedules();
 
       setShowModal(false);
       resetForm();
     } catch (err) {
       console.error('Failed to save project:', err);
-      alert('Failed to save project. Please check the logs.');
+      console.error('Error response:', err.response?.data);
+      const errorMsg = err.response?.data ? JSON.stringify(err.response.data) : err.message;
+      alert(`Failed to save project/schedule: ${errorMsg}`);
     } finally {
+
       setLoading(false);
     }
   };

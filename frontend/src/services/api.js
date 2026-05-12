@@ -66,6 +66,15 @@ export const scheduleAPI = {
   delete: (id) => api.delete(`/projects/structural-schedules/${id}/`),
 };
 
+/* ── Fabrication Detail API ── */
+export const fabricationAPI = {
+  getAll: (params = {}) => api.get('/projects/fabrication-details/', { params }),
+  create: (data) => api.post('/projects/fabrication-details/', data),
+  update: (id, data) => api.put(`/projects/fabrication-details/${id}/`, data),
+  delete: (id) => api.delete(`/projects/fabrication-details/${id}/`),
+};
+
+
 /* ── Production Schedule API ── */
 export const productionAPI = {
   getSchedules: () => api.get('/production/schedules/'),

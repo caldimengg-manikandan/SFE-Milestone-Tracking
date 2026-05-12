@@ -12,3 +12,4 @@ class StructuralScheduleItemViewSet(viewsets.ModelViewSet):
     queryset = StructuralScheduleItem.objects.all()
     serializer_class = StructuralScheduleItemSerializer
     filterset_fields = ['project']
+

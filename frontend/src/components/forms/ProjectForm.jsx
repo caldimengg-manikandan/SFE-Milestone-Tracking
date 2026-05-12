@@ -59,12 +59,13 @@ export default function ProjectForm({
     doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 230, 44);
 
 
-    const tableHeaders = [["SEQ #", "Tons", "Description", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Description", "Category", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
     
     const tableData = (schedules || []).map(s => [
       s.seq_no,
       s.tons,
       s.item_description,
+      s.category || '',
       s.scheduled_ofa_date,
       s.actual_ofa_date || '-',
       s.scheduled_bfa_date,
@@ -101,22 +102,24 @@ export default function ProjectForm({
         0: { cellWidth: 8 }, // SEQ
         1: { cellWidth: 10 }, // Tons
         2: { cellWidth: 'auto' }, // Desc
-        3: { cellWidth: 15 }, // OFA Sch
-        4: { cellWidth: 15 }, // OFA Act
-        5: { cellWidth: 15 }, // BFA Sch
-        6: { cellWidth: 15 }, // BFA Act
-        7: { cellWidth: 15 }, // FM Sch
-        8: { cellWidth: 15 }, // RTS
-        9: { cellWidth: 8 }, // Lead
-        10: { cellWidth: 15 }, // Erection
-        11: { cellWidth: 12 }, // B.Shop
-        12: { cellWidth: 12 }, // B.Field
-        13: { cellWidth: 12 }, // A.Shop
-        14: { cellWidth: 12 }, // A.Field
-        15: { cellWidth: 15 }, // Vendor
-        16: { cellWidth: 15 }, // Status
-        17: { cellWidth: 20 }  // Notes
+        3: { cellWidth: 20 }, // Category
+        4: { cellWidth: 15 }, // OFA Sch
+        5: { cellWidth: 15 }, // OFA Act
+        6: { cellWidth: 15 }, // BFA Sch
+        7: { cellWidth: 15 }, // BFA Act
+        8: { cellWidth: 15 }, // FM Sch
+        9: { cellWidth: 15 }, // RTS
+        10: { cellWidth: 8 }, // Lead
+        11: { cellWidth: 15 }, // Erection
+        12: { cellWidth: 12 }, // B.Shop
+        13: { cellWidth: 12 }, // B.Field
+        14: { cellWidth: 12 }, // A.Shop
+        15: { cellWidth: 12 }, // A.Field
+        16: { cellWidth: 15 }, // Vendor
+        17: { cellWidth: 15 }, // Status
+        18: { cellWidth: 20 }  // Notes
       }
+
     });
     
     doc.save(`Schedule_${form.code}.pdf`);

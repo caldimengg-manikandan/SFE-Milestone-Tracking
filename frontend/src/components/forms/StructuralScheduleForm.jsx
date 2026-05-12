@@ -1,5 +1,6 @@
-import React from 'react';
-import { Plus, Trash2, Calendar } from 'lucide-react';
+import React, { useState } from 'react';
+import { Plus, Trash2, Calendar, LayoutList, Eye } from 'lucide-react';
+import FabricationDetailModal from './FabricationDetailModal';
 
 export default function StructuralScheduleForm({
   hideMetrics = false,
@@ -12,6 +13,14 @@ export default function StructuralScheduleForm({
   handleDeleteRow,
   setSelectedProjectId
 }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const openFabricationModal = (item) => {
+    setSelectedItem(item);
+    setIsModalOpen(true);
+  };
+
   const isViewOnly = mode === 'view';
 
   const formatDate = (dateStr) => {
@@ -91,6 +100,7 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-0 z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">SEQ #</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-[48px] z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Tons</th>
                 <th className="px-1 py-1 border-r border-white/10 w-48 sticky left-[96px] z-40 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Item Description</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Category</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled OFA Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual OFA Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled BFA Date</th>
@@ -130,11 +140,43 @@ export default function StructuralScheduleForm({
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-slate-200 sticky left-[96px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50">
+                    <div className="flex flex-col gap-1.5 p-1">
+                      <input 
+                        readOnly={isViewOnly}
+                        className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-white transition-all relative z-10" 
+                        value={row.item_description} 
+                        onChange={e => handleRowChange(row.id, 'item_description', e.target.value)} 
+                        placeholder="Item Description"
+                      />
+                      {!isViewOnly && (
+                        <div className="flex items-center gap-1">
+                          <button 
+                            onClick={() => openFabricationModal(row)}
+                            disabled={!row.is_new}
+                            className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-0.5 rounded transition-all border shadow-sm text-[8px] font-bold ${
+                              row.is_new 
+                                ? 'bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 border-slate-200 hover:border-amber-200' 
+                                : 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed opacity-60'
+                            }`}
+                          >
+                            <Plus className="w-2.5 h-2.5" /> Add Item
+                          </button>
+                          <button 
+                            onClick={() => openFabricationModal(row)}
+                            className="flex-1 flex items-center justify-center gap-1 px-1.5 py-0.5 bg-slate-100 hover:bg-blue-100 text-[8px] font-bold text-slate-600 hover:text-blue-700 rounded transition-all border border-slate-200 hover:border-blue-200 shadow-sm"
+                          >
+                            <Eye className="w-2.5 h-2.5" /> View {row.fabrication_details?.length > 0 && `(${row.fabrication_details.length})`}
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-1 py-1 border-r border-slate-200">
                     <input 
                       readOnly={isViewOnly}
-                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-white transition-all relative z-10" 
-                      value={row.item_description} 
-                      onChange={e => handleRowChange(row.id, 'item_description', e.target.value)} 
+                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all" 
+                      value={row.category || ''} 
+                      onChange={e => handleRowChange(row.id, 'category', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-slate-200">
@@ -282,6 +324,17 @@ export default function StructuralScheduleForm({
           </table>
         </div>
       </div>
+
+      <FabricationDetailModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        scheduleItem={selectedItem} 
+        onSave={(details) => {
+          if (selectedItem) {
+            handleRowChange(selectedItem.id, 'fabrication_details', details);
+          }
+        }}
+      />
     </div>
   );
 }
