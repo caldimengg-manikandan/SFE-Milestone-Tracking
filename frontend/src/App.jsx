@@ -12,7 +12,7 @@ import ProcessMaster from './pages/Production/ProcessMaster';
 
 export default function App() {
   return (
-    <Router>
+    <Router basename="/SFE">
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />

@@ -48,16 +48,21 @@ export default function Login() {
       }
     } catch (err) {
       if (!err.response) {
-        setError('Server error');
+        setError('Cannot reach server. Please check your internet connection.');
+      } else if (err.response.status === 500) {
+        setError('Server Error (500): Please ensure database migrations have been run on the backend.');
       } else {
         const errorData = err.response.data;
+        // Extract the first available error message from the response
         const errorMessage = 
+          (typeof errorData === 'string' ? errorData : null) ||
           errorData?.non_field_errors?.[0] || 
           errorData?.message || 
           errorData?.detail || 
-          errorData?.email?.[0] || 
-          errorData?.password?.[0] || 
-          'Invalid credentials';
+          (errorData?.email ? `Email: ${errorData.email[0]}` : null) ||
+          (errorData?.password ? `Password: ${errorData.password[0]}` : null) ||
+          (errorData?.username ? `Username: ${errorData.username[0]}` : null) ||
+          'Failed to process request. Please check your details.';
         setError(errorMessage);
       }
     } finally {
