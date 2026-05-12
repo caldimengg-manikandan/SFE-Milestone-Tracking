@@ -135,11 +135,6 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   };
 
   const handleSave = async () => {
-    if (!header.startDate || !header.endDate) {
-      alert('Please select start and end dates');
-      return;
-    }
-
     try {
       setLoading(true);
       const payload = {

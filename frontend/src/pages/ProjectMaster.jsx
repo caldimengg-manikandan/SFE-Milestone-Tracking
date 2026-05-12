@@ -16,6 +16,30 @@ export default function ProjectMaster() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatClock = (date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit', 
+      second: '2-digit', 
+      hour12: true 
+    }).toLowerCase();
+  };
+
+  const formatDateLong = (date) => {
+    return date.toLocaleDateString('en-GB', { 
+      weekday: 'long', 
+      day: 'numeric', 
+      month: 'long', 
+      year: 'numeric' 
+    });
+  };
 
   const [form, setForm] = useState({
     name: '',
@@ -194,7 +218,11 @@ export default function ProjectMaster() {
 
   
   const downloadProjectPDF = (project) => {
-    const projectSchedules = allSchedules.filter(s => (typeof s.project === "object" ? s.project.id : s.project) === project.id);
+    const projectSchedules = allSchedules.filter(s => {
+      const sId = typeof s.project === 'object' ? s.project.id : s.project;
+      return String(sId) === String(project.id);
+    });
+    
     if (projectSchedules.length === 0) {
       alert("No schedule data found for this project.");
       return;
@@ -301,7 +329,9 @@ export default function ProjectMaster() {
   };
 
 
-  const handleDetails = async (project) => {
+  const [viewMode, setViewMode] = useState('edit');
+
+  const handleDetails = async (project, mode = 'edit') => {
     setForm({
       ...project,
       name: project.name || '',
@@ -315,8 +345,14 @@ export default function ProjectMaster() {
       status: project.status || 'Planning',
       priority: project.priority || 'Medium'
     });
+    setViewMode(mode);
     setIsEditing(true);
-    const projSchedules = allSchedules.filter(s => (typeof s.project === "object" ? s.project.id : s.project) === project.id).map(s => ({...s, project: project.id}));
+    
+    const projSchedules = allSchedules.filter(s => {
+      const sId = typeof s.project === 'object' ? s.project.id : s.project;
+      return String(sId) === String(project.id);
+    }).map(s => ({...s, project: project.id}));
+
     if (projSchedules.length === 0) {
       projSchedules.push(createDefaultRow(project));
     }
@@ -349,6 +385,7 @@ export default function ProjectMaster() {
         res = await projectAPI.create(payload);
         setProjects([res.data, ...projects]);
         projectId = res.data.id;
+        setForm(res.data); // Update form with new ID to allow subsequent updates if schedule save fails
       }
 
       // Save schedules
@@ -466,7 +503,11 @@ export default function ProjectMaster() {
   const paginatedData = filtered.slice(startIndex, startIndex + itemsPerPage);
 
   return (
-    <div className="space-y-4 animate-fade-in">
+    <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6">
+      {/* Top Professional Header */}
+
+
+      <div className="space-y-4 animate-fade-in">
       {/* Control Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
         <div className="relative flex-1 max-w-md">
@@ -559,10 +600,10 @@ export default function ProjectMaster() {
                                             <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
                         <FileText className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDetails(p)} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
+                      <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
                         <Eye className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDetails(p)} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
+                      <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
                         <Edit2 className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => handleDelete(p.id)} className="p-1 rounded text-red-500 hover:bg-red-50" title="Delete">
@@ -614,6 +655,7 @@ export default function ProjectMaster() {
           </div>
         </div>
       </div>
+      </div>
 
       {showModal && (
         <ProjectForm 
@@ -625,6 +667,7 @@ export default function ProjectMaster() {
           initialTab={initialTab}
           setForm={setForm}
           handleSave={handleSave}
+          mode={viewMode}
           onClose={() => setShowModal(false)}
           isEditing={isEditing}
           loading={loading}

@@ -52,10 +52,18 @@ class ProductionPrioritySerializer(serializers.ModelSerializer):
     items = ProductionPriorityItemSerializer(many=True, read_only=True)
     items_input = serializers.JSONField(write_only=True, required=False)
     schedule_number = serializers.CharField(source='schedule.schedule_number', read_only=True)
+    project_names = serializers.SerializerMethodField()
+    project_codes = serializers.SerializerMethodField()
 
     class Meta:
         model = ProductionPriority
-        fields = ['id', 'schedule', 'schedule_number', 'module_type', 'process_type', 'rate', 'items', 'items_input', 'created_at']
+        fields = ['id', 'schedule', 'schedule_number', 'project_names', 'project_codes', 'module_type', 'process_type', 'rate', 'items', 'items_input', 'created_at']
+
+    def get_project_names(self, obj):
+        return ", ".join([p.name for p in obj.schedule.projects.all()]) or "N/A"
+    
+    def get_project_codes(self, obj):
+        return ", ".join([p.code for p in obj.schedule.projects.all()]) or "N/A"
 
     def create(self, validated_data):
         items_data = validated_data.pop('items_input', [])

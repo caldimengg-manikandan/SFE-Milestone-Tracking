@@ -2,8 +2,8 @@ from django.db import models
 
 class ProductionSchedule(models.Model):
     schedule_number = models.CharField(max_length=50, unique=True)
-    start_date = models.DateField()
-    end_date = models.DateField()
+    start_date = models.DateField(null=True, blank=True)
+    end_date = models.DateField(null=True, blank=True)
     projects = models.ManyToManyField('projects.Project', related_name='production_schedules', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -49,6 +49,8 @@ class ProductionPriorityItem(models.Model):
     sequence_number = models.CharField(max_length=100, null=True, blank=True)
     weight = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     rts_date = models.DateField(null=True, blank=True)
+    actual_ofa = models.DateField(null=True, blank=True)
+    actual_bfa = models.DateField(null=True, blank=True)
     run_days = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
     start_run_date = models.DateField(null=True, blank=True)
     complete_run_date = models.DateField(null=True, blank=True)

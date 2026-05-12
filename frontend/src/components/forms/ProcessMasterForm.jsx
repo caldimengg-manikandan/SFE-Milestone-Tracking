@@ -1,21 +1,29 @@
 import { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Calendar, Loader2, Columns, ChevronRight, CheckCircle2, Layers, Zap, LayoutGrid, FileText } from 'lucide-react';
-import { productionAPI, priorityAPI } from '../../services/api';
+import { X, Save, Plus, Trash2, Calendar, Loader2, Columns, ChevronRight, CheckCircle2, Layers, Zap, LayoutGrid, FileText, ChevronDown } from 'lucide-react';
+import { productionAPI, priorityAPI, projectAPI, scheduleAPI } from '../../services/api';
 
 const DEFAULT_COLUMNS = [
   { key: 'job', label: 'Job #', type: 'text', fixed: true },
   { key: 'seq', label: 'Seq #', type: 'text', fixed: true },
   { key: 'weight', label: 'Weight', type: 'number', fixed: true },
-  { key: 'rtsDate', label: 'Sched. OFA', type: 'date', fixed: true },
-  { key: 'actualOfa', label: 'Actual OFA', type: 'date', fixed: true },
-  { key: 'completeRunDate', label: 'Sched. BFA', type: 'readonly', fixed: true },
-  { key: 'actualBfa', label: 'Actual BFA', type: 'date', fixed: true },
+  { key: 'rtsDate', label: 'RTS Date', type: 'date', fixed: true },
+  { key: 'runDays', label: 'Run Days', type: 'readonly', fixed: true },
+  { key: 'startRunDate', label: 'Start Run Date', type: 'date', fixed: true },
+  { key: 'completeRunDate', label: 'Complete Run Date', type: 'readonly', fixed: true },
   { key: 'notes', label: 'Notes', type: 'text', fixed: true },
 ];
 
-const emptyRow = () => {
+const DEFAULT_RATES = {
+  'Plasma': 4500,
+  'Plate Over -1': 2000,
+  'Bent Plate': 3000,
+};
+
+const emptyRow = (jobNum = '', rtsDate = '') => {
   const row = {};
   DEFAULT_COLUMNS.forEach(col => { row[col.key] = ''; });
+  row.job = jobNum;
+  row.rtsDate = rtsDate;
   return row;
 };
 
@@ -29,81 +37,105 @@ const STEPS = [
 export default function ProcessMasterForm({ onClose, onSuccess, editRecord, preselectedScheduleId }) {
   const [activeStep, setActiveStep] = useState(0);
   const [selectedSchedule, setSelectedSchedule] = useState(editRecord?.schedule || preselectedScheduleId || '');
-  const [existingRecords, setExistingRecords] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [header, setHeader] = useState({
+    scheduleNumber: '',
+    startDate: '',
+    endDate: ''
+  });
+  const [existingRecords, setExistingRecords] = useState([]);
+  const [structuralItems, setStructuralItems] = useState([]);
   const [fetchingSchedules, setFetchingSchedules] = useState(true);
-  const [fetchingExisting, setFetchingExisting] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Sync rates when schedule changes
+  // Fetch initial data
   useEffect(() => {
-    if (selectedSchedule) {
-      const loadRates = async () => {
-        try {
-          const res = await priorityAPI.getAll({ schedule: selectedSchedule });
-          const records = res.data.results || res.data;
-          setExistingRecords(records);
-          
-          setSectionData(prev => {
-            const next = { ...prev };
-            records.forEach(r => {
-              if (next[r.process_type]) {
-                next[r.process_type].rate = r.rate;
-              }
-            });
-            return next;
-          });
-        } catch (e) {
-          console.error("Failed to load existing rates", e);
-        }
-      };
-      loadRates();
-    }
-  }, [selectedSchedule]);
-  
-  useEffect(() => {
-    const fetchExisting = async () => {
+    const fetchData = async () => {
       try {
-        setFetchingExisting(true);
-        const res = await priorityAPI.getAll(); 
-        setExistingRecords(res.data.results || res.data);
+        setFetchingSchedules(true);
+        const [schedRes, projRes, structRes] = await Promise.all([
+          productionAPI.getSchedules(),
+          projectAPI.getAll(),
+          scheduleAPI.getAll()
+        ]);
+        setSchedules(schedRes.data.results || schedRes.data);
+        setProjects(projRes.data.results || projRes.data);
+        setStructuralItems(structRes.data.results || structRes.data);
       } catch (e) {
-        console.error('Error fetching existing records:', e);
-      } finally {
-        setFetchingExisting(false);
-      }
-    };
-    fetchExisting();
-  }, []);
-  
-  const [sectionData, setSectionData] = useState(() => {
-    const data = {};
-    STEPS.forEach(step => {
-      if (step.processes) {
-        step.processes.forEach(proc => {
-          data[proc] = {
-            rate: '',
-            rows: [emptyRow()]
-          };
-        });
-      }
-    });
-    return data;
-  });
-
-  useEffect(() => {
-    const fetchSchedules = async () => {
-      try {
-        const res = await productionAPI.getSchedules();
-        setSchedules(res.data.results || res.data);
-      } catch (e) {
-        console.error('Error fetching schedules:', e);
+        console.error('Error fetching initial data:', e);
       } finally {
         setFetchingSchedules(false);
       }
     };
-    fetchSchedules();
+    fetchData();
   }, []);
+
+  // Sync header when schedule changes
+  useEffect(() => {
+    if (selectedSchedule) {
+      const sched = schedules.find(s => String(s.id) === String(selectedSchedule));
+      if (sched) {
+        setHeader({
+          scheduleNumber: sched.schedule_number,
+          startDate: sched.start_date,
+          endDate: sched.end_date
+        });
+        setSelectedProjectIds(sched.projects || []);
+      }
+    }
+  }, [selectedSchedule, schedules]);
+
+  // Load existing records for the schedule
+  useEffect(() => {
+    if (selectedSchedule) {
+      const loadExisting = async () => {
+        try {
+          const res = await priorityAPI.getAll({ schedule: selectedSchedule });
+          const records = res.data.results || res.data;
+          setExistingRecords(records);
+
+          if (records.length > 0) {
+            setSectionData(prev => {
+              // Deep copy to avoid stale references
+              const next = {};
+              for (const key of Object.keys(prev)) {
+                next[key] = { rate: prev[key].rate, rows: [...prev[key].rows] };
+              }
+              records.forEach(r => {
+                if (next[r.process_type]) {
+                  next[r.process_type].rate = r.rate;
+                  if (r.items && r.items.length > 0) {
+                    next[r.process_type].rows = r.items.map(item => {
+                      const weight = parseFloat(item.weight) || 0;
+                      const rate = parseFloat(r.rate) || 0;
+                      return {
+                        job: item.job_number || '',
+                        seq: item.sequence_number || '',
+                        weight: item.weight || '',
+                        rtsDate: item.rts_date || '',
+                        runDays: (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : (item.run_days || ''),
+                        startRunDate: item.actual_ofa || '',
+                        completeRunDate: item.complete_run_date || '',
+                        notes: item.notes || '',
+                        _machine: ''
+                      };
+                    });
+                  }
+                }
+              });
+              return next;
+            });
+          }
+        } catch (e) {
+          console.error("Failed to load existing data", e);
+        }
+      };
+      loadExisting();
+    }
+  }, [selectedSchedule]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -112,12 +144,106 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
   };
 
-  const updateSectionRate = (processName, rateValue) => {
-    setSectionData(prev => ({
-      ...prev,
-      [processName]: { ...prev[processName], rate: rateValue }
-    }));
-  };
+
+  // Auto-populate logic based on selected projects and machine types
+  useEffect(() => {
+    if (selectedProjectIds.length > 0 && structuralItems.length > 0 && !editRecord) {
+      setSectionData(prev => {
+        const next = {};
+        // Deep copy all process sections
+        for (const key of Object.keys(prev)) {
+          next[key] = { rate: prev[key].rate, rows: [...prev[key].rows] };
+        }
+        let dataChanged = false;
+
+        selectedProjectIds.forEach(projId => {
+          const proj = projects.find(p => String(p.id) === String(projId));
+          if (!proj) return;
+
+          // Filter structural items for this project
+          const projectStructs = structuralItems.filter(item =>
+            String(item.project) === String(projId) ||
+            (item.project?.id && String(item.project.id) === String(projId))
+          );
+
+          projectStructs.forEach(item => {
+            let fabDetails = item.fabrication_details || [];
+            if (typeof fabDetails === 'string') {
+              try { fabDetails = JSON.parse(fabDetails); } catch (e) { fabDetails = []; }
+            }
+
+            if (!Array.isArray(fabDetails) || fabDetails.length === 0) return;
+
+            fabDetails.forEach(fab => {
+              const machineName = fab.machine?.trim()?.toLowerCase();
+              if (!machineName) return;
+
+              const clean = (s) => s.replace(/[^a-z0-9]/g, '');
+              const cm = clean(machineName);
+
+              let matchedProc = null;
+              for (const step of STEPS) {
+                if (step.processes) {
+                  const found = step.processes.find(p => {
+                    const cp = clean(p.toLowerCase());
+                    if (cp.includes(cm) || cm.includes(cp)) return true;
+                    // Industrial aliases
+                    if (cp === 'ironworker' && cm === 'ironmaster') return true;
+                    if (cp === 'anglemaster' && cm === 'anglemaster') return true;
+                    return false;
+                  });
+                  if (found) { matchedProc = found; break; }
+                }
+              }
+
+              if (matchedProc && next[matchedProc]) {
+                const currentRows = next[matchedProc].rows;
+                const isInitialEmpty = currentRows.length === 1 && Object.values(currentRows[0]).every(v => v === '');
+                // Dedup key includes machine to allow same seq on different machines
+                const dupKey = `${proj.code}__${item.seq_no}__${cm}`;
+                const exists = currentRows.find(r => `${r.job}__${r.seq}__${clean(r._machine || '')}` === dupKey);
+
+                if (!exists) {
+                  const rate = parseFloat(next[matchedProc].rate) || 0;
+                  const weight = parseFloat(item.tons) || 0;
+                  const runDays = (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : '';
+                  const newRow = {
+                    job: proj.code,
+                    seq: item.seq_no,
+                    weight: item.tons,
+                    rtsDate: item.rts_date || '',
+                    runDays,
+                    startRunDate: '',
+                    completeRunDate: '',
+                    notes: item.item_description || item.notes || '',
+                    _machine: machineName // internal tracking key
+                  };
+                  if (isInitialEmpty) next[matchedProc].rows = [newRow];
+                  else next[matchedProc].rows = [...next[matchedProc].rows, newRow];
+                  dataChanged = true;
+                }
+              }
+            });
+          });
+        });
+        return dataChanged ? next : prev;
+      });
+    }
+  }, [selectedProjectIds, structuralItems, projects, editRecord]);
+
+  const [sectionData, setSectionData] = useState(() => {
+    const data = {};
+    STEPS.forEach(step => {
+      if (step.processes) {
+        step.processes.forEach(proc => {
+          data[proc] = { rate: DEFAULT_RATES[proc] || '', rows: [emptyRow()] };
+        });
+      }
+    });
+    return data;
+  });
+
+
 
   const updateRow = (processName, ridx, field, value) => {
     setSectionData(prev => {
@@ -125,15 +251,14 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
       const nextRows = [...next[processName].rows];
       nextRows[ridx] = { ...nextRows[ridx], [field]: value };
       
-      if (field === 'weight' || field === 'rtsDate') {
-        const r = parseFloat(next[processName].rate);
-        const w = parseFloat(nextRows[ridx].weight);
-        if (r > 0 && w > 0 && nextRows[ridx].rtsDate) {
-          const days = w / r;
-          const d = new Date(nextRows[ridx].rtsDate);
-          d.setDate(d.getDate() + Math.ceil(days));
-          nextRows[ridx].completeRunDate = d.toISOString().split('T')[0];
-        }
+      const r = parseFloat(next[processName].rate);
+      const w = parseFloat(nextRows[ridx].weight);
+      if (r > 0 && w > 0) nextRows[ridx].runDays = Math.ceil(w / r);
+      
+      if (nextRows[ridx].runDays && nextRows[ridx].startRunDate) {
+        const d = new Date(nextRows[ridx].startRunDate);
+        d.setDate(d.getDate() + parseInt(nextRows[ridx].runDays));
+        nextRows[ridx].completeRunDate = d.toISOString().split('T')[0];
       }
       
       next[processName].rows = nextRows;
@@ -141,24 +266,43 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     });
   };
 
+  const updateSectionRate = (proc, value) => {
+    setSectionData(prev => {
+      const next = { ...prev };
+      next[proc].rate = value;
+      const r = parseFloat(value);
+      next[proc].rows = next[proc].rows.map(row => {
+        const w = parseFloat(row.weight);
+        const runDays = (r > 0 && w > 0) ? Math.ceil(w / r) : row.runDays;
+        let completeDate = row.completeRunDate;
+        if (runDays && row.startRunDate) {
+          const d = new Date(row.startRunDate);
+          d.setDate(d.getDate() + parseInt(runDays));
+          completeDate = d.toISOString().split('T')[0];
+        }
+        return { ...row, runDays, completeRunDate: completeDate };
+      });
+      return next;
+    });
+  };
+
+  const updateCategoryRate = (categoryStepId, value) => {
+    const step = STEPS.find(s => s.id === categoryStepId);
+    if (!step || !step.processes) return;
+    step.processes.forEach(proc => updateSectionRate(proc, value));
+  };
+
   const addRow = (processName) => {
     setSectionData(prev => ({
       ...prev,
-      [processName]: {
-        ...prev[processName],
-        rows: [...prev[processName].rows, emptyRow()]
-      }
+      [processName]: { ...prev[processName], rows: [...prev[processName].rows, emptyRow()] }
     }));
   };
 
   const removeRow = (processName, ridx) => {
     setSectionData(prev => {
       if (prev[processName].rows.length <= 1) return prev;
-      const nextRows = prev[processName].rows.filter((_, i) => i !== ridx);
-      return {
-        ...prev,
-        [processName]: { ...prev[processName], rows: nextRows }
-      };
+      return { ...prev, [processName]: { ...prev[processName], rows: prev[processName].rows.filter((_, i) => i !== ridx) } };
     });
   };
 
@@ -183,16 +327,17 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
               sequence_number: r.seq || null,
               weight: r.weight || null,
               rts_date: r.rtsDate || null,
-              actual_ofa: r.actual_ofa || null,
+              actual_ofa: r.startRunDate || null,
               complete_run_date: r.completeRunDate || null,
-              actual_bfa: r.actual_bfa || null,
               notes: r.notes || null,
             })),
           };
-          await priorityAPI.create(payload);
+          const existing = existingRecords.find(r => r.process_type === proc);
+          if (existing) await priorityAPI.update(existing.id, payload);
+          else await priorityAPI.create(payload);
         }
       }
-      if (activeStep < STEPS.length - 1) { setActiveStep(prev => prev + 1); } 
+      if (activeStep < STEPS.length - 1) setActiveStep(prev => prev + 1);
       else { if (onSuccess) onSuccess(); onClose(); }
     } catch (err) {
       console.error('Step save error:', err);
@@ -200,7 +345,13 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     } finally { setLoading(false); }
   };
 
-  const selectedSchedNum = schedules.find(s => s.id == selectedSchedule)?.schedule_number || "---";
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjectIds(prev => prev.includes(projectId) ? prev.filter(id => id !== projectId) : [...prev, projectId]);
+  };
+
+  const selectedProject = schedules.find(s => s.id == selectedSchedule);
+  const selectedSchedNum = selectedProject?.schedule_number || (fetchingSchedules ? "Loading..." : "---");
+  const selectedProjName = selectedProject?.project_name || (fetchingSchedules ? "Loading projects..." : "Select a project to begin");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -229,36 +380,110 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
         <div className="flex-1 overflow-y-auto p-6 bg-slate-50/30">
           {activeStep === 0 ? (
             <div className="space-y-6 animate-fade-in max-w-5xl mx-auto">
-                {/* Schedule Header Box */}
-                <div className="bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl p-6 shadow-xl shadow-orange-500/10 flex items-center justify-between border-2 border-white">
-                   <div className="flex items-center gap-4">
-                     <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30">
-                        <Layers className="w-6 h-6" />
-                     </div>
-                     <div>
-                       <h2 className="text-white text-xl font-black tracking-tight">Schedule No: {selectedSchedNum}</h2>
-                       <p className="text-white/70 text-[9px] font-black uppercase tracking-widest">Project {selectedSchedNum}</p>
-                     </div>
-                   </div>
-                   <div className="w-56">
+                {/* 4-Column Header Box */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6 rounded-3xl bg-white border border-slate-200 shadow-sm relative overflow-visible">
+                  <div className="relative">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Schedule Number</label>
+                    <div className="relative">
                       <select
                         value={selectedSchedule}
                         onChange={(e) => setSelectedSchedule(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/30 text-white text-xs font-black outline-none focus:bg-white/20 transition-all cursor-pointer backdrop-blur-md appearance-none text-center"
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-white text-xs font-black outline-none focus:border-amber-400 transition-all cursor-pointer appearance-none pr-10"
                       >
-                        <option value="" className="text-slate-900">Select Project</option>
-                        {schedules.map(s => <option key={s.id} value={s.id} className="text-slate-900">{s.schedule_number}</option>)}
+                        <option value="">Select Schedule</option>
+                        {schedules.map(s => <option key={s.id} value={s.id}>{s.schedule_number}</option>)}
                       </select>
-                   </div>
+                      <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Start Date</label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={header.startDate}
+                        readOnly
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 outline-none"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">End Date</label>
+                    <div className="relative">
+                      <input
+                        type="date"
+                        value={header.endDate}
+                        readOnly
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-xs font-bold text-slate-600 outline-none"
+                      />
+                      <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5 ml-1">Select Projects</label>
+                    <div 
+                      onClick={() => setShowProjectDropdown(!showProjectDropdown)}
+                      className={`w-full px-4 py-2 rounded-xl border bg-white text-[10px] font-bold flex flex-wrap gap-1.5 cursor-pointer transition-all min-h-[42px] items-center pr-8 ${showProjectDropdown ? 'border-amber-400 ring-4 ring-amber-500/5' : 'border-slate-200 hover:border-slate-300'}`}
+                    >
+                      {selectedProjectIds.length === 0 ? (
+                        <span className="text-slate-400">Choose projects...</span>
+                      ) : (
+                        selectedProjectIds.map(id => {
+                          const p = projects.find(proj => proj.id === id);
+                          return p ? (
+                            <span key={id} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                              {p.code}
+                            </span>
+                          ) : null;
+                        })
+                      )}
+                      <ChevronDown className={`absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform duration-200 ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                    </div>
+
+                    {showProjectDropdown && (
+                      <div className="absolute z-[100] top-[105%] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-64 overflow-y-auto p-2 animate-in fade-in slide-in-from-top-2 duration-200">
+                        <div className="grid grid-cols-1 gap-1">
+                          {projects.map(p => {
+                            const isSelected = selectedProjectIds.includes(p.id);
+                            return (
+                              <div 
+                                key={p.id}
+                                onClick={(e) => { e.stopPropagation(); toggleProjectSelection(p.id); }}
+                                className={`flex items-center justify-between px-4 py-2.5 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-amber-50 text-amber-700' : 'hover:bg-slate-50 text-slate-600'}`}
+                              >
+                                <div className="flex flex-col">
+                                  <span className="text-xs font-black uppercase tracking-wider">{p.code}</span>
+                                  <span className="text-[10px] opacity-70 font-semibold">{p.name}</span>
+                                </div>
+                                {isSelected && <CheckCircle2 className="w-4 h-4 text-amber-500" />}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="flex flex-col gap-6">
                    {/* Plate Priority Section */}
                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                       <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-500"></div>
-                      <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500"><Plus className="w-3.5 h-3.5" /></div>
-                        Plate Priority
+                      <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-500"><Plus className="w-3.5 h-3.5" /></div>
+                          Plate Priority
+                        </div>
+                        <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 rounded-lg border border-amber-100">
+                           <span className="text-[9px] font-black text-amber-600 uppercase">Master Rate:</span>
+                           <input 
+                             type="number"
+                             onChange={(e) => updateCategoryRate('PLATE', e.target.value)}
+                             placeholder="Set for all"
+                             className="w-20 bg-transparent outline-none text-[10px] font-black text-amber-700"
+                           />
+                        </div>
                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {['Plasma', 'Plate Over -1', 'Bent Plate'].map(proc => (
@@ -282,10 +507,21 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                    {/* Angle Priority Section */}
                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                       <div className="absolute top-0 left-0 w-1.5 h-full bg-orange-500"></div>
-                      <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500"><Zap className="w-3.5 h-3.5" /></div>
-                        Angle Priority
-                      </h3>
+                       <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center justify-between gap-2">
+                         <div className="flex items-center gap-2">
+                           <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500"><Zap className="w-3.5 h-3.5" /></div>
+                           Angle Priority
+                         </div>
+                         <div className="flex items-center gap-2 px-3 py-1 bg-orange-50 rounded-lg border border-orange-100">
+                           <span className="text-[9px] font-black text-orange-600 uppercase">Master Rate:</span>
+                           <input 
+                             type="number"
+                             onChange={(e) => updateCategoryRate('ANGLE', e.target.value)}
+                             placeholder="Set for all"
+                             className="w-20 bg-transparent outline-none text-[10px] font-black text-orange-700"
+                           />
+                         </div>
+                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {['Angle Master', 'Ironworker', 'Peddinghaus (Large)'].map(proc => (
                           <div key={proc} className="space-y-1.5">
@@ -308,10 +544,21 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                    {/* Structural Priority Section */}
                    <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
                       <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-600"></div>
-                      <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><LayoutGrid className="w-3.5 h-3.5" /></div>
-                        Structural Priority
-                      </h3>
+                       <h3 className="text-xs font-black text-slate-900 mb-6 uppercase tracking-widest flex items-center justify-between gap-2">
+                         <div className="flex items-center gap-2">
+                           <div className="w-7 h-7 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600"><LayoutGrid className="w-3.5 h-3.5" /></div>
+                           Structural Priority
+                         </div>
+                         <div className="flex items-center gap-2 px-3 py-1 bg-amber-50 rounded-lg border border-amber-100">
+                           <span className="text-[9px] font-black text-amber-600 uppercase">Master Rate:</span>
+                           <input 
+                             type="number"
+                             onChange={(e) => updateCategoryRate('STRUCTURAL', e.target.value)}
+                             placeholder="Set for all"
+                             className="w-20 bg-transparent outline-none text-[10px] font-black text-amber-700"
+                           />
+                         </div>
+                       </h3>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {['Peddinghaus Drill Line', 'Ficep', 'Punch'].map(proc => (
                           <div key={proc} className="space-y-1.5">
@@ -397,12 +644,21 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-slate-50">
-                        {sectionData[proc].rows.map((row, ridx) => (
+                        {[...sectionData[proc].rows]
+                          .sort((a, b) => {
+                            if (!a.rtsDate && !b.rtsDate) return 0;
+                            if (!a.rtsDate) return 1;
+                            if (!b.rtsDate) return -1;
+                            return new Date(a.rtsDate) - new Date(b.rtsDate);
+                          })
+                          .map((row, ridx) => (
                           <tr key={ridx} className="hover:bg-slate-50/30 transition-colors">
                             {DEFAULT_COLUMNS.map(col => (
                               <td key={col.key} className="p-1.5">
                                 {col.type === 'readonly' ? (
-                                  <div className="w-full py-2 bg-slate-50 text-slate-400 text-center text-[9px] font-bold rounded-lg border border-dashed border-slate-200">{formatDate(row[col.key])}</div>
+                                  <div className="w-full py-2 bg-slate-50 text-slate-400 text-center text-[9px] font-bold rounded-lg border border-dashed border-slate-200">
+                                    {col.key === 'completeRunDate' ? formatDate(row[col.key]) : (row[col.key] || '-')}
+                                  </div>
                                 ) : col.type === 'date' ? (
                                   <div className="relative group/date">
                                     <input

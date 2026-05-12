@@ -30,7 +30,6 @@ const navSections = [
     label: 'MANAGEMENT',
     items: [
       { name: 'Employee Master', path: '/employees', icon: Users },
-      { name: 'Project Master', path: '/projects', icon: FolderKanban },
     ],
   },
   {
@@ -43,7 +42,6 @@ const navSections = [
     label: 'PRODUCTION MANAGEMENT',
     items: [
       { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
-      { name: 'Production Priority', path: '/production/priority-schedule', icon: ListChecks },
       { name: 'Production Priority Schedule', path: '/production/priority-schedule', icon: ListChecks },
     ],
   },
