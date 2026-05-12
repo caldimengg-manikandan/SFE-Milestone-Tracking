@@ -34,10 +34,17 @@ const navSections = [
     ],
   },
   {
+    label: 'PROJECT MANAGEMENT',
+    items: [
+      { name: 'Project Master & Structural Schedule', path: '/projects', icon: FolderKanban },
+    ],
+  },
+  {
     label: 'PRODUCTION MANAGEMENT',
     items: [
       { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
       { name: 'Production Priority', path: '/production/priority-schedule', icon: ListChecks },
+      { name: 'Production Priority Schedule', path: '/production/priority-schedule', icon: ListChecks },
     ],
   },
   {
