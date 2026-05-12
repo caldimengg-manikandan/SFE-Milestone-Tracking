@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
-import { X, Save, Plus, Trash2, Loader2 } from 'lucide-react';
+import { X, Save, Plus, Trash2, Loader2, ChevronDown } from 'lucide-react';
 import { productionAPI, projectAPI } from '../../services/api';
 
-export default function ProductionScheduleForm({ onClose, onSuccess, editSchedule }) {
+export default function ProductionScheduleForm({ onClose, onSuccess, editSchedule, nextNumber }) {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
+  const [selectedProjectIds, setSelectedProjectIds] = useState([]);
+  const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [header, setHeader] = useState({
-    scheduleNumber: 'Schedule-' + Math.floor(10 + Math.random() * 90),
+    scheduleNumber: `SCH-${String(nextNumber || 1).padStart(2, '0')}`,
     startDate: '',
     endDate: ''
   });
@@ -30,6 +32,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         startDate: editSchedule.start_date,
         endDate: editSchedule.end_date
       });
+      setSelectedProjectIds(editSchedule.projects || []);
 
       if (editSchedule.items && editSchedule.items.length > 0) {
         setRows(editSchedule.items.map((item, idx) => ({
@@ -44,6 +47,74 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       }
     }
   }, [editSchedule]);
+
+  // Auto-populate logic when projects or dates change
+  useEffect(() => {
+    if (selectedProjectIds.length > 0 && !editSchedule) {
+      const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
+      let allItems = [];
+      
+      selectedProjects.forEach(proj => {
+        if (proj.structural_schedules) {
+          proj.structural_schedules.forEach(item => {
+            let inRange = true;
+            if (header.startDate && header.endDate && item.rts_date) {
+              const rts = new Date(item.rts_date);
+              const start = new Date(header.startDate);
+              const end = new Date(header.endDate);
+              inRange = rts >= start && rts <= end;
+            }
+            
+            if (inRange) {
+              allItems.push({
+                job: proj.code,
+                seq: item.seq_no,
+                weight: item.tons,
+                quantity: 1,
+                rtsDate: item.rts_date || '',
+                shipDate: '',
+                notes: item.notes || '',
+                // For sorting
+                erectionDate: item.scheduled_erection_date || '',
+                priority: proj.priority || 'Medium'
+              });
+            }
+          });
+        }
+      });
+      
+      if (allItems.length > 0) {
+        // Sort items by RTS, then Seq, then Erection, then Priority
+        allItems.sort((a, b) => {
+          const dateA = new Date(a.rtsDate || '9999-12-31');
+          const dateB = new Date(b.rtsDate || '9999-12-31');
+          if (dateA - dateB !== 0) return dateA - dateB;
+
+          const seqA = parseFloat(a.seq) || 999;
+          const seqB = parseFloat(b.seq) || 999;
+          if (seqA !== seqB) return seqA - seqB;
+
+          const erecA = new Date(a.erectionDate || '9999-12-31');
+          const erecB = new Date(b.erectionDate || '9999-12-31');
+          if (erecA - erecB !== 0) return erecA - erecB;
+
+          const priorityMap = { 'High': 1, 'Medium': 2, 'Low': 3 };
+          const priA = priorityMap[a.priority] || 4;
+          const priB = priorityMap[b.priority] || 4;
+          return priA - priB;
+        });
+        setRows(allItems);
+      }
+    }
+  }, [selectedProjectIds, header.startDate, header.endDate, projects, editSchedule]);
+
+  const toggleProjectSelection = (projectId) => {
+    setSelectedProjectIds(prev => 
+      prev.includes(projectId) 
+        ? prev.filter(id => id !== projectId) 
+        : [...prev, projectId]
+    );
+  };
 
   const addRow = () => {
     const lastSeq = rows.length > 0 ? (parseInt(rows[rows.length - 1].seq) || 0) : 0;
@@ -75,6 +146,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         schedule_number: header.scheduleNumber,
         start_date: header.startDate,
         end_date: header.endDate,
+        projects: selectedProjectIds,
         items_input: rows.map(r => ({
           job_number: r.job,
           sequence_number: r.seq,
@@ -109,8 +181,8 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[95vw] lg:max-w-7xl flex flex-col overflow-hidden max-h-[95vh]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={() => setShowProjectDropdown(false)}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[95vw] lg:max-w-7xl flex flex-col overflow-hidden max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-slate-300 bg-white">
           <div className="flex items-center gap-3">
@@ -127,7 +199,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 p-6 rounded-2xl bg-slate-50 border border-slate-300">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-2xl bg-slate-50 border border-slate-300">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Schedule Number</label>
               <input
@@ -137,7 +209,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Production Start Date</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Start Date</label>
               <input
                 type="date"
                 value={header.startDate}
@@ -146,13 +218,69 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
               />
             </div>
             <div>
-              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Production End Date</label>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">End Date</label>
               <input
                 type="date"
                 value={header.endDate}
                 onChange={(e) => setHeader({ ...header, endDate: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
               />
+            </div>
+            <div className="relative">
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Select Projects</label>
+              <div 
+                onClick={(e) => { e.stopPropagation(); setShowProjectDropdown(!showProjectDropdown); }}
+                className={`w-full px-4 py-2.5 rounded-xl border bg-white text-[11px] font-bold flex flex-wrap gap-2 cursor-pointer transition-all min-h-[46px] items-center pr-10 ${showProjectDropdown ? 'border-amber-400 ring-4 ring-amber-500/5' : 'border-slate-300 hover:border-slate-400'}`}
+              >
+                {selectedProjectIds.length === 0 ? (
+                  <span className="text-slate-400">Choose projects...</span>
+                ) : (
+                  selectedProjectIds.map(id => {
+                    const p = projects.find(proj => proj.id === id);
+                    return p ? (
+                      <span key={id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200">
+                        {p.code}
+                        <X className="w-3 h-3 hover:text-red-500 transition-colors" onClick={(e) => { e.stopPropagation(); toggleProjectSelection(id); }} />
+                      </span>
+                    ) : null;
+                  })
+                )}
+                <div className="absolute right-4 top-[40px] opacity-40 group-hover:opacity-100 transition-opacity">
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                </div>
+              </div>
+
+              {showProjectDropdown && (
+                <div 
+                  className="absolute z-[100] top-[75px] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-64 overflow-y-auto p-2 animate-in fade-in slide-in-from-top-2 duration-200"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="grid grid-cols-1 gap-1">
+                    {projects.length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-400">No projects found</div>
+                    ) : projects.map(p => {
+                      const isSelected = selectedProjectIds.includes(p.id);
+                      return (
+                        <div 
+                          key={p.id}
+                          onClick={() => toggleProjectSelection(p.id)}
+                          className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-amber-50 text-amber-700 shadow-sm' : 'hover:bg-slate-50 text-slate-600'}`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="text-xs font-black uppercase tracking-wider">{p.code}</span>
+                            <span className="text-[10px] opacity-70 font-semibold">{p.name}</span>
+                          </div>
+                          {isSelected && (
+                            <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-md">
+                              <Save className="w-2.5 h-2.5 text-white" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -190,23 +318,13 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                     {rows.map((row, index) => (
                       <tr key={index} className="hover:bg-white transition-colors group">
                         <td className="p-2">
-                          <select
-                            multiple
-                            value={(row.job || '').split(', ').filter(x => x)}
-                            onChange={(e) => {
-                              const values = Array.from(e.target.selectedOptions, o => o.value);
-                              updateRow(index, 'job', values.join(', '));
-                            }}
+                          <input
+                            value={row.job}
+                            onChange={(e) => updateRow(index, 'job', e.target.value)}
                             disabled={loading}
-                            className="w-full px-2 py-1 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[11px] font-bold transition-all min-h-[48px]"
-                          >
-                            {projects.map(p => (
-                              <option key={p.id} value={`${p.code} - ${p.name}`}>
-                                {p.code} | {p.name}
-                              </option>
-                            ))}
-                          </select>
-                          <div className="text-[8px] text-slate-400 mt-0.5 pl-1">Ctrl+Click to select multiple</div>
+                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[11px] font-bold transition-all"
+                            placeholder="Job #"
+                          />
                         </td>
                         <td className="p-2 text-center">
                           <div className="w-full py-2 px-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-center text-sm rounded-lg">

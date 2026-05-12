@@ -179,6 +179,16 @@ export default function ProjectMaster() {
     }
   };
 
+  // Automatically sync project-level erection date to the first schedule row
+  useEffect(() => {
+    if (schedules.length > 0 && schedules[0].is_new) {
+      const firstRow = schedules[0];
+      if (form.erection_date && firstRow.scheduled_erection_date !== form.erection_date) {
+        handleScheduleChange(firstRow.id, 'scheduled_erection_date', form.erection_date);
+      }
+    }
+  }, [form.erection_date]);
+
   
   
 

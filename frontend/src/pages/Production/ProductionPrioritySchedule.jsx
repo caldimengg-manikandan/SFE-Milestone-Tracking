@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, ClipboardList, FileText } from "lucide-react";
 import ProductionScheduleForm from '../../components/forms/ProductionScheduleForm';
 import { productionAPI } from '../../services/api';
@@ -11,6 +11,7 @@ export default function ProductionPrioritySchedule() {
   const [loading, setLoading] = useState(true);
   const [editSchedule, setEditSchedule] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
+  const [expandedId, setExpandedId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
@@ -29,6 +30,16 @@ export default function ProductionPrioritySchedule() {
   useEffect(() => {
     fetchSchedules();
   }, []);
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '-';
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}-${m}-${y}`;
+  };
 
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this schedule and all its items?')) {
@@ -56,6 +67,10 @@ export default function ProductionPrioritySchedule() {
     setShowPlanModal(true);
   };
 
+  const toggleExpand = (id) => {
+    setExpandedId(expandedId === id ? null : id);
+  };
+
   
   const exportToCSV = () => {
     const headers = ["Schedule Number", "Start Date", "End Date"];
@@ -77,10 +92,6 @@ export default function ProductionPrioritySchedule() {
     document.body.removeChild(link);
   };
 
-  const handlePrint = () => {
-    window.print();
-  };
-
   const filteredSchedules = schedules.filter(s => 
     s.schedule_number.toLowerCase().includes(search.toLowerCase())
   );
@@ -100,7 +111,7 @@ export default function ProductionPrioritySchedule() {
             type="text" 
             placeholder="Search by Schedule #..." 
             value={search} 
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1);; setCurrentPage(1); }} 
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} 
             className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
           />
           {search && (
@@ -159,50 +170,113 @@ export default function ProductionPrioritySchedule() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {paginatedData.map((schedule) => (
-                  <tr key={schedule.id} className="hover:bg-slate-50/50 transition-colors group text-[12px]">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center text-amber-600 shrink-0 font-bold text-[10px] border border-amber-100">
-                          {schedule.schedule_number.split('-')[1] || '01'}
+                  <Fragment key={schedule.id}>
+                    <tr 
+                      className={`hover:bg-slate-50/50 transition-colors group cursor-pointer text-[12px] ${expandedId === schedule.id ? 'bg-slate-50' : ''}`}
+                      onClick={() => toggleExpand(schedule.id)}
+                    >
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-bold text-[10px] border transition-all ${expandedId === schedule.id ? 'bg-amber-500 text-white border-amber-600' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                            {schedule.schedule_number.split('-')[1] || '01'}
+                          </div>
+                          <span className="font-bold text-slate-800">{schedule.schedule_number}</span>
                         </div>
-                        <span className="font-bold text-slate-800">{schedule.schedule_number}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">{schedule.start_date}</td>
-                    <td className="px-6 py-4 text-slate-600 font-medium">{schedule.end_date}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-end gap-1">
-                        <button 
-                          onClick={() => openPlan(schedule)}
-                          className="flex items-center gap-1 px-2 py-1 rounded bg-indigo-50 text-indigo-600 text-[10px] font-bold hover:bg-indigo-100 transition-all"
-                          title="Plan Details"
-                        >
-                          <ClipboardList className="w-3 h-3" /> Plan
-                        </button>
-                        <button 
-                          onClick={() => openPlan(schedule)}
-                          className="p-1.5 rounded text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-colors" 
-                          title="View"
-                        >
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => openEdit(schedule)}
-                          className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" 
-                          title="Edit"
-                        >
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button 
-                          onClick={() => handleDelete(schedule.id)}
-                          className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" 
-                          title="Delete"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
+                      </td>
+                      <td className="px-6 py-4 text-slate-600 font-medium">{formatDate(schedule.start_date)}</td>
+                      <td className="px-6 py-4 text-slate-600 font-medium">{formatDate(schedule.end_date)}</td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-1">
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); openEdit(schedule); }}
+                            className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" 
+                            title="Edit"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button 
+                            onClick={(e) => { e.stopPropagation(); handleDelete(schedule.id); }}
+                            className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" 
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                    {expandedId === schedule.id && (
+                      <tr>
+                        <td colSpan="4" className="px-0 py-4 bg-slate-50/50">
+                          <div className="border-y border-slate-200 overflow-hidden shadow-inner bg-white animate-in slide-in-from-top-4 duration-300">
+                            <table className="w-full text-left border-collapse">
+                              <thead>
+                                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider w-20 text-center">Serial No.</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Job #</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Seq #</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Quantity</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">RTS Date</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Ship Date</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Notes</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {(() => {
+                                  const sortedItems = [...(schedule.items || [])].sort((a, b) => {
+                                    // 1. RTS Date (Soonest first)
+                                    const dateA = new Date(a.rts_date || '9999-12-31');
+                                    const dateB = new Date(b.rts_date || '9999-12-31');
+                                    if (dateA - dateB !== 0) return dateA - dateB;
+
+                                    // 2. Sequence (Lowest first)
+                                    const seqA = parseFloat(a.sequence_number) || 999;
+                                    const seqB = parseFloat(b.sequence_number) || 999;
+                                    if (seqA !== seqB) return seqA - seqB;
+
+                                    // 3. Schedule Erection Date (Soonest first)
+                                    const erecA = new Date(a.scheduled_erection_date || '9999-12-31');
+                                    const erecB = new Date(b.scheduled_erection_date || '9999-12-31');
+                                    if (erecA - erecB !== 0) return erecA - erecB;
+
+                                    // 4. Project Priority (High > Medium > Low)
+                                    const priorityMap = { 'High': 1, 'Medium': 2, 'Low': 3 };
+                                    const priA = priorityMap[a.project_priority] || 4;
+                                    const priB = priorityMap[b.project_priority] || 4;
+                                    return priA - priB;
+                                  });
+
+                                  return sortedItems.length > 0 ? sortedItems.map((item, idx) => (
+                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-[11px]">
+                                      <td className="px-4 py-3 text-center">
+                                        <span className="w-6 h-6 inline-flex items-center justify-center rounded bg-amber-100 text-amber-700 font-bold text-[9px]">
+                                          {idx + 1}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-3 font-bold text-slate-800">{item.job_number}</td>
+                                      <td className="px-4 py-3 text-center text-slate-600 font-bold">{item.sequence_number}</td>
+                                      <td className="px-4 py-3 text-center text-orange-600 font-black">{item.weight}</td>
+                                      <td className="px-4 py-3 text-center text-slate-500 font-bold">{item.quantity}</td>
+                                      <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.rts_date)}</td>
+                                      <td className="px-4 py-3 text-slate-400">—</td>
+                                      <td className="px-4 py-3 text-slate-400 italic text-[10px]">{item.notes || '—'}</td>
+                                    </tr>
+                                  )) : (
+                                    <tr>
+                                      <td colSpan="8" className="px-6 py-8 text-center text-slate-400 italic">No production items defined for this schedule</td>
+                                    </tr>
+                                  );
+                                })()}
+                              </tbody>
+                            </table>
+                            <div className="bg-slate-50 px-6 py-2 border-t border-slate-100 flex items-center">
+                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{schedule.items?.length || 0} Production Items Tracked</span>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
                 ))}
               </tbody>
             </table>
@@ -249,6 +323,7 @@ export default function ProductionPrioritySchedule() {
           onClose={() => setShowModal(false)} 
           onSuccess={fetchSchedules}
           editSchedule={editSchedule}
+          nextNumber={schedules.length + 1}
         />
       )}
     </div>
