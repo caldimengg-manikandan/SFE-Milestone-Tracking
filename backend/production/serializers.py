@@ -1,5 +1,6 @@
 from rest_framework import serializers
 from .models import ProductionSchedule, ProductionItem, ProductionPriority, ProductionPriorityItem
+from projects.models import Project
 
 class ProductionItemSerializer(serializers.ModelSerializer):
     class Meta:
@@ -9,24 +10,32 @@ class ProductionItemSerializer(serializers.ModelSerializer):
 class ProductionScheduleSerializer(serializers.ModelSerializer):
     items = ProductionItemSerializer(many=True, read_only=True)
     items_input = serializers.JSONField(write_only=True, required=False)
+    projects = serializers.PrimaryKeyRelatedField(many=True, queryset=Project.objects.all(), required=False)
 
     class Meta:
         model = ProductionSchedule
-        fields = ['id', 'schedule_number', 'start_date', 'end_date', 'items', 'items_input', 'created_at', 'updated_at']
+        fields = ['id', 'schedule_number', 'start_date', 'end_date', 'projects', 'items', 'items_input', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         items_data = validated_data.pop('items_input', [])
+        projects_data = validated_data.pop('projects', [])
         schedule = ProductionSchedule.objects.create(**validated_data)
+        schedule.projects.set(projects_data)
         for item_data in items_data:
             ProductionItem.objects.create(schedule=schedule, **item_data)
         return schedule
 
     def update(self, instance, validated_data):
         items_data = validated_data.pop('items_input', None)
+        projects_data = validated_data.pop('projects', None)
+        
         instance.schedule_number = validated_data.get('schedule_number', instance.schedule_number)
         instance.start_date = validated_data.get('start_date', instance.start_date)
         instance.end_date = validated_data.get('end_date', instance.end_date)
         instance.save()
+
+        if projects_data is not None:
+            instance.projects.set(projects_data)
 
         if items_data is not None:
             instance.items.all().delete()

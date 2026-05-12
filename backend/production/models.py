@@ -4,6 +4,7 @@ class ProductionSchedule(models.Model):
     schedule_number = models.CharField(max_length=50, unique=True)
     start_date = models.DateField()
     end_date = models.DateField()
+    projects = models.ManyToManyField('projects.Project', related_name='production_schedules', blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

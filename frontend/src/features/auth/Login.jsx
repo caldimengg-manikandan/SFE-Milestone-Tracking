@@ -50,7 +50,15 @@ export default function Login() {
       if (!err.response) {
         setError('Server error');
       } else {
-        setError(err.response.data?.message || err.response.data?.detail || err.response.data?.email?.[0] || err.response.data?.password?.[0] || 'Invalid credentials');
+        const errorData = err.response.data;
+        const errorMessage = 
+          errorData?.non_field_errors?.[0] || 
+          errorData?.message || 
+          errorData?.detail || 
+          errorData?.email?.[0] || 
+          errorData?.password?.[0] || 
+          'Invalid credentials';
+        setError(errorMessage);
       }
     } finally {
       setLoading(false);
