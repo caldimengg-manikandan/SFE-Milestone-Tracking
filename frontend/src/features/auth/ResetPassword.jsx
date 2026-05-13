@@ -53,10 +53,13 @@ export default function ResetPassword() {
       <div className="w-full max-w-md">
         <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
           <div className="flex items-center gap-3 mb-8">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-md">
-              <Building2 className="w-5 h-5 text-white" />
+            <div className="w-10 h-9 bg-white rounded flex items-center justify-center shadow-md p-0.5">
+              <img src="/SFE/steelfab_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-lg font-bold text-slate-800">Steel Fab</span>
+            <div className="flex flex-col">
+              <span className="text-lg font-bold text-slate-800 leading-tight block">Steel Fab</span>
+              <span className="text-[10px] font-bold text-amber-500 tracking-widest uppercase block -mt-1">ENTERPRISES</span>
+            </div>
           </div>
 
           {!success ? (

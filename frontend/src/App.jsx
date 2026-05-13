@@ -9,6 +9,8 @@ import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
 import ProcessMaster from './pages/Production/ProcessMaster';
+import CustomerMaster from './pages/CustomerMaster';
+import DetailerMaster from './pages/DetailerMaster';
 
 export default function App() {
   return (
@@ -31,6 +33,8 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="employees" element={<EmployeeMaster />} />
+          <Route path="customers" element={<CustomerMaster />} />
+          <Route path="management" element={<DetailerMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
           
           {/* Production Management Routes */}

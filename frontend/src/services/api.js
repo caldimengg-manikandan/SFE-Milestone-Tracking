@@ -97,7 +97,25 @@ export const priorityAPI = {
 
 /* ── Dashboard API ── */
 export const dashboardAPI = {
-  getStats: () => api.get('/dashboard/stats/'),
+    getStats: (params) => api.get('/dashboard/stats/', { params }),
 };
 
 export default api;
+
+/* -- Customer API -- */
+export const customerAPI = {
+  getAll: (params = {}) => api.get('/projects/customers/', { params }),
+  getById: (id) => api.get(`/projects/customers/${id}/`),
+  create: (data) => api.post('/projects/customers/', data),
+  update: (id, data) => api.put(`/projects/customers/${id}/`, data),
+  delete: (id) => api.delete(`/projects/customers/${id}/`),
+};
+
+/* -- Detailer API -- */
+export const detailerAPI = {
+  getAll: (params = {}) => api.get('/projects/detailers/', { params }),
+  getById: (id) => api.get(`/projects/detailers/${id}/`),
+  create: (data) => api.post('/projects/detailers/', data),
+  update: (id, data) => api.put(`/projects/detailers/${id}/`, data),
+  delete: (id) => api.delete(`/projects/detailers/${id}/`),
+};

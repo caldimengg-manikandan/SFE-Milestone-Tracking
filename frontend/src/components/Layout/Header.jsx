@@ -62,11 +62,7 @@ export default function Header({ onMenuClick }) {
     navigate('/login');
   };
 
-  const notifications = [
-    { id: 1, title: 'New milestone submitted', desc: 'Project Alpha — Phase 3 completed', time: '5m ago', unread: true },
-    { id: 2, title: 'Employee onboarded', desc: 'Rajesh Kumar joined the team', time: '1h ago', unread: true },
-    { id: 3, title: 'Payment approved', desc: 'Invoice #INV-2026-045 cleared', time: '3h ago', unread: false },
-  ];
+  const notifications = [];
 
   const unreadCount = notifications.filter((n) => n.unread).length;
 
@@ -154,12 +150,19 @@ export default function Header({ onMenuClick }) {
                 <span className="text-sm font-bold text-slate-800">Notifications</span>
               </div>
               <div className="max-h-72 overflow-y-auto scrollbar-thin">
-                {notifications.map((notif) => (
-                  <div key={notif.id} className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0">
-                    <p className="text-sm font-semibold text-slate-700">{notif.title}</p>
-                    <p className="text-xs text-slate-500">{notif.desc}</p>
+                {notifications.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-slate-400">
+                    <p className="text-sm font-semibold">No new notifications</p>
+                    <p className="text-xs mt-1">You're all caught up!</p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map((notif) => (
+                    <div key={notif.id} className="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0">
+                      <p className="text-sm font-semibold text-slate-700">{notif.title}</p>
+                      <p className="text-xs text-slate-500">{notif.desc}</p>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           )}

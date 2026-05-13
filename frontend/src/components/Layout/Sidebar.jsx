@@ -30,6 +30,8 @@ const navSections = [
     label: 'MANAGEMENT',
     items: [
       { name: 'Employee Master', path: '/employees', icon: Users },
+      { name: 'Customer Master', path: '/customers', icon: Building2 },
+      { name: 'Detailer Master', path: '/management', icon: Layers },
     ],
   },
   {
@@ -107,12 +109,12 @@ export default function Sidebar({
         <div className="h-[72px] flex items-center px-5 border-b border-white/[0.06] shrink-0">
           <div className="flex items-center gap-3 min-w-0 overflow-hidden">
             {/* Brand Icon */}
-            <div className="relative w-10 h-10 shrink-0">
-              <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-lg shadow-amber-500/25">
-                <Building2 className="w-5 h-5 text-white" strokeWidth={2} />
-              </div>
-              {/* Pulse dot */}
-              <div className="absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0c1222]" />
+            <div className="relative w-12 h-10 shrink-0 bg-white rounded flex items-center justify-center p-0.5">
+              <img 
+                src="/SFE/steelfab_logo.png" 
+                alt="Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
 
             {/* Brand Text */}

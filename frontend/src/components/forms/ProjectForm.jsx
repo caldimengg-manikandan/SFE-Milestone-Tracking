@@ -3,6 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight } from 'lucide-react';
 import StructuralScheduleForm from './StructuralScheduleForm';
+import { customerAPI, detailerAPI } from '../../services/api';
 
 export default function ProjectForm({ 
   schedules,
@@ -19,6 +20,24 @@ export default function ProjectForm({
   initialTab = "basic"
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [customers, setCustomers] = useState([]);
+  const [detailers, setDetailers] = useState([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [custRes, detRes] = await Promise.all([
+          customerAPI.getAll(),
+          detailerAPI.getAll()
+        ]);
+        setCustomers(custRes.data.results || custRes.data);
+        setDetailers(detRes.data.results || detRes.data);
+      } catch (err) {
+        console.error('Failed to load masters', err);
+      }
+    };
+    fetchData();
+  }, []);
 
   const exportToPDF = () => {
     const doc = new jsPDF('l', 'mm', 'a4');
@@ -204,21 +223,29 @@ export default function ProjectForm({
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer Name</label>
-                <input 
-                  value={form.customer_name}
+                <select 
+                  value={form.customer_name || ''}
                   onChange={e => setForm({...form, customer_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                  placeholder="Enter customer" 
-                />
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="">Select Customer</option>
+                  {customers.map(c => (
+                    <option key={c.id} value={c.name}>{c.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
-                <input 
-                  value={form.detailer_name}
+                <select 
+                  value={form.detailer_name || ''}
                   onChange={e => setForm({...form, detailer_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                  placeholder="Enter detailer" 
-                />
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="">Select Detailer</option>
+                  {detailers.map(d => (
+                    <option key={d.id} value={d.name}>{d.name}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>

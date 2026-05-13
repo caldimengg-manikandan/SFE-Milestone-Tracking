@@ -23,3 +23,70 @@ class ProjectSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+from .models import Customer, CustomerContact, Detailer, DetailerContact
+
+class CustomerContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CustomerContact
+        fields = ['id', 'person', 'email', 'phone']
+
+class CustomerSerializer(serializers.ModelSerializer):
+    contacts = CustomerContactSerializer(many=True, required=False)
+
+    class Meta:
+        model = Customer
+        fields = ['id', 'name', 'code', 'category', 'country', 'contacts', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        contacts_data = validated_data.pop('contacts', [])
+        customer = Customer.objects.create(**validated_data)
+        for contact_data in contacts_data:
+            CustomerContact.objects.create(customer=customer, **contact_data)
+        return customer
+
+    def update(self, instance, validated_data):
+        contacts_data = validated_data.pop('contacts', None)
+        instance.name = validated_data.get('name', instance.name)
+        instance.code = validated_data.get('code', instance.code)
+        instance.category = validated_data.get('category', instance.category)
+        instance.country = validated_data.get('country', instance.country)
+        instance.save()
+
+        if contacts_data is not None:
+            instance.contacts.all().delete()
+            for contact_data in contacts_data:
+                CustomerContact.objects.create(customer=instance, **contact_data)
+                
+        return instance
+
+class DetailerContactSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = DetailerContact
+        fields = ['id', 'person', 'email', 'phone']
+
+class DetailerSerializer(serializers.ModelSerializer):
+    contacts = DetailerContactSerializer(many=True, required=False)
+
+    class Meta:
+        model = Detailer
+        fields = ['id', 'name', 'code', 'contacts', 'created_at', 'updated_at']
+
+    def create(self, validated_data):
+        contacts_data = validated_data.pop('contacts', [])
+        detailer = Detailer.objects.create(**validated_data)
+        for contact_data in contacts_data:
+            DetailerContact.objects.create(detailer=detailer, **contact_data)
+        return detailer
+
+    def update(self, instance, validated_data):
+        contacts_data = validated_data.pop('contacts', None)
+        instance.name = validated_data.get('name', instance.name)
+        instance.code = validated_data.get('code', instance.code)
+        instance.save()
+
+        if contacts_data is not None:
+            instance.contacts.all().delete()
+            for contact_data in contacts_data:
+                DetailerContact.objects.create(detailer=instance, **contact_data)
+                
+        return instance

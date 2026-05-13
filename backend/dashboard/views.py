@@ -24,11 +24,8 @@ class DashboardStatsView(APIView):
 
     def get(self, request):
         # 1. Basic Stats
-        total_employees = Employee.objects.count()
+        total_projects = Project.objects.count()
         active_projects = Project.objects.filter(status='In Progress').count()
-        
-        # For active jobs, let's count ProductionPriorityItems that are not complete
-        active_jobs = ProductionPriorityItem.objects.filter(is_complete=False).count()
         
         # Efficiency rate - for now, let's calculate based on completed vs total priority items
         total_jobs = ProductionPriorityItem.objects.count()
@@ -36,7 +33,11 @@ class DashboardStatsView(APIView):
         efficiency_rate = (completed_jobs / total_jobs * 100) if total_jobs > 0 else 0
 
         # 2. Gantt Chart Data (Production Throughput)
-        schedules = ProductionSchedule.objects.all().order_by('start_date')
+        year = request.query_params.get('year')
+        schedules = ProductionSchedule.objects.all()
+        if year:
+            schedules = schedules.filter(start_date__year=year)
+        schedules = schedules.order_by('start_date')
         gantt_tasks = []
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
         color_palette = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6']
@@ -46,13 +47,26 @@ class DashboardStatsView(APIView):
                 if schedule.start_date and schedule.end_date:
                     start_month = schedule.start_date.month - 1
                     duration = (schedule.end_date.year - schedule.start_date.year) * 12 + (schedule.end_date.month - schedule.start_date.month) + 1
+                    items_data = []
+                    for item in schedule.items.all():
+                        items_data.append({
+                            'job_number': item.job_number,
+                            'sequence_number': item.sequence_number,
+                            'weight': str(item.weight) if item.weight else '0.00',
+                            'quantity': item.quantity,
+                            'rts_date': item.rts_date.isoformat() if item.rts_date else None,
+                            'ship_date': item.ship_date.isoformat() if item.ship_date else None,
+                            'notes': item.notes,
+                        })
+
                     gantt_tasks.append({
                         'id': schedule.id,
                         'name': schedule.schedule_number,
                         'startMonth': start_month,
                         'duration': max(1, duration),
                         'color': color_palette[idx % len(color_palette)],
-                        'priority': 'High' if schedule.items.count() > 5 else 'Medium'
+                        'priority': 'High' if schedule.items.count() > 5 else 'Medium',
+                        'items': items_data
                     })
             if len(gantt_tasks) < 3:
                 extras = [
@@ -64,7 +78,10 @@ class DashboardStatsView(APIView):
                     gantt_tasks.append(extra)
         else:
             # Try using projects if no production schedules exist
-            project_timelines = Project.objects.filter(erection_date__isnull=False).order_by('created_at')
+            project_timelines = Project.objects.filter(erection_date__isnull=False)
+            if year:
+                project_timelines = project_timelines.filter(erection_date__year=year)
+            project_timelines = project_timelines.order_by('created_at')
             if project_timelines.exists():
                 for idx, project in enumerate(project_timelines):
                     start_date = project.created_at.date()
@@ -161,9 +178,8 @@ class DashboardStatsView(APIView):
 
         return Response({
             'stats': [
-                {'label': 'Total Employees', 'value': str(total_employees), 'change': '+0%', 'up': True},
+                {'label': 'Total Projects', 'value': str(total_projects), 'change': '+0', 'up': True},
                 {'label': 'Active Projects', 'value': str(active_projects), 'change': '+0', 'up': True},
-                {'label': 'Active Jobs', 'value': str(active_jobs), 'change': '+0%', 'up': True},
                 {'label': 'Efficiency Rate', 'value': f"{int(efficiency_rate)}%", 'change': '+0%', 'up': True},
             ],
             'ganttData': {

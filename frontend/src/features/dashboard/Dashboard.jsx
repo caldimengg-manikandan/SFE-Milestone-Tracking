@@ -11,9 +11,8 @@ import { dashboardAPI } from '../../services/api';
 
 /* ── Configs ── */
 const statConfigs = {
-  'Total Employees': { icon: Users, iconBg: 'bg-amber-100', color: 'text-amber-600' },
-  'Active Projects': { icon: FolderKanban, iconBg: 'bg-blue-100', color: 'text-blue-600' },
-  'Active Jobs': { icon: Box, iconBg: 'bg-emerald-100', color: 'text-emerald-600' },
+  'Total Projects': { icon: FolderKanban, iconBg: 'bg-amber-100', color: 'text-amber-600' },
+  'Active Projects': { icon: Box, iconBg: 'bg-blue-100', color: 'text-blue-600' },
   'Efficiency Rate': { icon: TrendingUp, iconBg: 'bg-purple-100', color: 'text-purple-600' },
 };
 
@@ -25,6 +24,9 @@ const announcements = [
 
 export default function Dashboard() {
   const [period, setPeriod] = useState('7d');
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [fromMonth, setFromMonth] = useState(0);
+  const [toMonth, setToMonth] = useState(11);
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState({
     stats: [],
@@ -33,12 +35,27 @@ export default function Dashboard() {
     barData: [],
     recentActivities: []
   });
+  const [expandedTaskId, setExpandedTaskId] = useState(null);
+
+  const toggleExpand = (id) => {
+    setExpandedTaskId(expandedTaskId === id ? null : id);
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return '-';
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${d}-${m}-${y}`;
+  };
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await dashboardAPI.getStats();
+        const response = await dashboardAPI.getStats({ year: selectedYear });
         setData(response.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -48,7 +65,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [selectedYear]);
 
   if (loading) {
     return (
@@ -84,7 +101,7 @@ export default function Dashboard() {
       </div>
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {data.stats.map((s, i) => {
           const config = statConfigs[s.label] || { icon: Users, iconBg: 'bg-slate-100', color: 'text-slate-600' };
           const Icon = config.icon;
@@ -111,10 +128,10 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Gantt Chart — Production Throughput */}
-        <div className="lg:col-span-2 bg-white border border-slate-300 overflow-hidden">
+        <div className="lg:col-span-3 bg-white border border-slate-300 overflow-hidden">
           <div className="p-8 border-bottom border-slate-100 flex items-center justify-between">
             <div>
-              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Production Throughput</h3>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Milestone Management</h3>
               <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gantt Chart • Project Timelines & Prioritization</p>
             </div>
             <div className="flex items-center gap-4">
@@ -122,24 +139,47 @@ export default function Dashboard() {
                 <div className="w-2 h-2 bg-amber-500" />
                 <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">High Priority</span>
               </div>
+              <select
+                value={fromMonth}
+                onChange={(e) => setFromMonth(parseInt(e.target.value))}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1 outline-none bg-white cursor-pointer"
+              >
+                {['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map((m, i) => (
+                  <option key={i} value={i} disabled={i > toMonth}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={toMonth}
+                onChange={(e) => setToMonth(parseInt(e.target.value))}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1 outline-none bg-white cursor-pointer"
+              >
+                {['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map((m, i) => (
+                  <option key={i} value={i} disabled={i < fromMonth}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(e.target.value)}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1 outline-none bg-white cursor-pointer"
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
               <BarChart3 className="w-5 h-5 text-slate-300" />
             </div>
           </div>
 
           <div className="overflow-x-auto scrollbar-thin">
-            <div className="min-w-[800px] gantt-grid">
-              {/* Header Row 1: Quarters */}
-              <div className="gantt-header-cell gantt-pink-header flex flex-col justify-center row-span-2">
+            <div className="min-w-[800px] gantt-grid" style={{ gridTemplateColumns: `200px repeat(${toMonth - fromMonth + 1}, 1fr)` }}>
+              {/* Header Row: Months */}
+              <div className="gantt-header-cell gantt-pink-header flex flex-col justify-center">
                 <span>Process / Project</span>
               </div>
-              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 1</div>
-              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 2</div>
-              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 3</div>
-              <div className="col-span-3 gantt-header-cell text-center border-b-0 py-2 bg-slate-50/50">Quarter 4</div>
               
-              {/* Header Row 2: Months */}
-              {data.ganttData?.months.map((m, i) => (
-                <div key={i} className="gantt-header-cell text-center py-2">
+              {data.ganttData?.months?.slice(fromMonth, toMonth + 1).map((m, i) => (
+                <div key={fromMonth + i} className="gantt-header-cell text-center py-2">
                   {m}
                 </div>
               ))}
@@ -147,36 +187,114 @@ export default function Dashboard() {
               {/* Task Rows */}
               {data.ganttData?.tasks && data.ganttData.tasks.length > 0 ? (
                 data.ganttData.tasks.map((task, idx) => (
-                  <div key={idx} className="gantt-row">
-                    <div className="gantt-label-cell">
-                      <div className="flex flex-col">
-                        <span className="truncate max-w-[160px]">{task.name}</span>
-                        <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">{task.priority} Priority</span>
+                  <div key={idx} className="contents">
+                    <div 
+                      className={`gantt-row cursor-pointer transition-colors hover:bg-slate-50/50 ${expandedTaskId === task.id ? 'bg-slate-50' : ''}`}
+                      onClick={() => toggleExpand(task.id)}
+                    >
+                      <div className="gantt-label-cell flex items-center gap-2">
+                        <div className={`w-1.5 h-full absolute left-0 top-0 transition-colors ${expandedTaskId === task.id ? 'bg-amber-500' : 'bg-transparent'}`} />
+                        <div className="flex flex-col">
+                          <span className="truncate max-w-[160px] font-bold text-slate-800">{task.name}</span>
+                          <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">{task.priority} Priority</span>
+                        </div>
                       </div>
-                    </div>
-                    {/* Grid Cells */}
-                    {Array.from({ length: 12 }).map((_, mIdx) => (
-                      <div key={mIdx} className="gantt-cell">
-                        {/* Task Bar */}
-                        {mIdx === task.startMonth && (
-                          <div 
-                            className="gantt-bar"
-                            style={{ 
-                              width: `calc(${task.duration} * 100% + (${task.duration} - 1) * 1px)`,
-                              backgroundColor: task.color + '20',
-                              borderLeft: `4px solid ${task.color}`,
-                              color: task.color
-                            }}
-                          >
-                            {task.name}
+                      {/* Grid Cells */}
+                      {Array.from({ length: toMonth - fromMonth + 1 }).map((_, colIdx) => {
+                        const mIdx = fromMonth + colIdx;
+                        const taskStart = task.startMonth;
+                        const taskEnd = task.startMonth + task.duration - 1;
+                        const visibleStart = Math.max(taskStart, fromMonth);
+                        const visibleEnd = Math.min(taskEnd, toMonth);
+                        const isFirstVisibleMonth = mIdx === visibleStart && visibleStart <= visibleEnd;
+
+                        return (
+                          <div key={colIdx} className="gantt-cell">
+                            {/* Task Bar */}
+                            {isFirstVisibleMonth && (
+                              <div 
+                                className="gantt-bar shadow-sm"
+                                style={{ 
+                                  width: `calc(${visibleEnd - visibleStart + 1} * 100% + (${visibleEnd - visibleStart} * 1px))`,
+                                  backgroundColor: task.color + '20',
+                                  borderLeft: `4px solid ${task.color}`,
+                                  color: task.color
+                                }}
+                              >
+                                {task.name}
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    ))}
+                        );
+                      })}
+                    </div>
+
+                    {/* Expanded Sub-Tasks */}
+                    {expandedTaskId === task.id && task.items && task.items.length > 0 && task.items.map((item, iIdx) => {
+                      let startMonth = 0;
+                      let duration = 1;
+                      let hasTimeline = false;
+
+                      if (item.rts_date) {
+                        const rts = new Date(item.rts_date);
+                        const ship = item.ship_date ? new Date(item.ship_date) : rts;
+                        if (!isNaN(rts.getTime())) {
+                          startMonth = rts.getMonth();
+                          duration = Math.max(1, (ship.getFullYear() - rts.getFullYear()) * 12 + (ship.getMonth() - rts.getMonth()) + 1);
+                          hasTimeline = true;
+                        }
+                      }
+
+                      return (
+                        <div key={`sub-${task.id}-${iIdx}`} className="gantt-row">
+                          <div className="gantt-label-cell flex items-center bg-slate-50 relative">
+                            {/* Indentation line */}
+                            <div className="absolute left-6 top-0 bottom-0 w-px bg-slate-300"></div>
+                            {/* Horizontal connector */}
+                            <div className="absolute left-6 top-1/2 w-4 h-px bg-slate-300"></div>
+                            <div className="flex flex-col ml-12">
+                              <span className="truncate max-w-[140px] font-bold text-slate-600 text-[11px]">{item.job_number}</span>
+                              <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">Seq: {item.sequence_number}</span>
+                            </div>
+                          </div>
+                          {/* Sub-task Grid Cells */}
+                          {Array.from({ length: toMonth - fromMonth + 1 }).map((_, colIdx) => {
+                            const mIdx = fromMonth + colIdx;
+                            const taskStart = startMonth;
+                            const taskEnd = startMonth + duration - 1;
+                            const visibleStart = Math.max(taskStart, fromMonth);
+                            const visibleEnd = Math.min(taskEnd, toMonth);
+                            const isFirstVisibleMonth = hasTimeline && mIdx === visibleStart && visibleStart <= visibleEnd;
+
+                            return (
+                              <div key={`sub-cell-${colIdx}`} className="gantt-cell bg-slate-50/50 border-dashed border-slate-200">
+                                {/* Sub-task Bar */}
+                                {isFirstVisibleMonth && (
+                                  <div 
+                                    className="gantt-bar shadow-sm"
+                                    style={{ 
+                                      width: `calc(${visibleEnd - visibleStart + 1} * 100% + (${visibleEnd - visibleStart} * 1px))`,
+                                      backgroundColor: task.color + '15',
+                                      borderLeft: `3px solid ${task.color}`,
+                                      color: task.color,
+                                      height: '22px',
+                                      fontSize: '0.6rem',
+                                      opacity: 0.85
+                                    }}
+                                  >
+                                    {item.job_number}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
                   </div>
                 ))
               ) : (
-                <div className="col-span-13 flex flex-col items-center justify-center py-20 bg-slate-50/30">
+                <div className="flex flex-col items-center justify-center py-20 bg-slate-50/30" style={{ gridColumn: '1 / -1' }}>
                   <Clock className="w-8 h-8 text-slate-300 mb-3" />
                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">No Active Projects Found</p>
                   <p className="text-[9px] text-slate-400 mt-1">Start adding projects to see the timeline</p>
@@ -187,31 +305,6 @@ export default function Dashboard() {
           
           <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex justify-end">
              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">© Steel Fab Enterprises • Production Intelligence Unit</p>
-          </div>
-        </div>
-
-        {/* Pie Chart */}
-        <div className="bg-white border border-slate-300 p-8">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-1">Inventory Status</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-6">Distribution Overview</p>
-          <ResponsiveContainer width="100%" height={200}>
-            <PieChart>
-              <Pie data={data.pieData} cx="50%" cy="50%" innerRadius={60} outerRadius={85} paddingAngle={0} dataKey="value">
-                {data.pieData.map((entry, i) => (
-                  <Cell key={i} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e2e8f0', fontSize: 10, fontWeight: 900 }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="space-y-3 mt-6">
-            {data.pieData.map((d, i) => (
-              <div key={i} className="flex items-center gap-3">
-                <div className="w-2.5 h-2.5" style={{ backgroundColor: d.color }} />
-                <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">{d.name}</span>
-                <span className="ml-auto text-[10px] font-black text-slate-900 tracking-widest">{d.value}</span>
-              </div>
-            ))}
           </div>
         </div>
       </div>

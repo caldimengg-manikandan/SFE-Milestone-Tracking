@@ -87,16 +87,18 @@ export default function Login() {
 
         <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
           {/* Logo */}
-          <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-amber-400 via-amber-500 to-orange-600 flex items-center justify-center shadow-2xl shadow-amber-500/30 mb-8">
-            <Building2 className="w-10 h-10 text-white" strokeWidth={1.5} />
-          </div>
+          <div className="flex flex-col items-center">
+            <div className="w-24 h-20 bg-white rounded-xl flex items-center justify-center shadow-2xl mb-6 p-1">
+              <img src="/SFE/steelfab_logo.png" alt="Logo" className="w-full h-full object-contain" />
+            </div>
 
-          <h1 className="text-4xl xl:text-5xl font-bold text-white text-center leading-tight">
-            Steel Fab<br />
-            <span className="bg-gradient-to-r from-amber-400 to-orange-400 bg-clip-text text-transparent">
-              Enterprises
-            </span>
-          </h1>
+            <h1 className="text-4xl xl:text-5xl font-bold text-white text-center leading-tight">
+              Steel Fab<br />
+              <span className="text-amber-400">
+                ENTERPRISES
+              </span>
+            </h1>
+          </div>
 
           <p className="text-slate-400 text-center mt-4 max-w-sm text-lg leading-relaxed">
             Milestone Management System
@@ -122,12 +124,12 @@ export default function Login() {
         <div className="w-full max-w-md">
           {/* Mobile logo */}
           <div className="lg:hidden flex items-center gap-3 mb-10">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-amber-400 to-orange-600 flex items-center justify-center shadow-lg">
-              <Building2 className="w-6 h-6 text-white" />
+            <div className="w-12 h-11 bg-white rounded-lg flex items-center justify-center shadow-lg p-0.5">
+              <img src="/SFE/steelfab_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
             <div>
-              <span className="text-lg font-bold text-slate-800">Steel Fab</span>
-              <span className="text-[10px] block font-semibold text-amber-500 tracking-widest uppercase -mt-0.5">Enterprises</span>
+              <span className="text-lg font-bold text-slate-800 leading-tight block">Steel Fab</span>
+              <span className="text-[10px] font-bold text-amber-500 tracking-widest uppercase block -mt-1">ENTERPRISES</span>
             </div>
           </div>
 

@@ -13,3 +13,16 @@ class StructuralScheduleItemViewSet(viewsets.ModelViewSet):
     serializer_class = StructuralScheduleItemSerializer
     filterset_fields = ['project']
 
+from .models import Customer, Detailer
+from .serializers import CustomerSerializer, DetailerSerializer
+
+class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.all()
+    serializer_class = CustomerSerializer
+    search_fields = ['name', 'code']
+    filterset_fields = ['category', 'country']
+
+class DetailerViewSet(viewsets.ModelViewSet):
+    queryset = Detailer.objects.all()
+    serializer_class = DetailerSerializer
+    search_fields = ['name', 'code']

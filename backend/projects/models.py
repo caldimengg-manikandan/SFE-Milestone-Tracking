@@ -59,3 +59,55 @@ class StructuralScheduleItem(models.Model):
     def __str__(self):
         return f"{self.project.code} - {self.seq_no}"
 
+
+class Customer(models.Model):
+    name = models.CharField(max_length=300)
+    code = models.CharField(max_length=100, blank=True)
+    category = models.CharField(max_length=100, default='Domestic')
+    country = models.CharField(max_length=100, default='India')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'customers'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+class CustomerContact(models.Model):
+    customer = models.ForeignKey(Customer, related_name='contacts', on_delete=models.CASCADE)
+    person = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        db_table = 'customer_contacts'
+
+    def __str__(self):
+        return self.person
+
+class Detailer(models.Model):
+    name = models.CharField(max_length=300)
+    code = models.CharField(max_length=100, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'detailers'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return self.name
+
+class DetailerContact(models.Model):
+    detailer = models.ForeignKey(Detailer, related_name='contacts', on_delete=models.CASCADE)
+    person = models.CharField(max_length=200, blank=True)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=100, blank=True)
+
+    class Meta:
+        db_table = 'detailer_contacts'
+
+    def __str__(self):
+        return self.person
