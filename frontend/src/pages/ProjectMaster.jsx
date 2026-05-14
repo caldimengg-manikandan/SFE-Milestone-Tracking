@@ -24,20 +24,20 @@ export default function ProjectMaster() {
   }, []);
 
   const formatClock = (date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
-      minute: '2-digit', 
-      second: '2-digit', 
-      hour12: true 
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true
     }).toLowerCase();
   };
 
   const formatDateLong = (date) => {
-    return date.toLocaleDateString('en-GB', { 
-      weekday: 'long', 
-      day: 'numeric', 
-      month: 'long', 
-      year: 'numeric' 
+    return date.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric'
     });
   };
 
@@ -59,7 +59,26 @@ export default function ProjectMaster() {
     fetchAllSchedules();
   }, []);
 
-  
+  // Recalculate all budget shop hours if project-wide manhour/ton changes
+  useEffect(() => {
+    const mhTonStr = autocalculateManhourTon();
+    const mhTon = parseFloat(mhTonStr);
+
+    if (schedules.length > 0 && mhTon > 0) {
+      setSchedules(prev => prev.map(row => {
+        const rowTons = parseFloat(row.tons) || 0;
+        const newBudget = (mhTon * rowTons).toFixed(2);
+        // Only update if it actually changed to avoid unnecessary re-renders
+        if (row.budget_shop_hours === newBudget) return row;
+        return {
+          ...row,
+          budget_shop_hours: newBudget
+        };
+      }));
+    }
+  }, [form.total_manhours, form.total_ton]);
+
+
   const fetchAllSchedules = async () => {
     try {
       const res = await scheduleAPI.getAll();
@@ -70,7 +89,7 @@ export default function ProjectMaster() {
     }
   };
 
-  
+
   const createDefaultRow = (projectData) => {
     const initialErectionDate = projectData.erection_date || '';
     const calculated = initialErectionDate ? calculateDates(initialErectionDate) : {};
@@ -99,30 +118,30 @@ export default function ProjectMaster() {
   const calculateDates = (erectionDate) => {
     if (!erectionDate) return {};
     const base = new Date(erectionDate);
-    
+
     // RTS Date: 2 months prior
-    const rts = new Date(base); 
+    const rts = new Date(base);
     rts.setMonth(rts.getMonth() - 2);
-    
+
     // Field Measure: 2 weeks prior to RTS
-    const fm = new Date(rts); 
+    const fm = new Date(rts);
     fm.setDate(fm.getDate() - 14);
-    
+
     // BFA: 2 weeks prior to Field Measure
-    const bfa = new Date(fm); 
+    const bfa = new Date(fm);
     bfa.setDate(bfa.getDate() - 14);
-    
+
     // OFA: 2 weeks prior to BFA
-    const ofa = new Date(bfa); 
+    const ofa = new Date(bfa);
     ofa.setDate(ofa.getDate() - 14);
-    
+
     const formatDate = (d) => {
       const year = d.getFullYear();
       const month = String(d.getMonth() + 1).padStart(2, '0');
       const day = String(d.getDate()).padStart(2, '0');
       return `${year}-${month}-${day}`;
     };
-    
+
     return {
       rts_date: formatDate(rts),
       scheduled_field_measure_date: formatDate(fm),
@@ -135,6 +154,14 @@ export default function ProjectMaster() {
     setSchedules(prev => prev.map(row => {
       if (row.id !== id) return row;
       let updated = { ...row, [field]: value };
+
+      // Auto-calculate Budget Shop Hours when tons change
+      if (field === 'tons') {
+        const mhTon = parseFloat(autocalculateManhourTon()) || 0;
+        const rowTons = parseFloat(value) || 0;
+        updated.budget_shop_hours = (mhTon * rowTons).toFixed(2);
+      }
+
       if (field === 'scheduled_erection_date' && value) {
         const calculated = calculateDates(value);
         updated = { ...updated, ...calculated };
@@ -213,30 +240,30 @@ export default function ProjectMaster() {
     }
   }, [form.erection_date]);
 
-  
-  
 
-  
+
+
+
   const downloadProjectPDF = (project) => {
     const projectSchedules = allSchedules.filter(s => {
       const sId = typeof s.project === 'object' ? s.project.id : s.project;
       return String(sId) === String(project.id);
     });
-    
+
     if (projectSchedules.length === 0) {
       alert("No schedule data found for this project.");
       return;
     }
 
     const doc = new jsPDF('l', 'mm', 'a4');
-    
-    
+
+
     // Title & Branding
     doc.setFontSize(22);
     doc.setTextColor(15, 23, 42); // Slate 900
     doc.setFont(undefined, 'bold');
     doc.text("STRUCTURAL SCHEDULE", 14, 20);
-    
+
     // Horizontal Divider
     doc.setDrawColor(203, 213, 225); // Slate 300
     doc.setLineWidth(0.5);
@@ -263,7 +290,7 @@ export default function ProjectMaster() {
 
 
     const tableHeaders = [["SEQ #", "Tons", "Description", "Category", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
-    
+
     const tableData = projectSchedules.map(s => [
       s.seq_no,
       s.tons,
@@ -285,7 +312,7 @@ export default function ProjectMaster() {
       s.dwg_status,
       s.notes
     ]);
-    
+
     autoTable(doc, {
       startY: 50,
       head: tableHeaders,
@@ -324,7 +351,7 @@ export default function ProjectMaster() {
       }
 
     });
-    
+
     doc.save(`Plan_${project.code}.pdf`);
   };
 
@@ -347,11 +374,11 @@ export default function ProjectMaster() {
     });
     setViewMode(mode);
     setIsEditing(true);
-    
+
     const projSchedules = allSchedules.filter(s => {
       const sId = typeof s.project === 'object' ? s.project.id : s.project;
       return String(sId) === String(project.id);
-    }).map(s => ({...s, project: project.id}));
+    }).map(s => ({ ...s, project: project.id }));
 
     if (projSchedules.length === 0) {
       projSchedules.push(createDefaultRow(project));
@@ -374,7 +401,7 @@ export default function ProjectMaster() {
         total_manhours: parseFloat(form.total_manhours) || 0,
         erection_date: form.erection_date || null
       };
-      
+
       let res;
 
       let projectId = form.id;
@@ -388,8 +415,10 @@ export default function ProjectMaster() {
         setForm(res.data); // Update form with new ID to allow subsequent updates if schedule save fails
       }
 
-      // Save schedules
+      // Save schedules - skip rows that have no description (prevents mandatory field errors if only basic details are filled)
       for (const row of schedules) {
+        if (!row.item_description && !row.tons && row.is_new) continue;
+
         const schedPayload = {
           project: projectId,
           seq_no: row.seq_no || '1',
@@ -479,7 +508,7 @@ export default function ProjectMaster() {
       p.status,
       p.total_ton
     ]);
-    
+
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -492,8 +521,8 @@ export default function ProjectMaster() {
     document.body.removeChild(link);
   };
 
-  const filtered = projects.filter(p => 
-    (p.name?.toLowerCase() || '').includes(search.toLowerCase()) || 
+  const filtered = projects.filter(p =>
+    (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
     (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
     (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase())
   );
@@ -508,163 +537,163 @@ export default function ProjectMaster() {
 
 
       <div className="space-y-4 animate-fade-in">
-      {/* Control Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search projects by name, code or customer..." 
-            value={search} 
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} 
-            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-          />
-          {search && (
-            <button 
-              onClick={() => { setSearch(''); setCurrentPage(1); }}
-              className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 text-slate-400"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          )}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
-            <Filter className="w-4 h-4" /> Filters
-          </button>
-          <button 
-            onClick={exportToCSV}
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"
-          >
-            <Download className="w-4 h-4" /> Export CSV
-          </button>
-          <button 
-            onClick={() => {
-              resetForm();
-              setShowModal(true);
-            }} 
-            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all"
-          >
-            <Plus className="w-4 h-4" /> Add Project
-          </button>
-        </div>
-      </div>
-
-      {/* Table Section */}
-      <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[120px]">Project Name</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 w-20">Code</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[100px]">Customer Name</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Detailer Name</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Manager</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Erection</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Priority</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Ton</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M.Hrs</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M/T</th>
-                <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 bg-white">
-              {paginatedData.length > 0 ? paginatedData.map((p) => (
-                <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100">
-                  <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{p.name}</td>
-                  <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{p.code}</td>
-                  <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{p.customer_name || 'N/A'}</td>
-                  <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
-                  <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
-                  <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
-                    {p.erection_date ? new Date(p.erection_date).toLocaleDateString('en-GB') : 'N/A'}
-                  </td>
-                  <td className="px-2 py-3 border-r border-slate-100 text-center">
-                    <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
-                      p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' : 
-                      p.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' : 
-                      'bg-emerald-50 text-emerald-600 border border-emerald-100'
-                    }`}>
-                      {p.priority}
-                    </span>
-                  </td>
-                  <td className="px-2 py-3 font-bold text-slate-700 border-r border-slate-100 text-center">{p.total_ton}</td>
-                  <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">{p.total_manhours}</td>
-                  <td className="px-2 py-3 border-r border-slate-100 text-center font-bold text-amber-600">
-                    {p.total_ton > 0 ? (p.total_manhours / p.total_ton).toFixed(1) : '0.0'}
-                  </td>
-                  <td className="px-2 py-3 text-right">
-                    <div className="flex items-center justify-end gap-0.5">
-                                            <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
-                        <FileText className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
-                        <Eye className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
-                        <Edit2 className="w-3.5 h-3.5" />
-                      </button>
-                      <button onClick={() => handleDelete(p.id)} className="p-1 rounded text-red-500 hover:bg-red-50" title="Delete">
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              )) : (
-                <tr>
-                  <td colSpan="11" className="px-6 py-12 text-center text-slate-500 italic">No projects found matching your search.</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Pagination & Footer */}
-        <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-          <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-            {filtered.length} {filtered.length === 1 ? 'Record' : 'Records'} Found
+        {/* Control Bar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search projects by name, code or customer..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-              disabled={currentPage === 1}
-              onClick={() => setCurrentPage(prev => prev - 1)}
-              className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all"
-            >
-              <ChevronLeft className="w-4 h-4" />
+
+          <div className="flex flex-wrap items-center gap-2">
+            <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
+              <Filter className="w-4 h-4" /> Filters
             </button>
-            <div className="flex items-center gap-1">
-              {[...Array(totalPages)].map((_, i) => (
-                <button 
-                  key={i}
-                  onClick={() => setCurrentPage(i + 1)}
-                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i + 1 ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
-                >
-                  {i + 1}
-                </button>
-              ))}
+            <button
+              onClick={exportToCSV}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+            <button
+              onClick={() => {
+                resetForm();
+                setShowModal(true);
+              }}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all"
+            >
+              <Plus className="w-4 h-4" /> Add Project
+            </button>
+          </div>
+        </div>
+
+        {/* Table Section */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[120px]">Project Name</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 w-20">Code</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[100px]">Customer Name</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Detailer Name</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Manager</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Erection</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Priority</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Ton</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M.Hrs</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M/T</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {paginatedData.length > 0 ? paginatedData.map((p) => (
+                  <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100">
+                    <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{p.name}</td>
+                    <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{p.code}</td>
+                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{p.customer_name || 'N/A'}</td>
+                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
+                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
+                    <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
+                      {p.erection_date ? new Date(p.erection_date).toLocaleDateString('en-GB') : 'N/A'}
+                    </td>
+                    <td className="px-2 py-3 border-r border-slate-100 text-center">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
+                          p.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                            'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        }`}>
+                        {p.priority}
+                      </span>
+                    </td>
+                    <td className="px-2 py-3 font-bold text-slate-700 border-r border-slate-100 text-center">{p.total_ton}</td>
+                    <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">{p.total_manhours}</td>
+                    <td className="px-2 py-3 border-r border-slate-100 text-center font-bold text-amber-600">
+                      {p.total_ton > 0 ? (p.total_manhours / p.total_ton).toFixed(1) : '0.0'}
+                    </td>
+                    <td className="px-2 py-3 text-right">
+                      <div className="flex items-center justify-end gap-0.5">
+                        <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
+                          <FileText className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
+                          <Eye className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                        <button onClick={() => handleDelete(p.id)} className="p-1 rounded text-red-500 hover:bg-red-50" title="Delete">
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )) : (
+                  <tr>
+                    <td colSpan="11" className="px-6 py-12 text-center text-slate-500 italic">No projects found matching your search.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination & Footer */}
+          <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              {filtered.length} {filtered.length === 1 ? 'Record' : 'Records'} Found
             </div>
-            <button 
-              disabled={currentPage === totalPages}
-              onClick={() => setCurrentPage(prev => prev + 1)}
-              className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <div className="flex items-center gap-1">
+                {[...Array(totalPages)].map((_, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setCurrentPage(i + 1)}
+                    className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i + 1 ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+              <button
+                disabled={currentPage === totalPages}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
           </div>
         </div>
-      </div>
       </div>
 
       {showModal && (
-        <ProjectForm 
+        <ProjectForm
           form={form}
           schedules={schedules}
           addScheduleRow={addScheduleRow}
           handleScheduleChange={handleScheduleChange}
           handleDeleteSchedule={handleDeleteSchedule}
-          initialTab={initialTab}
+          initialTab="basic"
+          showTabs={false}
           setForm={setForm}
           handleSave={handleSave}
           mode={viewMode}

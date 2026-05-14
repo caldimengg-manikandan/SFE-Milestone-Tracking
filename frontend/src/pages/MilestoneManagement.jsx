@@ -61,13 +61,11 @@ export default function MilestoneManagement() {
       <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1">
         {statusFilters.map(s => (
           <button key={s} onClick={() => setStatusFilter(s)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${
-              statusFilter === s ? 'bg-amber-500 text-white shadow-sm' : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-300'
-            }`}>
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 ${statusFilter === s ? 'bg-amber-500 text-white shadow-sm' : 'bg-white text-slate-500 border border-slate-200 hover:border-amber-300'
+              }`}>
             {s}
-            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${
-              statusFilter === s ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
-            }`}>{statusCounts[s]}</span>
+            <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-[10px] font-bold ${statusFilter === s ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+              }`}>{statusCounts[s]}</span>
           </button>
         ))}
       </div>

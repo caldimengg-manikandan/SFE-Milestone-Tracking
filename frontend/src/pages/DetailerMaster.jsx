@@ -211,7 +211,7 @@ export default function DetailerMaster() {
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
-            
+
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200">
               <h3 className="text-xl font-bold text-slate-900">{editId ? 'Edit Detailer' : 'Add Detailer'}</h3>
@@ -222,7 +222,7 @@ export default function DetailerMaster() {
 
             {/* Form Content */}
             <div className="flex-1 overflow-y-auto p-8 custom-scrollbar space-y-8 bg-slate-50/50">
-              
+
               {/* Primary Info */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
 
@@ -233,7 +233,7 @@ export default function DetailerMaster() {
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
                     placeholder="Enter detailer name"
                     value={form.name}
-                    onChange={e => setForm({...form, name: e.target.value})}
+                    onChange={e => setForm({ ...form, name: e.target.value })}
                   />
                 </div>
 
@@ -243,7 +243,7 @@ export default function DetailerMaster() {
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
                     placeholder="Auto-generated if empty"
                     value={form.code}
-                    onChange={e => setForm({...form, code: e.target.value})}
+                    onChange={e => setForm({ ...form, code: e.target.value })}
                   />
                 </div>
               </div>
@@ -252,7 +252,7 @@ export default function DetailerMaster() {
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-800">Contact Persons</h4>
-                  <button 
+                  <button
                     type="button"
                     onClick={addContact}
                     className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md hover:bg-slate-800 transition-colors"
@@ -273,7 +273,7 @@ export default function DetailerMaster() {
                           onChange={e => updateContact(index, 'person', e.target.value)}
                         />
                       </div>
-                      
+
                       <div className="flex-1 w-full space-y-1.5">
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Email</label>}
                         <input
@@ -284,7 +284,7 @@ export default function DetailerMaster() {
                           onChange={e => updateContact(index, 'email', e.target.value)}
                         />
                       </div>
-                      
+
                       <div className="flex-1 w-full space-y-1.5">
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Phone</label>}
                         <div className="relative">

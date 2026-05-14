@@ -17,7 +17,11 @@ export default function ProjectForm({
   isEditing, 
   loading,
   autocalculateManhourTon,
-  initialTab = "basic"
+  initialTab = "basic",
+  showTabs = true,
+  mode = "edit",
+  projects = [],
+  onProjectSelect
 }) {
   const [activeTab, setActiveTab] = useState(initialTab);
   const [customers, setCustomers] = useState([]);
@@ -174,20 +178,22 @@ export default function ProjectForm({
 
 
         {/* Tabs */}
-        <div className="flex px-8 border-b border-slate-200 bg-white">
-          <button 
-            onClick={() => setActiveTab('basic')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'basic' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-          >
-            <LayoutTemplate className="w-4 h-4" /> Basic Details
-          </button>
-          <button 
-            onClick={() => setActiveTab('structural')}
-            className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'structural' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
-          >
-            <CalendarDays className="w-4 h-4" /> Structural Schedule
-          </button>
-        </div>
+        {showTabs && (
+          <div className="flex px-8 border-b border-slate-200 bg-white">
+            <button 
+              onClick={() => setActiveTab('basic')}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'basic' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+            >
+              <LayoutTemplate className="w-4 h-4" /> Basic Details
+            </button>
+            <button 
+              onClick={() => setActiveTab('structural')}
+              className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'structural' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
+            >
+              <CalendarDays className="w-4 h-4" /> Structural Schedule
+            </button>
+          </div>
+        )}
 
         {/* Modal Body */}
         <div className={`flex-1 ${activeTab === 'basic' ? 'overflow-y-auto p-8 space-y-8' : 'overflow-hidden flex flex-col p-4 bg-slate-50/50'}`}>
@@ -327,6 +333,8 @@ export default function ProjectForm({
               <StructuralScheduleForm
                 mode="edit"
                 project={form}
+                projects={projects}
+                onProjectSelect={onProjectSelect}
                 schedules={schedules}
                 addScheduleRow={addScheduleRow}
                 handleRowChange={handleScheduleChange}
@@ -340,7 +348,7 @@ export default function ProjectForm({
         {/* Modal Footer */}
         <div className="flex justify-end gap-3 px-8 py-5 border-t border-slate-100 bg-slate-50/50">
           <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-all shadow-sm">Cancel</button>
-          {activeTab === 'basic' ? (
+          {showTabs && activeTab === 'basic' ? (
             <button 
               onClick={(e) => { e.preventDefault(); setActiveTab('structural'); }}
               className="px-8 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2"

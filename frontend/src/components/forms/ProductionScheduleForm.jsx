@@ -304,86 +304,116 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Weight</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Quantity</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">RTS Date</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">Status</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Ship Date</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Notes</th>
                       <th className="px-4 py-3 w-12"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {rows.map((row, index) => (
-                      <tr key={index} className="hover:bg-white transition-colors group">
-                        <td className="p-2">
-                          <input
-                            value={row.job}
-                            onChange={(e) => updateRow(index, 'job', e.target.value)}
-                            disabled={loading}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[11px] font-bold transition-all"
-                            placeholder="Job #"
-                          />
-                        </td>
-                        <td className="p-2 text-center">
-                          <div className="w-full py-2 px-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-center text-sm rounded-lg">
-                            {row.seq}
-                          </div>
-                        </td>
-                        <td className="p-2">
-                          <input
-                            type="number"
-                            value={row.weight}
-                            onChange={(e) => updateRow(index, 'weight', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
-                            placeholder="0.00"
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            type="number"
-                            value={row.quantity}
-                            onChange={(e) => updateRow(index, 'quantity', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
-                            placeholder="0"
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            type="date"
-                            value={row.rtsDate}
-                            onChange={(e) => updateRow(index, 'rtsDate', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            type="date"
-                            value={row.shipDate}
-                            onChange={(e) => updateRow(index, 'shipDate', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="p-2">
-                          <input
-                            value={row.notes}
-                            onChange={(e) => updateRow(index, 'notes', e.target.value)}
-                            className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
-                            placeholder="Add notes..."
-                            disabled={loading}
-                          />
-                        </td>
-                        <td className="p-2 text-center">
-                          <button
-                            onClick={() => removeRow(index)}
-                            disabled={rows.length === 1 || loading}
-                            className="p-2 text-slate-300 hover:text-red-500 disabled:opacity-0 transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {rows.map((row, index) => {
+                      const calculateStatus = () => {
+                        if (!row.rtsDate) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
+                        
+                        const now = new Date();
+                        const rtsDate = new Date(row.rtsDate);
+                        const shipDate = row.shipDate ? new Date(row.shipDate) : null;
+                        
+                        const twoDaysFromNow = new Date();
+                        twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+
+                        if (rtsDate > twoDaysFromNow) {
+                          return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                        } else if (shipDate && now >= shipDate) {
+                          return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
+                        } else {
+                          return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                        }
+                      };
+
+                      const status = calculateStatus();
+
+                      return (
+                        <tr key={index} className="hover:bg-white transition-colors group">
+                          <td className="p-2">
+                            <input
+                              value={row.job}
+                              onChange={(e) => updateRow(index, 'job', e.target.value)}
+                              disabled={loading}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-white text-[11px] font-bold transition-all"
+                              placeholder="Job #"
+                            />
+                          </td>
+                          <td className="p-2 text-center">
+                            <div className="w-full py-2 px-1 bg-amber-50 border border-amber-200 text-amber-700 font-black text-center text-sm rounded-lg">
+                              {row.seq}
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="number"
+                              value={row.weight}
+                              onChange={(e) => updateRow(index, 'weight', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
+                              placeholder="0.00"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="number"
+                              value={row.quantity}
+                              onChange={(e) => updateRow(index, 'quantity', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
+                              placeholder="0"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="date"
+                              value={row.rtsDate}
+                              onChange={(e) => updateRow(index, 'rtsDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <div className={`flex items-center justify-center gap-1.5 px-2 py-1 rounded-full text-[9px] font-black tracking-tight ${status.bg} ${status.color} border border-current/10 whitespace-nowrap`}>
+                              <div className={`w-1.5 h-1.5 rounded-full ${status.dot}`} />
+                              {status.label}
+                            </div>
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="date"
+                              value={row.shipDate}
+                              onChange={(e) => updateRow(index, 'shipDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              value={row.notes}
+                              onChange={(e) => updateRow(index, 'notes', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
+                              placeholder="Add notes..."
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2 text-center">
+                            <button
+                              onClick={() => removeRow(index)}
+                              disabled={rows.length === 1 || loading}
+                              className="p-2 text-slate-300 hover:text-red-500 disabled:opacity-0 transition-all"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

@@ -11,7 +11,8 @@ export default function StructuralScheduleForm({
   addScheduleRow,
   handleRowChange,
   handleDeleteRow,
-  setSelectedProjectId
+  setSelectedProjectId,
+  onProjectSelect
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -38,6 +39,27 @@ export default function StructuralScheduleForm({
       {/* Spreadsheet Header Metrics */}
       {!hideMetrics && (
       <div className="bg-white border-b border-slate-300">
+        {/* Project Selector - Only if not editing an existing plan or if explicitly requested */}
+        {projects.length > 0 && !project?.id && (
+          <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-center gap-4">
+            <label className="text-xs font-bold text-amber-800 uppercase tracking-wider">Select Project to Initialize Plan:</label>
+            <select 
+              className="px-4 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:ring-2 focus:ring-amber-500/20 transition-all min-w-[300px]"
+              onChange={(e) => {
+                const selected = projects.find(p => p.code === e.target.value);
+                if (selected && onProjectSelect) onProjectSelect(selected);
+              }}
+              value={project?.code || ''}
+            >
+              <option value="">-- Select Project Code --</option>
+              {projects.map(p => (
+                <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
+              ))}
+            </select>
+            <p className="text-[10px] text-amber-600 font-medium italic">Fetching data from Project Master...</p>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 md:grid-cols-4 border-b border-slate-200">
           <div className="flex border-r border-slate-200">
             <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Customer:</div>

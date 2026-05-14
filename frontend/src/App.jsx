@@ -11,6 +11,8 @@ import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySch
 import ProcessMaster from './pages/Production/ProcessMaster';
 import CustomerMaster from './pages/CustomerMaster';
 import DetailerMaster from './pages/DetailerMaster';
+import PlanCreation from './pages/Structural/PlanCreation';
+import PlanTracking from './pages/Structural/PlanTracking';
 
 export default function App() {
   return (
@@ -36,6 +38,10 @@ export default function App() {
           <Route path="customers" element={<CustomerMaster />} />
           <Route path="management" element={<DetailerMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
+          
+          {/* Structural Schedule Routes */}
+          <Route path="structural/plan-creation" element={<PlanCreation />} />
+          <Route path="structural/plan-tracking" element={<PlanTracking />} />
           
           {/* Production Management Routes */}
           <Route path="production/process-master" element={<ProcessMaster />} />

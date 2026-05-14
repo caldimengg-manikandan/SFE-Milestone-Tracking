@@ -71,7 +71,7 @@ export default function ProductionPrioritySchedule() {
     setExpandedId(expandedId === id ? null : id);
   };
 
-  
+
   const exportToCSV = () => {
     const headers = ["Schedule Number", "Start Date", "End Date"];
     const rows = filteredSchedules.map(s => [
@@ -79,7 +79,7 @@ export default function ProductionPrioritySchedule() {
       s.start_date,
       s.end_date
     ]);
-    
+
     const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
@@ -92,11 +92,11 @@ export default function ProductionPrioritySchedule() {
     document.body.removeChild(link);
   };
 
-  const filteredSchedules = schedules.filter(s => 
+  const filteredSchedules = schedules.filter(s =>
     s.schedule_number.toLowerCase().includes(search.toLowerCase())
   );
 
-  
+
   const totalPages = Math.ceil(filteredSchedules.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedData = filteredSchedules.slice(startIndex, startIndex + itemsPerPage);
@@ -107,15 +107,15 @@ export default function ProductionPrioritySchedule() {
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input 
-            type="text" 
-            placeholder="Search by Schedule #..." 
-            value={search} 
-            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }} 
-            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
+          <input
+            type="text"
+            placeholder="Search by Schedule #..."
+            value={search}
+            onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+            className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
           />
           {search && (
-            <button 
+            <button
               onClick={() => { setSearch(''); setCurrentPage(1); }}
               className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 text-slate-400"
             >
@@ -128,14 +128,14 @@ export default function ProductionPrioritySchedule() {
           <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
             <Filter className="w-4 h-4" /> Filters
           </button>
-          <button 
+          <button
             onClick={exportToCSV}
             className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"
           >
             <Download className="w-4 h-4" /> Export CSV
           </button>
-          <button 
-            onClick={openAdd} 
+          <button
+            onClick={openAdd}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all"
           >
             <Plus className="w-4 h-4" /> New Schedule
@@ -171,7 +171,7 @@ export default function ProductionPrioritySchedule() {
               <tbody className="divide-y divide-slate-100">
                 {paginatedData.map((schedule) => (
                   <Fragment key={schedule.id}>
-                    <tr 
+                    <tr
                       className={`hover:bg-slate-50/50 transition-colors group cursor-pointer text-[12px] ${expandedId === schedule.id ? 'bg-slate-50' : ''}`}
                       onClick={() => toggleExpand(schedule.id)}
                     >
@@ -187,16 +187,16 @@ export default function ProductionPrioritySchedule() {
                       <td className="px-6 py-4 text-slate-600 font-medium">{formatDate(schedule.end_date)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-1">
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); openEdit(schedule); }}
-                            className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors" 
+                            className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                             title="Edit"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
                           </button>
-                          <button 
+                          <button
                             onClick={(e) => { e.stopPropagation(); handleDelete(schedule.id); }}
-                            className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors" 
+                            className="p-1.5 rounded text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -217,6 +217,7 @@ export default function ProductionPrioritySchedule() {
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Quantity</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">RTS Date</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Status</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Ship Date</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Notes</th>
                                 </tr>
@@ -246,24 +247,53 @@ export default function ProductionPrioritySchedule() {
                                     return priA - priB;
                                   });
 
-                                  return sortedItems.length > 0 ? sortedItems.map((item, idx) => (
-                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-[11px]">
-                                      <td className="px-4 py-3 text-center">
-                                        <span className="w-6 h-6 inline-flex items-center justify-center rounded bg-amber-100 text-amber-700 font-bold text-[9px]">
-                                          {idx + 1}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-3 font-bold text-slate-800">{item.job_number}</td>
-                                      <td className="px-4 py-3 text-center text-slate-600 font-bold">{item.sequence_number}</td>
-                                      <td className="px-4 py-3 text-center text-orange-600 font-black">{item.weight}</td>
-                                      <td className="px-4 py-3 text-center text-slate-500 font-bold">{item.quantity}</td>
-                                      <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.rts_date)}</td>
-                                      <td className="px-4 py-3 text-slate-400">—</td>
-                                      <td className="px-4 py-3 text-slate-400 italic text-[10px]">{item.notes || '—'}</td>
-                                    </tr>
-                                  )) : (
+                                  return sortedItems.length > 0 ? sortedItems.map((item, idx) => {
+                                    const calculateStatus = () => {
+                                      if (!item.rts_date) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
+
+                                      const now = new Date();
+                                      const rtsDate = new Date(item.rts_date);
+                                      const shipDate = item.ship_date ? new Date(item.ship_date) : null;
+
+                                      const twoDaysFromNow = new Date();
+                                      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+
+                                      if (rtsDate > twoDaysFromNow) {
+                                        return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                                      } else if (shipDate && now >= shipDate) {
+                                        return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
+                                      } else {
+                                        return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                                      }
+                                    };
+
+                                    const status = calculateStatus();
+
+                                    return (
+                                      <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-[11px]">
+                                        <td className="px-4 py-3 text-center">
+                                          <span className="w-6 h-6 inline-flex items-center justify-center rounded bg-amber-100 text-amber-700 font-bold text-[9px]">
+                                            {idx + 1}
+                                          </span>
+                                        </td>
+                                        <td className="px-4 py-3 font-bold text-slate-800">{item.job_number}</td>
+                                        <td className="px-4 py-3 text-center text-slate-600 font-bold">{item.sequence_number}</td>
+                                        <td className="px-4 py-3 text-center text-orange-600 font-black">{item.weight}</td>
+                                        <td className="px-4 py-3 text-center text-slate-500 font-bold">{item.quantity}</td>
+                                        <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.rts_date)}</td>
+                                        <td className="px-4 py-3">
+                                          <div className={`flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full text-[8px] font-black tracking-tight ${status.bg} ${status.color} border border-current/10 whitespace-nowrap w-fit`}>
+                                            <div className={`w-1 h-1 rounded-full ${status.dot}`} />
+                                            {status.label}
+                                          </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-slate-400">—</td>
+                                        <td className="px-4 py-3 text-slate-400 italic text-[10px]">{item.notes || '—'}</td>
+                                      </tr>
+                                    );
+                                  }) : (
                                     <tr>
-                                      <td colSpan="8" className="px-6 py-8 text-center text-slate-400 italic">No production items defined for this schedule</td>
+                                      <td colSpan="9" className="px-6 py-8 text-center text-slate-400 italic">No production items defined for this schedule</td>
                                     </tr>
                                   );
                                 })()}
@@ -288,7 +318,7 @@ export default function ProductionPrioritySchedule() {
               {filteredSchedules.length} {filteredSchedules.length === 1 ? 'Record' : 'Records'} Found
             </div>
             <div className="flex items-center gap-2">
-              <button 
+              <button
                 disabled={currentPage === 1}
                 onClick={() => setCurrentPage(prev => prev - 1)}
                 className="p-1.5 rounded border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
@@ -297,7 +327,7 @@ export default function ProductionPrioritySchedule() {
               </button>
               <div className="flex items-center gap-1">
                 {[...Array(totalPages)].map((_, i) => (
-                  <button 
+                  <button
                     key={i}
                     onClick={() => setCurrentPage(i + 1)}
                     className={`w-7 h-7 rounded text-[10px] font-bold transition-all ${currentPage === i + 1 ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200'}`}
@@ -306,7 +336,7 @@ export default function ProductionPrioritySchedule() {
                   </button>
                 ))}
               </div>
-              <button 
+              <button
                 disabled={currentPage === totalPages}
                 onClick={() => setCurrentPage(prev => prev + 1)}
                 className="p-1.5 rounded border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50"
@@ -319,8 +349,8 @@ export default function ProductionPrioritySchedule() {
       )}
 
       {showModal && (
-        <ProductionScheduleForm 
-          onClose={() => setShowModal(false)} 
+        <ProductionScheduleForm
+          onClose={() => setShowModal(false)}
           onSuccess={fetchSchedules}
           editSchedule={editSchedule}
           nextNumber={schedules.length + 1}

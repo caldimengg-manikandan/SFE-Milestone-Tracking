@@ -149,11 +149,10 @@ export default function EmployeeMaster() {
             <button
               key={d}
               onClick={() => setDeptFilter(d)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                deptFilter === d
+              className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${deptFilter === d
                   ? 'bg-amber-500 text-white shadow-lg shadow-amber-500/20'
                   : 'bg-white text-slate-500 border border-slate-300 hover:border-amber-300 hover:text-amber-600'
-              }`}
+                }`}
             >
               {d}
             </button>
@@ -212,9 +211,8 @@ export default function EmployeeMaster() {
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                        emp.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
-                      }`}>
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${emp.status === 'Active' ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'
+                        }`}>
                         <span className={`w-1.5 h-1.5 rounded-full ${emp.status === 'Active' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
                         {emp.status}
                       </span>
@@ -259,9 +257,8 @@ export default function EmployeeMaster() {
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all border-b-4 ${
-                    activeTab === tab ? 'border-amber-500 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
-                  }`}
+                  className={`flex-1 py-4 text-xs font-black uppercase tracking-[0.2em] transition-all border-b-4 ${activeTab === tab ? 'border-amber-500 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'
+                    }`}
                 >
                   {tab === 'personal' ? 'Personal Profile' : 'Professional Info'}
                 </button>
@@ -280,7 +277,7 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="John Doe"
                         value={form.name}
-                        onChange={e => setForm({...form, name: e.target.value})}
+                        onChange={e => setForm({ ...form, name: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -291,7 +288,7 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="john@company.com"
                         value={form.email}
-                        onChange={e => setForm({...form, email: e.target.value})}
+                        onChange={e => setForm({ ...form, email: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -300,7 +297,7 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="+1 (555) 000-0000"
                         value={form.phone}
-                        onChange={e => setForm({...form, phone: e.target.value})}
+                        onChange={e => setForm({ ...form, phone: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -309,7 +306,7 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="New York, USA"
                         value={form.location}
-                        onChange={e => setForm({...form, location: e.target.value})}
+                        onChange={e => setForm({ ...form, location: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -318,14 +315,14 @@ export default function EmployeeMaster() {
                         type="date"
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         value={form.dob}
-                        onChange={e => setForm({...form, dob: e.target.value})}
+                        onChange={e => setForm({ ...form, dob: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
-                      <select 
+                      <select
                         value={form.gender}
-                        onChange={e => setForm({...form, gender: e.target.value})}
+                        onChange={e => setForm({ ...form, gender: e.target.value })}
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
                       >
                         <option value="">Select Gender</option>
@@ -344,7 +341,7 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="SFE-000"
                         value={form.emp_id}
-                        onChange={e => setForm({...form, emp_id: e.target.value})}
+                        onChange={e => setForm({ ...form, emp_id: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
@@ -354,15 +351,15 @@ export default function EmployeeMaster() {
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"
                         placeholder="Project Manager"
                         value={form.designation}
-                        onChange={e => setForm({...form, designation: e.target.value})}
+                        onChange={e => setForm({ ...form, designation: e.target.value })}
                       />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
-                      <select 
+                      <select
                         required
                         value={form.department}
-                        onChange={e => setForm({...form, department: e.target.value})}
+                        onChange={e => setForm({ ...form, department: e.target.value })}
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
                       >
                         <option value="">Select Dept</option>
@@ -373,9 +370,9 @@ export default function EmployeeMaster() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label>
-                      <select 
+                      <select
                         value={form.status}
-                        onChange={e => setForm({...form, status: e.target.value})}
+                        onChange={e => setForm({ ...form, status: e.target.value })}
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm"
                       >
                         <option value="Active">Active</option>
@@ -396,7 +393,7 @@ export default function EmployeeMaster() {
                 >
                   Discard
                 </button>
-                <button 
+                <button
                   type="submit"
                   disabled={saving}
                   className="px-10 py-3.5 rounded-2xl bg-slate-900 text-white text-xs font-black uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all transform hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50 flex items-center gap-2"

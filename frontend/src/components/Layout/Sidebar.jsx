@@ -16,6 +16,7 @@ import {
   Layers,
   Square,
   Box,
+  Plus,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -37,7 +38,14 @@ const navSections = [
   {
     label: 'PROJECT MANAGEMENT',
     items: [
-      { name: 'Project Master & Structural Schedule', path: '/projects', icon: FolderKanban },
+      { name: 'Project Master', path: '/projects', icon: FolderKanban },
+    ],
+  },
+  {
+    label: 'STRUCTURAL SCHEDULE',
+    items: [
+      { name: 'Plan Creation', path: '/structural/plan-creation', icon: Plus },
+      { name: 'Plan Tracking', path: '/structural/plan-tracking', icon: ListChecks },
     ],
   },
   {
