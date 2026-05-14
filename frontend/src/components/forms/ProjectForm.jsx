@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight } from 'lucide-react';
 import StructuralScheduleForm from './StructuralScheduleForm';
-import { customerAPI, detailerAPI } from '../../services/api';
+import { customerAPI, detailerAPI, employeeAPI } from '../../services/api';
 
 export default function ProjectForm({ 
   schedules,
@@ -22,16 +22,19 @@ export default function ProjectForm({
   const [activeTab, setActiveTab] = useState(initialTab);
   const [customers, setCustomers] = useState([]);
   const [detailers, setDetailers] = useState([]);
+  const [employees, setEmployees] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [custRes, detRes] = await Promise.all([
+        const [custRes, detRes, empRes] = await Promise.all([
           customerAPI.getAll(),
-          detailerAPI.getAll()
+          detailerAPI.getAll(),
+          employeeAPI.getAll()
         ]);
         setCustomers(custRes.data.results || custRes.data);
         setDetailers(detRes.data.results || detRes.data);
+        setEmployees(empRes.data.results || empRes.data);
       } catch (err) {
         console.error('Failed to load masters', err);
       }
@@ -249,12 +252,16 @@ export default function ProjectForm({
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>
-                <input 
-                  value={form.project_manager_name}
+                <select 
+                  value={form.project_manager_name || ''}
                   onChange={e => setForm({...form, project_manager_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                  placeholder="Enter PM name" 
-                />
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="">Select PM</option>
+                  {Array.from(new Set(employees.map(emp => emp.designation).filter(Boolean))).map((pmName, idx) => (
+                    <option key={idx} value={pmName}>{pmName}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>

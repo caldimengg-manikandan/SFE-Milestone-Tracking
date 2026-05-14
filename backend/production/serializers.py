@@ -1,5 +1,8 @@
 from rest_framework import serializers
-from .models import ProductionSchedule, ProductionItem, ProductionPriority, ProductionPriorityItem
+from .models import (
+    ProductionSchedule, ProductionItem, ProductionPriority, ProductionPriorityItem,
+    Machine, Manpower, Capacity
+)
 from projects.models import Project
 
 class ProductionItemSerializer(serializers.ModelSerializer):
@@ -85,3 +88,22 @@ class ProductionPrioritySerializer(serializers.ModelSerializer):
             for item_data in items_data:
                 ProductionPriorityItem.objects.create(priority=instance, **item_data)
         return instance
+
+class MachineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Machine
+        fields = '__all__'
+
+class ManpowerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Manpower
+        fields = '__all__'
+
+class CapacitySerializer(serializers.ModelSerializer):
+    machine_name = serializers.CharField(source='machine.name', read_only=True)
+    rate_per_month = serializers.ReadOnlyField()
+    rate_per_year = serializers.ReadOnlyField()
+
+    class Meta:
+        model = Capacity
+        fields = '__all__'
