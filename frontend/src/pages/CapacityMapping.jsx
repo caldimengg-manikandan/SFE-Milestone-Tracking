@@ -26,6 +26,7 @@ export default function CapacityMapping() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState(tab || 'summary');
   const [loading, setLoading] = useState(true);
+  const [filterShop, setFilterShop] = useState('All');
 
   // Sync activeTab with URL param
   useEffect(() => {
@@ -67,7 +68,13 @@ export default function CapacityMapping() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Summary Cards - Always Visible */}
-      <SummaryView capacities={capacities} machines={machines} manpower={manpower} />
+      <SummaryView 
+        capacities={capacities} 
+        machines={machines} 
+        manpower={manpower} 
+        filterShop={filterShop}
+        setFilterShop={setFilterShop}
+      />
 
 
       {/* Content */}
@@ -82,21 +89,41 @@ export default function CapacityMapping() {
 }
 
 /* ── Summary Cards Component (Header) ── */
-function SummaryView({ capacities, machines, manpower }) {
-  const totalCapacity = capacities.reduce((sum, c) => sum + parseFloat(c.rate_per_day || 0), 0);
-  const shops = Array.from(new Set(capacities.map(c => c.shop))).length;
-  const machineCount = machines.length;
+function SummaryView({ capacities, machines, manpower, filterShop, setFilterShop }) {
+  const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
+
+  const filteredCapacities = filterShop === 'All' ? capacities : capacities.filter(c => c.shop === filterShop);
+  const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => m.shop === filterShop);
+  
+  const totalCapacity = filteredCapacities.reduce((sum, c) => sum + parseFloat(c.rate_per_day || 0), 0);
+  const shopsCount = filterShop === 'All' ? Array.from(new Set(capacities.map(c => c.shop))).length : 1;
+  const machineCount = filteredMachines.length;
   const skilledManpower = manpower.length;
 
   const stats = [
-    { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: 'Per Day (Global)', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Active Shops', value: shops, sub: 'Operating Locations', icon: MapPin, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: filterShop === 'All' ? 'Per Day (Global)' : `Per Day (${filterShop})`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Active Shops', value: shopsCount, sub: filterShop === 'All' ? 'Operating Locations' : 'Selected Shop', icon: MapPin, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Total Machinery', value: machineCount, sub: 'Production Equipment', icon: Cpu, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Total Manpower', value: skilledManpower, sub: 'Production Personnel', icon: Users2, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+    <div className="space-y-4 animate-fade-in">
+      <div className="flex items-center justify-between mb-2">
+        <h2 className="text-lg font-black text-slate-800 tracking-tight">Performance Overview</h2>
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Shop:</label>
+          <select 
+            className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
+            value={filterShop}
+            onChange={(e) => setFilterShop(e.target.value)}
+          >
+            <option value="All">All Shops</option>
+            {uniqueShops.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+        </div>
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
       {stats.map((s, idx) => (
         <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4`}>
@@ -107,6 +134,7 @@ function SummaryView({ capacities, machines, manpower }) {
           <p className="text-xs text-slate-400 mt-2 font-medium">{s.sub}</p>
         </div>
       ))}
+      </div>
     </div>
   );
 }
@@ -156,8 +184,11 @@ function SummaryTableView({ capacities, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Shop Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Location</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Machinery Assigned</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Manpower Assigned</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Capacity/Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity (T/Day)</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate (T)</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
           </thead>
@@ -167,6 +198,9 @@ function SummaryTableView({ capacities, machines, refresh }) {
                 <td className="px-6 py-4 font-bold text-slate-900">{item.shop}</td>
                 <td className="px-6 py-4 text-slate-500 font-medium">{item.location || '-'}</td>
                 <td className="px-6 py-4 text-[10px] font-bold text-amber-600 uppercase">{item.machine_name || '-'}</td>
+                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.machine_assigned}</td>
+                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.manpower_assigned}</td>
+                <td className="px-6 py-4 text-center font-bold text-blue-600">{item.capacity_per_day}</td>
                 <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
                 <td className="px-6 py-4 text-right">
                   <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs">
@@ -208,13 +242,29 @@ function SummaryTableView({ capacities, machines, refresh }) {
                   <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
                 </div>
               </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Assigned</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.machine_assigned} onChange={e => setForm({...form, machine_assigned: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Manpower Assigned</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.manpower_assigned} onChange={e => setForm({...form, manpower_assigned: e.target.value})} />
+                </div>
+              </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rate per Day (Tonnes)</label>
-                <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacity per Day (T)</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.capacity_per_day} onChange={e => setForm({...form, capacity_per_day: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Rate (Tonnes)</label>
+                  <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} />
+                </div>
               </div>
               <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -234,8 +284,12 @@ function CapacityView({ data, machines, refresh }) {
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: ''
+    shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', capacity_per_day: '', rate_per_day: ''
   });
+
+  // Derived data for dynamic dropdowns
+  const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
+  const filteredMachines = machines.filter(m => m.shop === form.shop);
 
   const handleOpen = (item = null) => {
     if (item) {
@@ -245,12 +299,15 @@ function CapacityView({ data, machines, refresh }) {
         location: item.location || '',
         category: item.category || 'Machine',
         machine: item.machine || '',
+        machine_assigned: item.machine_assigned || '',
+        manpower_assigned: item.manpower_assigned || '',
         process: item.process || '',
+        capacity_per_day: item.capacity_per_day || '',
         rate_per_day: item.rate_per_day || ''
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', capacity_per_day: '', rate_per_day: '' });
     }
     setShowModal(true);
   };
@@ -298,6 +355,9 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Category</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Machinery Assigned</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Manpower Assigned</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Capacity/Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Month</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Year</th>
@@ -316,6 +376,9 @@ function CapacityView({ data, machines, refresh }) {
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
                 <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
+                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.machine_assigned}</td>
+                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.manpower_assigned}</td>
+                <td className="px-6 py-4 text-center font-bold text-blue-600">{item.capacity_per_day}</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{item.rate_per_day} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_month?.toFixed(1)} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_year?.toFixed(1)} T</td>
@@ -342,11 +405,14 @@ function CapacityView({ data, machines, refresh }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop Name</label>
-                  <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.shop} onChange={e => setForm({...form, shop: e.target.value})} placeholder="Main Shop" />
+                  <select required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" value={form.shop} onChange={e => setForm({...form, shop: e.target.value, machine: ''})}>
+                    <option value="">Select Shop</option>
+                    {uniqueShops.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Location</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({...form, location: e.target.value})} placeholder="Section A" />
+                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({...form, location: e.target.value})} placeholder="Country" />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -360,16 +426,32 @@ function CapacityView({ data, machines, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine (Optional)</label>
                 <select className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" value={form.machine || ''} onChange={e => setForm({...form, machine: e.target.value || null})}>
                   <option value="">Select Machine</option>
-                  {machines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                  {filteredMachines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Assigned</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.machine_assigned} onChange={e => setForm({...form, machine_assigned: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Manpower Assigned</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.manpower_assigned} onChange={e => setForm({...form, manpower_assigned: e.target.value})} />
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} placeholder="e.g. Drilling" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rate per Day (Tonnes)</label>
-                <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} placeholder="0.00" />
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacity per Day (T)</label>
+                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.capacity_per_day} onChange={e => setForm({...form, capacity_per_day: e.target.value})} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Rate (Tonnes)</label>
+                  <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} placeholder="0.00" />
+                </div>
               </div>
               <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}

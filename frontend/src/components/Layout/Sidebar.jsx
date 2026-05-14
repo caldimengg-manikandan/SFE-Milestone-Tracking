@@ -54,9 +54,9 @@ const navSections = [
   {
     label: 'CAPACITY MAPPING',
     items: [
-      { name: 'Update Capacity', path: '/production/capacity-mapping/capacity', icon: Settings2 },
-      { name: 'Update Machine', path: '/production/capacity-mapping/machine', icon: Cpu },
-      { name: 'Update Manpower', path: '/production/capacity-mapping/manpower', icon: Users2 },
+      { name: 'Capacity Configuration', path: '/production/capacity-mapping/capacity', icon: Settings2 },
+      { name: 'Machine Master', path: '/production/capacity-mapping/machine', icon: Cpu },
+      { name: 'Workforce Master', path: '/production/capacity-mapping/manpower', icon: Users2 },
       { name: 'Summary', path: '/production/capacity-mapping/summary', icon: BarChart3 },
     ],
   },
