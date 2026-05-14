@@ -13,6 +13,7 @@ import CustomerMaster from './pages/CustomerMaster';
 import DetailerMaster from './pages/DetailerMaster';
 import PlanCreation from './pages/Structural/PlanCreation';
 import PlanTracking from './pages/Structural/PlanTracking';
+import CapacityMapping from './pages/CapacityMapping';
 
 export default function App() {
   return (
@@ -46,6 +47,7 @@ export default function App() {
           {/* Production Management Routes */}
           <Route path="production/process-master" element={<ProcessMaster />} />
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
+          <Route path="production/capacity-mapping/:tab?" element={<CapacityMapping />} />
 
           <Route path="settings" element={<PlaceholderPage title="Settings" />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />

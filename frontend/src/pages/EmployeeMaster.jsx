@@ -167,7 +167,8 @@ export default function EmployeeMaster() {
             <thead>
               <tr className="border-b border-slate-300 bg-white">
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employee</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Dept / Designation</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Department</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Project Manager</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Contact Info</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
                 <th className="text-right px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actions</th>
@@ -175,10 +176,10 @@ export default function EmployeeMaster() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan={5} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" /><p className="text-xs font-bold text-slate-400">Loading records...</p></td></tr>
+                <tr><td colSpan={6} className="py-20 text-center"><Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" /><p className="text-xs font-bold text-slate-400">Loading records...</p></td></tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-5 py-20 text-center">
+                  <td colSpan={6} className="px-5 py-20 text-center">
                     <div className="w-16 h-16 bg-white rounded-none flex items-center justify-center mx-auto mb-4"><Users className="w-8 h-8 text-slate-200" /></div>
                     <p className="text-sm font-bold text-slate-800">No employees found</p>
                     <p className="text-xs text-slate-400 mt-1">Add your first employee to get started</p>
@@ -199,10 +200,10 @@ export default function EmployeeMaster() {
                       </div>
                     </td>
                     <td className="px-6 py-5 hidden md:table-cell">
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs"><Briefcase className="w-3 h-3 text-slate-400" /> {emp.designation}</div>
-                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-tighter">{emp.department}</div>
-                      </div>
+                      <div className="text-[10px] text-slate-700 font-bold uppercase tracking-tighter">{emp.department}</div>
+                    </td>
+                    <td className="px-6 py-5 hidden md:table-cell">
+                      <div className="flex items-center gap-1.5 text-slate-700 font-bold text-xs"><Briefcase className="w-3 h-3 text-slate-400" /> {emp.designation}</div>
                     </td>
                     <td className="px-6 py-5 hidden xl:table-cell">
                       <div className="space-y-1">
@@ -345,7 +346,7 @@ export default function EmployeeMaster() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Designation</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Project Manager</label>
                       <input
                         required
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"

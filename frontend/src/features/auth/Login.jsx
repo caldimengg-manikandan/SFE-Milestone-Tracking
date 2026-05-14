@@ -31,15 +31,14 @@ export default function Login() {
     setLoading(true);
     try {
       if (mode === 'signup') {
-        const res = await authAPI.register({
+        await authAPI.register({
           email: form.email,
           password: form.password,
           first_name: form.first_name,
           last_name: form.last_name,
         });
-        sessionStorage.setItem('token', res.data.token);
-        sessionStorage.setItem('user', JSON.stringify(res.data.user));
-        navigate('/dashboard', { replace: true });
+        setMode('login');
+        setForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
       } else {
         const res = await authAPI.login({ email: form.email, password: form.password });
         sessionStorage.setItem('token', res.data.token);

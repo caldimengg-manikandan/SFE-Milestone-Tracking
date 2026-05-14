@@ -17,6 +17,10 @@ import {
   Square,
   Box,
   Plus,
+  BarChart3,
+  Settings2,
+  Cpu,
+  Users2,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -52,7 +56,16 @@ const navSections = [
     label: 'PRODUCTION MANAGEMENT',
     items: [
       { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
-      { name: 'Production Priority Schedule', path: '/production/priority-schedule', icon: ListChecks },
+      { name: 'Production Schedule', path: '/production/priority-schedule', icon: ListChecks },
+    ],
+  },
+  {
+    label: 'CAPACITY MAPPING',
+    items: [
+      { name: 'Capacity Configuration', path: '/production/capacity-mapping/capacity', icon: Settings2 },
+      { name: 'Machine Master', path: '/production/capacity-mapping/machine', icon: Cpu },
+      { name: 'Workforce Master', path: '/production/capacity-mapping/manpower', icon: Users2 },
+      { name: 'Summary', path: '/production/capacity-mapping/summary', icon: BarChart3 },
     ],
   },
   {

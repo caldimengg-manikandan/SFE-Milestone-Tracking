@@ -100,6 +100,31 @@ export const dashboardAPI = {
     getStats: (params) => api.get('/dashboard/stats/', { params }),
 };
 
+/* ── Capacity Mapping APIs ── */
+export const machineAPI = {
+  getAll: (params = {}) => api.get('/production/machines/', { params }),
+  getById: (id) => api.get(`/production/machines/${id}/`),
+  create: (data) => api.post('/production/machines/', data),
+  update: (id, data) => api.put(`/production/machines/${id}/`, data),
+  delete: (id) => api.delete(`/production/machines/${id}/`),
+};
+
+export const manpowerAPI = {
+  getAll: (params = {}) => api.get('/production/manpower/', { params }),
+  getById: (id) => api.get(`/production/manpower/${id}/`),
+  create: (data) => api.post('/production/manpower/', data),
+  update: (id, data) => api.put(`/production/manpower/${id}/`, data),
+  delete: (id) => api.delete(`/production/manpower/${id}/`),
+};
+
+export const capacityAPI = {
+  getAll: (params = {}) => api.get('/production/capacity/', { params }),
+  getById: (id) => api.get(`/production/capacity/${id}/`),
+  create: (data) => api.post('/production/capacity/', data),
+  update: (id, data) => api.put(`/production/capacity/${id}/`, data),
+  delete: (id) => api.delete(`/production/capacity/${id}/`),
+};
+
 export default api;
 
 /* -- Customer API -- */
