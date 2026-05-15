@@ -3,7 +3,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Count
 from employees.models import Employee
-from projects.models import Project
+from projects.models import Project, StructuralScheduleItem
 from production.models import ProductionPriorityItem, ProductionItem, ProductionSchedule
 from django.utils import timezone
 from datetime import timedelta
@@ -49,11 +49,27 @@ class DashboardStatsView(APIView):
                     duration = (schedule.end_date.year - schedule.start_date.year) * 12 + (schedule.end_date.month - schedule.start_date.month) + 1
                     items_data = []
                     for item in schedule.items.all():
+                        ofa_date = None
+                        erection_date = None
+                        try:
+                            # Link to StructuralScheduleItem via job_number (code) and sequence_number
+                            struct_item = StructuralScheduleItem.objects.filter(
+                                project__code=item.job_number, 
+                                seq_no=item.sequence_number
+                            ).first()
+                            if struct_item:
+                                ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
+                                erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
+                        except:
+                            pass
+
                         items_data.append({
                             'job_number': item.job_number,
                             'sequence_number': item.sequence_number,
                             'weight': str(item.weight) if item.weight else '0.00',
                             'quantity': item.quantity,
+                            'ofa_date': ofa_date,
+                            'erection_date': erection_date,
                             'rts_date': item.rts_date.isoformat() if item.rts_date else None,
                             'ship_date': item.ship_date.isoformat() if item.ship_date else None,
                             'notes': item.notes,
@@ -84,8 +100,25 @@ class DashboardStatsView(APIView):
             project_timelines = project_timelines.order_by('created_at')
             if project_timelines.exists():
                 for idx, project in enumerate(project_timelines):
-                    start_date = project.created_at.date()
-                    end_date = project.erection_date
+                    # Try to get overall range from schedules
+                    struct_schedules = project.structural_schedules.all()
+                    start_date = None
+                    end_date = None
+                    
+                    if struct_schedules.exists():
+                        ofa_dates = [s.scheduled_ofa_date for s in struct_schedules if s.scheduled_ofa_date]
+                        erection_dates = [s.scheduled_erection_date for s in struct_schedules if s.scheduled_erection_date]
+                        if ofa_dates:
+                            start_date = min(ofa_dates)
+                        if erection_dates:
+                            end_date = max(erection_dates)
+
+                    # Fallbacks if no schedules or dates
+                    if not start_date:
+                        start_date = project.created_at.date()
+                    if not end_date:
+                        end_date = project.erection_date or start_date
+
                     if start_date and end_date:
                         start_month = start_date.month - 1
                         duration = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
@@ -155,17 +188,17 @@ class DashboardStatsView(APIView):
                 {'name': 'Structural', 'completed': 6, 'pending': 4},
             ]
 
-        # 5. Recent Activities
+        # 5. Recent Activities (Recent Projects)
         recent_activities = []
-        latest_items = ProductionPriorityItem.objects.order_by('-updated_at')[:4]
-        for item in latest_items:
+        latest_projects = Project.objects.order_by('-created_at')[:6]
+        for proj in latest_projects:
             recent_activities.append({
-                'id': item.id,
-                'action': f"Job #{item.job_number} {'Completed' if item.is_complete else 'Updated'}",
-                'project': f"Seq: {item.sequence_number}",
-                'user': 'System',
-                'time': item.updated_at.strftime('%H:%M %p'),
-                'type': 'success' if item.is_complete else 'info'
+                'id': proj.id,
+                'action': f"Project: {proj.name}",
+                'project': f"Code: {proj.code}",
+                'user': 'Admin',
+                'time': proj.created_at.strftime('%b %d, %I:%M %p') if proj.created_at.date() < timezone.now().date() else proj.created_at.strftime('%I:%M %p'),
+                'type': 'success'
             })
 
         if not recent_activities:
@@ -176,11 +209,16 @@ class DashboardStatsView(APIView):
                 {'id': 4, 'action': 'Job #D420 Scheduled', 'project': 'Seq: 09', 'user': 'System', 'time': '01:15 PM', 'type': 'info'},
             ]
 
+        in_progress = Project.objects.filter(status='In Progress').count()
+        yet_to_complete = Project.objects.filter(status='Yet to Complete').count()
+        completed = Project.objects.filter(status='Completed').count()
+
         return Response({
             'stats': [
                 {'label': 'Total Projects', 'value': str(total_projects), 'change': '+0', 'up': True},
-                {'label': 'Active Projects', 'value': str(active_projects), 'change': '+0', 'up': True},
-                {'label': 'Efficiency Rate', 'value': f"{int(efficiency_rate)}%", 'change': '+0%', 'up': True},
+                {'label': 'In Progress', 'value': str(in_progress), 'change': '+0', 'up': True},
+                {'label': 'Yet to Complete', 'value': str(yet_to_complete), 'change': '+0', 'up': True},
+                {'label': 'Completed', 'value': str(completed), 'change': '+0', 'up': True},
             ],
             'ganttData': {
                 'tasks': gantt_tasks,

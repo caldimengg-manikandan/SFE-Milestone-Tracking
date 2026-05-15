@@ -11,7 +11,8 @@ import {
   Save,
   CheckCircle2,
   Trash2,
-  AlertCircle
+  AlertCircle,
+  Upload
 } from 'lucide-react';
 import { authAPI } from '../services/api';
 
@@ -21,6 +22,7 @@ export default function Settings() {
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   
   const [form, setForm] = useState({
     first_name: '',
@@ -28,11 +30,7 @@ export default function Settings() {
     email: '',
     role: '',
     department: '',
-    notifications: {
-      email: true,
-      browser: true,
-      updates: false
-    }
+    department: ''
   });
 
   const [securityForm, setSecurityForm] = useState({
@@ -45,6 +43,15 @@ export default function Settings() {
     fetchUserData();
   }, []);
 
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.body.classList.add('dark');
+    } else {
+      document.body.classList.remove('dark');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
   const fetchUserData = async () => {
     try {
       setLoading(true);
@@ -52,11 +59,12 @@ export default function Settings() {
       const userData = response.data;
       setForm(prev => ({
         ...prev,
-        first_name: userData.first_name || userData.name?.split(' ')[0] || '',
-        last_name: userData.last_name || userData.name?.split(' ')[1] || '',
+        first_name: userData.first_name || '',
+        last_name: userData.last_name || '',
         email: userData.email || '',
         role: userData.role || 'employee',
         department: userData.department || 'Management',
+        department: userData.department || 'Management'
       }));
     } catch (err) {
       console.error("Failed to fetch user data", err);
@@ -66,30 +74,49 @@ export default function Settings() {
     }
   };
 
+
   const handleProfileSave = async () => {
     setSaving(true);
     setError('');
     try {
-      const response = await authAPI.updateProfile({
+      const payload = {
         first_name: form.first_name,
         last_name: form.last_name,
         email: form.email,
         role: form.role
-      });
+      };
+
+      const response = await authAPI.updateProfile(payload);
+      const updatedData = response.data;
       
       // Update session storage
       const updatedUser = {
         ...JSON.parse(sessionStorage.getItem('user') || '{}'),
-        name: `${form.first_name} ${form.last_name}`,
-        email: form.email,
-        role: form.role
+        name: `${updatedData.first_name} ${updatedData.last_name}`,
+        email: updatedData.email,
+        role: updatedData.role,
       };
       sessionStorage.setItem('user', JSON.stringify(updatedUser));
       
+      setForm(prev => ({ 
+        ...prev
+      }));
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
-      setError(err.response?.data?.email?.[0] || "Failed to update profile.");
+      const errorData = err.response?.data;
+      if (typeof errorData === 'object' && errorData !== null) {
+        const firstError = Object.values(errorData)[0];
+        if (Array.isArray(firstError)) {
+          setError(firstError[0]);
+        } else if (typeof firstError === 'string') {
+          setError(firstError);
+        } else {
+          setError("Failed to update profile.");
+        }
+      } else {
+        setError("Failed to update profile.");
+      }
     } finally {
       setSaving(false);
     }
@@ -135,7 +162,6 @@ export default function Settings() {
   const tabs = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
     { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
 
@@ -191,17 +217,13 @@ export default function Settings() {
         <div className="flex-1 bg-white rounded-[2.5rem] border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
           {activeTab === 'profile' && (
             <div className="p-8 space-y-8 animate-fade-in">
-              <div className="flex items-center gap-6">
-                <div className="w-24 h-24 rounded-[2rem] bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-2xl font-black text-slate-400 shadow-inner overflow-hidden">
+              <div className="flex items-center gap-4 mb-6 pb-6 border-b border-slate-100">
+                <div className="w-16 h-16 rounded-2xl bg-amber-50 flex items-center justify-center text-xl font-black text-amber-500 shadow-sm border border-amber-100">
                   {form.first_name ? `${form.first_name[0]}${form.last_name?.[0] || ''}`.toUpperCase() : '??'}
                 </div>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Profile Picture</h3>
-                  <p className="text-xs text-slate-500 mt-1">Upload a high-resolution portrait for your team to recognize you.</p>
-                  <div className="flex gap-2 mt-4">
-                    <button className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-xl hover:bg-slate-800 transition-all cursor-not-allowed opacity-50" title="Coming Soon">Upload New</button>
-                    <button className="px-4 py-2 bg-slate-50 text-slate-600 text-xs font-bold rounded-xl border border-slate-200 hover:bg-slate-100 transition-all">Remove</button>
-                  </div>
+                  <h3 className="text-lg font-bold text-slate-900">Personal Information</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">Update your identity and contact details across the system.</p>
                 </div>
               </div>
 
@@ -323,61 +345,47 @@ export default function Settings() {
             </div>
           )}
 
-          {activeTab === 'notifications' && (
-            <div className="p-8 space-y-8 animate-fade-in">
-              <div className="space-y-6">
-                <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                      <Mail className="w-5 h-5 text-blue-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">Email Notifications</p>
-                      <p className="text-[11px] text-slate-500">Receive weekly reports and system alerts via email.</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={form.notifications.email} onChange={() => setForm({...form, notifications: {...form.notifications, email: !form.notifications.email}})} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                  </label>
-                </div>
-
-                <div className="flex items-center justify-between p-4 rounded-2xl border border-slate-100 hover:bg-slate-50 transition-all">
-                  <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center">
-                      <Smartphone className="w-5 h-5 text-purple-500" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-slate-800">Browser Push Alerts</p>
-                      <p className="text-[11px] text-slate-500">Get instant updates even when you are not in the tab.</p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" checked={form.notifications.browser} onChange={() => setForm({...form, notifications: {...form.notifications, browser: !form.notifications.browser}})} className="sr-only peer" />
-                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
 
           {activeTab === 'appearance' && (
             <div className="p-8 space-y-8 animate-fade-in">
               <div className="space-y-6">
                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">Theme Preferences</h3>
                 <div className="grid grid-cols-2 gap-4">
-                  <button className="p-4 rounded-3xl border-2 border-amber-500 bg-white text-left space-y-3">
-                    <div className="w-full h-20 bg-slate-50 rounded-xl border border-slate-100 flex items-center justify-center">
+                  <button 
+                    onClick={() => setTheme('light')}
+                    className={`p-4 rounded-3xl border-2 transition-all ${theme === 'light' ? 'border-amber-500 bg-white' : 'border-slate-100 bg-slate-50 opacity-60 hover:opacity-100'}`}
+                  >
+                    <div className="w-full h-20 bg-white rounded-xl border border-slate-100 flex items-center justify-center mb-3">
                       <div className="w-12 h-1 bg-amber-500 rounded-full" />
                     </div>
-                    <p className="text-xs font-bold text-slate-900">Light Mode (System)</p>
+                    <p className={`text-xs font-bold ${theme === 'light' ? 'text-slate-900' : 'text-slate-500'}`}>Light Mode</p>
                   </button>
-                  <button className="p-4 rounded-3xl border-2 border-slate-100 bg-slate-900 text-left space-y-3 grayscale opacity-60 cursor-not-allowed">
-                    <div className="w-full h-20 bg-slate-800 rounded-xl flex items-center justify-center">
-                      <div className="w-12 h-1 bg-amber-500 rounded-full opacity-50" />
+                  <button 
+                    onClick={() => setTheme('dark')}
+                    className={`p-4 rounded-3xl border-2 transition-all ${theme === 'dark' ? 'border-amber-500 bg-slate-800' : 'border-slate-100 bg-slate-900 opacity-60 hover:opacity-100'}`}
+                  >
+                    <div className="w-full h-20 bg-slate-800 rounded-xl flex items-center justify-center mb-3">
+                      <div className="w-12 h-1 bg-amber-500 rounded-full" />
                     </div>
-                    <p className="text-xs font-bold text-slate-300">Dark Mode (Coming Soon)</p>
+                    <p className={`text-xs font-bold ${theme === 'dark' ? 'text-amber-500' : 'text-slate-300'}`}>Dark Mode</p>
                   </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-slate-100">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">System Language</label>
+                    <select className="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-bold text-slate-700 outline-none appearance-none">
+                      <option value="en">English (US)</option>
+                      <option value="hi">Hindi</option>
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Timezone</label>
+                    <select className="w-full px-5 py-4 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-bold text-slate-700 outline-none appearance-none">
+                      <option value="IST">Asia/Kolkata (GMT+5:30)</option>
+                      <option value="UTC">UTC</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>

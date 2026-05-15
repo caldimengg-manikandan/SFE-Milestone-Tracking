@@ -27,6 +27,12 @@
     color: #1e293b;
     min-height: 100vh;
     overflow-x: hidden;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  body.dark {
+    background-color: #0b1120;
+    color: #f1f5f9;
   }
 
   #root {
@@ -309,4 +315,134 @@
   font-size: 0.55rem;
   color: #64748b;
   margin-top: 2px;
+}
+
+/* ============================================
+   DARK MODE OVERRIDES
+   ============================================ */
+.dark .glass-card {
+  background: rgba(15, 23, 42, 0.8) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+.dark .gantt-cell {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+}
+
+.dark .gantt-header-cell {
+  background-color: #0f172a !important;
+  border-color: #334155 !important;
+  color: #94a3b8 !important;
+}
+
+.dark .gantt-label-cell {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #334155 !important;
+}
+
+.dark .gantt-month-sub {
+  color: #94a3b8 !important;
+}
+
+.dark input, 
+.dark select, 
+.dark textarea {
+  background-color: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f1f5f9 !important;
+}
+
+.dark input:focus, 
+.dark select:focus {
+  border-color: #fbbf24 !important;
+}
+
+.dark .bg-white {
+  background-color: #1e293b !important;
+}
+
+.dark .text-slate-900 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .border-slate-200 {
+  border-color: #334155 !important;
+}
+
+.dark .bg-slate-50 {
+  background-color: #0f172a !important;
+}
+
+.dark .bg-slate-50\/50 {
+  background-color: rgba(15, 23, 42, 0.5) !important;
+}
+
+/* ============================================
+   GLOBAL UI FIXES (TABLES & TEXT)
+   ============================================ */
+
+/* Remove harsh white/slate hovers and replace with subtle brand hover */
+tr[class*="hover:bg-"] {
+  transition: all 0.2s ease !important;
+}
+
+tr[class*="hover:bg-"]:hover {
+  background-color: rgba(245, 158, 11, 0.04) !important;
+}
+
+.dark tr[class*="hover:bg-"]:hover {
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+
+/* Fix text colors in dark mode for common slate classes */
+.dark .text-slate-900, 
+.dark .text-slate-800, 
+.dark .text-slate-700 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-600, 
+.dark .text-slate-500 {
+  color: #94a3b8 !important;
+}
+
+.dark .text-slate-400 {
+  color: #64748b !important;
+}
+
+/* Fix badges and avatars in dark mode */
+.dark .bg-emerald-50 {
+  background-color: rgba(16, 185, 129, 0.1) !important;
+}
+
+.dark .bg-amber-50 {
+  background-color: rgba(245, 158, 11, 0.1) !important;
+}
+
+.dark .bg-blue-50 {
+  background-color: rgba(59, 130, 246, 0.1) !important;
+}
+
+.dark .bg-red-50 {
+  background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+.dark .bg-gradient-to-br.from-slate-100 {
+  background-image: linear-gradient(to bottom right, #1e293b, #0f172a) !important;
+}
+
+/* Modal specific fixes */
+.dark .bg-black\/60 {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Fix Lucide icons that use slate-400 */
+.dark .text-slate-400 {
+  color: #475569 !important;
 }

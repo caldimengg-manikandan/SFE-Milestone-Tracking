@@ -1,7 +1,7 @@
 from django.db import models
 
 class Project(models.Model):
-    STATUS_CHOICES = [('Planning', 'Planning'), ('In Progress', 'In Progress'), ('Completed', 'Completed'), ('Delayed', 'Delayed'), ('On Hold', 'On Hold')]
+    STATUS_CHOICES = [('In Progress', 'In Progress'), ('Yet to Complete', 'Yet to Complete'), ('Completed', 'Completed')]
     PRIORITY_CHOICES = [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')]
 
     code = models.CharField(max_length=30, unique=True)
@@ -13,7 +13,7 @@ class Project(models.Model):
     total_manhours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     manhour_ton = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     erection_date = models.DateField(null=True, blank=True)
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Planning')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Yet to Complete')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

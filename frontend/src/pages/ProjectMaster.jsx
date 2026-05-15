@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, FileText } from 'lucide-react';
+import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../services/api';
 import ProjectForm from '../components/forms/ProjectForm';
 
@@ -12,8 +12,11 @@ export default function ProjectMaster() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [initialTab, setInitialTab] = useState("basic");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
+  const [viewMode, setViewMode] = useState('view');
+  const [error, setError] = useState('');
+  const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -50,7 +53,7 @@ export default function ProjectMaster() {
     total_ton: '',
     total_manhours: '',
     erection_date: '',
-    status: 'Planning',
+    status: 'Yet to Complete',
     priority: 'Medium'
   });
 
@@ -81,11 +84,14 @@ export default function ProjectMaster() {
 
   const fetchAllSchedules = async () => {
     try {
+      setLoading(true);
       const res = await scheduleAPI.getAll();
       const data = res.data.results || res.data;
       setAllSchedules(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -222,11 +228,32 @@ export default function ProjectMaster() {
 
   const fetchProjects = async () => {
     try {
+      setLoading(true);
+      setError('');
       const res = await projectAPI.getAll();
+      
+      // Handle both { results: [] } and directly []
       const data = res.data.results || res.data;
-      setProjects(Array.isArray(data) ? data : []);
+      
+      if (Array.isArray(data)) {
+        setProjects(data);
+      } else if (data && typeof data === 'object') {
+        // Handle case where it might be a single object instead of list
+        setProjects([data]);
+      } else {
+        setProjects([]);
+      }
     } catch (err) {
       console.error('Failed to fetch projects:', err);
+      if (err.response) {
+        setError(`Server Error: ${err.response.status} - ${err.response.data?.detail || 'Something went wrong on the server.'}`);
+      } else if (err.request) {
+        setError('Network Error: Unable to reach the server. Please check if the backend is running.');
+      } else {
+        setError(`Error: ${err.message}`);
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -356,7 +383,6 @@ export default function ProjectMaster() {
   };
 
 
-  const [viewMode, setViewMode] = useState('edit');
 
   const handleDetails = async (project, mode = 'edit') => {
     setForm({
@@ -369,7 +395,7 @@ export default function ProjectMaster() {
       total_ton: project.total_ton || '',
       total_manhours: project.total_manhours || '',
       erection_date: project.erection_date || '',
-      status: project.status || 'Planning',
+      status: project.status || 'Yet to Complete',
       priority: project.priority || 'Medium'
     });
     setViewMode(mode);
@@ -521,11 +547,15 @@ export default function ProjectMaster() {
     document.body.removeChild(link);
   };
 
-  const filtered = projects.filter(p =>
-    (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
-    (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase())
-  );
+  const filtered = projects.filter(p => {
+    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
+      (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    
+    return matchesSearch && matchesStatus;
+  });
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -537,6 +567,14 @@ export default function ProjectMaster() {
 
 
       <div className="space-y-4 animate-fade-in">
+        {/* Error Message */}
+      {error && (
+        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
+          <AlertCircle className="w-5 h-5" />
+          {error}
+          <button onClick={fetchProjects} className="ml-auto underline">Try Again</button>
+        </div>
+      )}
         {/* Control Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
           <div className="relative flex-1 max-w-md">
@@ -559,6 +597,16 @@ export default function ProjectMaster() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold outline-none focus:border-amber-400 transition-all"
+            >
+              <option value="All">All Statuses</option>
+              <option value="In Progress">In Progress</option>
+              <option value="Yet to Complete">Yet to Complete</option>
+              <option value="Completed">Completed</option>
+            </select>
             <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
               <Filter className="w-4 h-4" /> Filters
             </button>
@@ -600,7 +648,14 @@ export default function ProjectMaster() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
-                {paginatedData.length > 0 ? paginatedData.map((p) => (
+                {loading ? (
+                  <tr>
+                    <td colSpan="11" className="py-20 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
+                      <p className="text-xs font-bold text-slate-400">Loading projects...</p>
+                    </td>
+                  </tr>
+                ) : paginatedData.length > 0 ? paginatedData.map((p) => (
                   <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100">
                     <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{p.name}</td>
                     <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{p.code}</td>
@@ -645,6 +700,7 @@ export default function ProjectMaster() {
                     <td colSpan="11" className="px-6 py-12 text-center text-slate-500 italic">No projects found matching your search.</td>
                   </tr>
                 )}
+
               </tbody>
             </table>
           </div>

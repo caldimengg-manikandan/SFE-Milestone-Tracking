@@ -21,6 +21,12 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined']
         read_only_fields = ['id', 'date_joined']
 
+    def update(self, instance, validated_data):
+        email = validated_data.get('email')
+        if email:
+            validated_data['username'] = email
+        return super().update(instance, validated_data)
+
 class ChangePasswordSerializer(serializers.Serializer):
     old_password = serializers.CharField(required=True)
     new_password = serializers.CharField(required=True, min_length=6)

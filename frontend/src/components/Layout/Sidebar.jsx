@@ -254,8 +254,12 @@ export default function Sidebar({
           >
             {/* Avatar */}
             <div className="relative shrink-0">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-[13px] font-bold text-white ring-2 ring-white/10">
-                {initials}
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-[13px] font-bold text-white ring-2 ring-white/10 overflow-hidden">
+                {user.profile_picture ? (
+                  <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '')}${user.profile_picture}`} alt="Avatar" className="w-full h-full object-cover" />
+                ) : (
+                  initials
+                )}
               </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-[#0c1222]" />
             </div>

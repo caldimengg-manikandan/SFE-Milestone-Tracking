@@ -292,6 +292,18 @@ export default function ProjectForm({
                   <option value="High">High</option>
                 </select>
               </div>
+              <div>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
+                <select 
+                  value={form.status}
+                  onChange={e => setForm({...form, status: e.target.value})}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                >
+                  <option value="In Progress">In Progress</option>
+                  <option value="Yet to Complete">Yet to Complete</option>
+                  <option value="Completed">Completed</option>
+                </select>
+              </div>
 
               <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                 <div>

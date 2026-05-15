@@ -12,8 +12,9 @@ import { dashboardAPI } from '../../services/api';
 /* ── Configs ── */
 const statConfigs = {
   'Total Projects': { icon: FolderKanban, iconBg: 'bg-amber-100', color: 'text-amber-600' },
-  'Active Projects': { icon: Box, iconBg: 'bg-blue-100', color: 'text-blue-600' },
-  'Efficiency Rate': { icon: TrendingUp, iconBg: 'bg-purple-100', color: 'text-purple-600' },
+  'In Progress': { icon: Box, iconBg: 'bg-blue-100', color: 'text-blue-600' },
+  'Yet to Complete': { icon: Clock, iconBg: 'bg-orange-100', color: 'text-orange-600' },
+  'Completed': { icon: CheckCircle2, iconBg: 'bg-emerald-100', color: 'text-emerald-600' },
 };
 
 const announcements = [
@@ -23,7 +24,6 @@ const announcements = [
 ];
 
 export default function Dashboard() {
-  const [period, setPeriod] = useState('7d');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [fromMonth, setFromMonth] = useState(0);
   const [toMonth, setToMonth] = useState(11);
@@ -35,6 +35,7 @@ export default function Dashboard() {
     barData: [],
     recentActivities: []
   });
+  const [error, setError] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState(null);
 
   const toggleExpand = (id) => {
@@ -59,6 +60,7 @@ export default function Dashboard() {
         setData(response.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
+        setError(error.response?.data?.detail || 'Failed to connect to the server');
       } finally {
         setLoading(false);
       }
@@ -83,27 +85,18 @@ export default function Dashboard() {
           <h2 className="text-2xl font-black text-slate-900 tracking-tight">Executive Dashboard</h2>
           <p className="text-sm text-slate-500 font-medium">Real-time production and workforce overview</p>
         </div>
-        <div className="flex items-center gap-1 bg-white border border-slate-300 p-1 shadow-sm">
-          {['24h', '7d', '30d', '90d'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setPeriod(p)}
-              className={`px-4 py-1.5 text-[10px] font-black uppercase tracking-widest transition-all ${
-                period === p
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-50'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
       </div>
+      
+      {error && (
+        <div className="bg-red-50 border border-red-100 p-4 rounded-lg text-red-600 text-xs font-bold animate-shake">
+          {error}
+        </div>
+      )}
 
       {/* Stat Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {data.stats.map((s, i) => {
-          const config = statConfigs[s.label] || { icon: Users, iconBg: 'bg-slate-100', color: 'text-slate-600' };
+          const config = statConfigs[s.label] || { icon: FolderKanban, iconBg: 'bg-slate-100', color: 'text-slate-600' };
           const Icon = config.icon;
           return (
             <div key={i} className="bg-white border border-slate-300 p-6 transition-all duration-300 hover:shadow-xl hover:border-amber-400 group">
@@ -132,13 +125,10 @@ export default function Dashboard() {
           <div className="p-8 border-bottom border-slate-100 flex items-center justify-between">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Milestone Management</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gantt Chart • Project Timelines & Prioritization</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Gantt Chart • Project Timelines & Schedules</p>
             </div>
             <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-amber-500" />
-                <span className="text-[9px] font-bold text-slate-500 uppercase tracking-tighter">High Priority</span>
-              </div>
+
               <select
                 value={fromMonth}
                 onChange={(e) => setFromMonth(parseInt(e.target.value))}
@@ -175,7 +165,7 @@ export default function Dashboard() {
             <div className="min-w-[800px] gantt-grid" style={{ gridTemplateColumns: `200px repeat(${toMonth - fromMonth + 1}, 1fr)` }}>
               {/* Header Row: Months */}
               <div className="gantt-header-cell gantt-pink-header flex flex-col justify-center">
-                <span>Process / Project</span>
+                <span>Schedule / Project</span>
               </div>
               
               {data.ganttData?.months?.slice(fromMonth, toMonth + 1).map((m, i) => (
@@ -196,7 +186,6 @@ export default function Dashboard() {
                         <div className={`w-1.5 h-full absolute left-0 top-0 transition-colors ${expandedTaskId === task.id ? 'bg-amber-500' : 'bg-transparent'}`} />
                         <div className="flex flex-col">
                           <span className="truncate max-w-[160px] font-bold text-slate-800">{task.name}</span>
-                          <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">{task.priority} Priority</span>
                         </div>
                       </div>
                       {/* Grid Cells */}
@@ -235,12 +224,12 @@ export default function Dashboard() {
                       let duration = 1;
                       let hasTimeline = false;
 
-                      if (item.rts_date) {
-                        const rts = new Date(item.rts_date);
-                        const ship = item.ship_date ? new Date(item.ship_date) : rts;
-                        if (!isNaN(rts.getTime())) {
-                          startMonth = rts.getMonth();
-                          duration = Math.max(1, (ship.getFullYear() - rts.getFullYear()) * 12 + (ship.getMonth() - rts.getMonth()) + 1);
+                      if (item.ofa_date && (item.erection_date || item.rts_date)) {
+                        const ofa = new Date(item.ofa_date);
+                        const end = new Date(item.erection_date || item.rts_date);
+                        if (!isNaN(ofa.getTime()) && !isNaN(end.getTime())) {
+                          startMonth = ofa.getMonth();
+                          duration = Math.max(1, (end.getFullYear() - ofa.getFullYear()) * 12 + (end.getMonth() - ofa.getMonth()) + 1);
                           hasTimeline = true;
                         }
                       }

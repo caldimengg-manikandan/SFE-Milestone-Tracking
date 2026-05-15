@@ -174,8 +174,12 @@ export default function Header({ onMenuClick }) {
             onClick={() => setShowProfile(!showProfile)}
             className="flex items-center gap-2 p-1.5 rounded-xl hover:bg-slate-100 transition-colors"
           >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-sm">
-              {initials}
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-sm overflow-hidden">
+              {user.profile_picture ? (
+                <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '')}${user.profile_picture}`} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                initials
+              )}
             </div>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />
           </button>

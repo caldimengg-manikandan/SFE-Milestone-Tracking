@@ -30,7 +30,9 @@ import {
   ResponsiveContainer, 
   PieChart, 
   Pie, 
-  Cell 
+  Cell,
+  AreaChart,
+  Area
 } from 'recharts';
 import { machineAPI, manpowerAPI, capacityAPI } from '../services/api';
 
@@ -175,6 +177,7 @@ function SummaryChartsView({ capacities, machines, manpower }) {
   const resourceData = [
     { name: 'Machinery', value: machines.length },
     { name: 'Manpower', value: manpower.length },
+    { name: 'Daily Capacity', value: capacities.reduce((sum, c) => sum + parseFloat(c.rate_per_day || 0), 0) },
   ];
 
   return (
@@ -211,10 +214,8 @@ function SummaryChartsView({ capacities, machines, manpower }) {
         </ResponsiveContainer>
       </div>
 
-      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px] lg:col-span-2">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Resource Distribution</h3>
-        </div>
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px]">
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Resource Allocation Summary</h3>
         <div className="flex h-full pb-8">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -222,8 +223,8 @@ function SummaryChartsView({ capacities, machines, manpower }) {
                 data={resourceData}
                 cx="50%"
                 cy="45%"
-                innerRadius={80}
-                outerRadius={120}
+                innerRadius={60}
+                outerRadius={100}
                 paddingAngle={5}
                 dataKey="value"
               >
@@ -238,6 +239,27 @@ function SummaryChartsView({ capacities, machines, manpower }) {
             </PieChart>
           </ResponsiveContainer>
         </div>
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px]">
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Growth Projection (Conceptual)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="colorCap" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.8}/>
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0}/>
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+            />
+            <Area type="monotone" dataKey="capacity" stroke="#f59e0b" fillOpacity={1} fill="url(#colorCap)" />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

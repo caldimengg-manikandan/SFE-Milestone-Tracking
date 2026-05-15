@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -10,7 +10,7 @@ import random
 from datetime import timedelta
 from .serializers import LoginSerializer, UserSerializer, RegisterSerializer, ChangePasswordSerializer
 from .models import User
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -99,15 +99,41 @@ def reset_password_view(request):
         return Response({'message': 'Invalid request.'}, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['PATCH'])
+@parser_classes([MultiPartParser, FormParser, JSONParser])
 @permission_classes([IsAuthenticated])
 def update_profile_view(request):
     """Update authenticated user's profile."""
-    # Support for profile picture upload (MultiPartParser)
-    serializer = UserSerializer(request.user, data=request.data, partial=True)
-    if serializer.is_valid():
-        serializer.save()
-        return Response(serializer.data)
-    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    user = request.user
+    data = request.data
+    
+    # Update fields if present in request
+    if 'first_name' in data:
+        user.first_name = data['first_name']
+    if 'last_name' in data:
+        user.last_name = data['last_name']
+    if 'email' in data:
+        email = data['email']
+        # Check if email is already used by another user
+        if User.objects.filter(email=email).exclude(id=user.id).exists():
+            return Response({'email': ['This email is already in use.']}, status=status.HTTP_400_BAD_REQUEST)
+        user.email = email
+        user.username = email
+    if 'role' in data:
+        user.role = data['role']
+    if 'phone' in data:
+        user.phone = data['phone']
+    
+    # Handle profile picture if sent
+    if 'profile_picture' in request.FILES:
+        user.profile_picture = request.FILES['profile_picture']
+    
+    try:
+        user.save()
+    except Exception as e:
+        return Response({'message': f"Database Error: {str(e)}"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    serializer = UserSerializer(user)
+    return Response(serializer.data)
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
