@@ -10,7 +10,7 @@ class StructuralScheduleItemSerializer(serializers.ModelSerializer):
             'scheduled_field_measure_date', 'rts_date', 'shop_lead_time_weeks',
             'scheduled_erection_date', 'budget_shop_hours', 'budget_field_hours',
             'actual_shop_hours', 'actual_field_hours', 'detailer_vendor',
-            'dwg_status', 'notes', 'fabrication_details', 'created_at', 'updated_at'
+            'dwg_status', 'tracking_status', 'notes', 'fabrication_details', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 

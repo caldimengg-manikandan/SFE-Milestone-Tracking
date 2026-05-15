@@ -46,6 +46,7 @@ class StructuralScheduleItem(models.Model):
     actual_field_hours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     detailer_vendor = models.CharField(max_length=200, blank=True)
     dwg_status = models.CharField(max_length=100, blank=True)
+    tracking_status = models.CharField(max_length=100, blank=True, null=True)
     notes = models.TextField(blank=True)
     fabrication_details = models.JSONField(default=list, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
