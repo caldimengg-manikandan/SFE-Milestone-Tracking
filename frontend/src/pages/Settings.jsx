@@ -29,7 +29,6 @@ export default function Settings() {
     last_name: '',
     email: '',
     role: '',
-    department: '',
     department: ''
   });
 
@@ -63,7 +62,6 @@ export default function Settings() {
         last_name: userData.last_name || '',
         email: userData.email || '',
         role: userData.role || 'employee',
-        department: userData.department || 'Management',
         department: userData.department || 'Management'
       }));
     } catch (err) {
