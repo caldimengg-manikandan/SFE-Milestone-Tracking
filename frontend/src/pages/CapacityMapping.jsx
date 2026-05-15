@@ -19,6 +19,19 @@ import {
   Clock,
   Briefcase
 } from 'lucide-react';
+import { 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  Legend, 
+  ResponsiveContainer, 
+  PieChart, 
+  Pie, 
+  Cell 
+} from 'recharts';
 import { machineAPI, manpowerAPI, capacityAPI } from '../services/api';
 
 export default function CapacityMapping() {
@@ -79,7 +92,7 @@ export default function CapacityMapping() {
 
       {/* Content */}
       <div className="mt-6">
-        {activeTab === 'summary' && <SummaryTableView capacities={capacities} machines={machines} manpower={manpower} />}
+        {activeTab === 'summary' && <SummaryChartsView capacities={capacities} machines={machines} manpower={manpower} />}
         {activeTab === 'capacity' && <CapacityView data={capacities} machines={machines} refresh={fetchData} />}
         {activeTab === 'machine' && <MachineView data={machines} refresh={fetchData} />}
         {activeTab === 'manpower' && <ManpowerView data={manpower} refresh={fetchData} />}
@@ -139,141 +152,93 @@ function SummaryView({ capacities, machines, manpower, filterShop, setFilterShop
   );
 }
 
-/* ── Summary Module Table View ── */
-function SummaryTableView({ capacities, machines, refresh }) {
-  const [showModal, setShowModal] = useState(false);
-  const [editItem, setEditItem] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
-    shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: ''
+/* ── Summary Module Charts View ── */
+function SummaryChartsView({ capacities, machines, manpower }) {
+  const shopData = capacities.reduce((acc, curr) => {
+    const shop = curr.shop;
+    if (!acc[shop]) acc[shop] = { name: shop, capacity: 0, machines: 0, manpower: 0 };
+    acc[shop].capacity += parseFloat(curr.rate_per_day || 0);
+    return acc;
+  }, {});
+
+  machines.forEach(m => {
+    if (shopData[m.shop]) shopData[m.shop].machines += 1;
   });
 
-  const handleOpen = (item) => {
-    setEditItem(item);
-    setForm({
-      shop: item.shop || '',
-      location: item.location || '',
-      category: item.category || 'Machine',
-      machine: item.machine || '',
-      process: item.process || '',
-      rate_per_day: item.rate_per_day || ''
-    });
-    setShowModal(true);
-  };
+  // Since manpower isn't strictly tied to a shop in the current data structure (based on the view), 
+  // we'll distribute or just show total. But looking at the cards, they are filtered by shop.
+  // Assuming manpower is global for now or we could add shop to manpower later.
+  
+  const data = Object.values(shopData);
+  const COLORS = ['#f59e0b', '#3b82f6', '#10b981', '#8b5cf6', '#ef4444'];
 
-  const handleSave = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      await capacityAPI.update(editItem.id, form);
-      setShowModal(false);
-      refresh();
-    } catch (err) {
-      alert('Failed to update');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const resourceData = [
+    { name: 'Machinery', value: machines.length },
+    { name: 'Manpower', value: manpower.length },
+  ];
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      <div className="bg-white rounded-3xl border border-slate-200 overflow-hidden shadow-sm">
-        <table className="w-full text-sm text-left">
-          <thead>
-            <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Shop Name</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Location</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Machinery Assigned</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Manpower Assigned</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Capacity/Day</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate (T)</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100">
-            {capacities.map((item, idx) => (
-              <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900">{item.shop}</td>
-                <td className="px-6 py-4 text-slate-500 font-medium">{item.location || '-'}</td>
-                <td className="px-6 py-4 text-[10px] font-bold text-amber-600 uppercase">{item.machine_name || '-'}</td>
-                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.machine_assigned}</td>
-                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.manpower_assigned}</td>
-                <td className="px-6 py-4 text-center font-bold text-blue-600">{item.capacity_per_day}</td>
-                <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
-                <td className="px-6 py-4 text-right">
-                  <span className="inline-flex items-center px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 font-black text-xs">
-                    {item.rate_per_day}
-                  </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button onClick={() => handleOpen(item)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={async () => { if(window.confirm('Delete entry?')) { await capacityAPI.delete(item.id); refresh(); } }} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {capacities.length === 0 && (
-              <tr>
-                <td colSpan="6" className="px-6 py-12 text-center text-slate-400 italic">No records found.</td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-fade-in">
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px]">
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Capacity by Shop (Tonnes/Day)</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+              cursor={{ fill: '#f8fafc' }}
+            />
+            <Bar dataKey="capacity" fill="#f59e0b" radius={[6, 6, 0, 0]} barSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
       </div>
 
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-slate-900">Edit Capacity (Summary)</h3>
-              <button onClick={() => setShowModal(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
-            </div>
-            <form onSubmit={handleSave} className="p-8 space-y-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop Name</label>
-                  <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.shop} onChange={e => setForm({...form, shop: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Location</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({...form, location: e.target.value})} />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Assigned</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.machine_assigned} onChange={e => setForm({...form, machine_assigned: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Manpower Assigned</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.manpower_assigned} onChange={e => setForm({...form, manpower_assigned: e.target.value})} />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
-                <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} />
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacity per Day (T)</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.capacity_per_day} onChange={e => setForm({...form, capacity_per_day: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Rate (Tonnes)</label>
-                  <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} />
-                </div>
-              </div>
-              <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
-                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-                Update Capacity
-              </button>
-            </form>
-          </div>
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px]">
+        <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest mb-6">Machinery per Shop</h3>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 700, fill: '#64748b' }} />
+            <Tooltip 
+              contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+              cursor={{ fill: '#f8fafc' }}
+            />
+            <Bar dataKey="machines" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={40} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+
+      <div className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm h-[400px] lg:col-span-2">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">Resource Distribution</h3>
         </div>
-      )}
+        <div className="flex h-full pb-8">
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={resourceData}
+                cx="50%"
+                cy="45%"
+                innerRadius={80}
+                outerRadius={120}
+                paddingAngle={5}
+                dataKey="value"
+              >
+                {resourceData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <Tooltip 
+                contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+              />
+              <Legend verticalAlign="bottom" height={36}/>
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
     </div>
   );
 }
@@ -284,7 +249,7 @@ function CapacityView({ data, machines, refresh }) {
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', capacity_per_day: '', rate_per_day: ''
+    shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', rate_per_day: ''
   });
 
   // Derived data for dynamic dropdowns
@@ -302,12 +267,11 @@ function CapacityView({ data, machines, refresh }) {
         machine_assigned: item.machine_assigned || '',
         manpower_assigned: item.manpower_assigned || '',
         process: item.process || '',
-        capacity_per_day: item.capacity_per_day || '',
         rate_per_day: item.rate_per_day || ''
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', capacity_per_day: '', rate_per_day: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', rate_per_day: '' });
     }
     setShowModal(true);
   };
@@ -357,7 +321,6 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Machinery Assigned</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Manpower Assigned</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Capacity/Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Month</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Year</th>
@@ -378,7 +341,6 @@ function CapacityView({ data, machines, refresh }) {
                 <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
                 <td className="px-6 py-4 text-center font-bold text-slate-700">{item.machine_assigned}</td>
                 <td className="px-6 py-4 text-center font-bold text-slate-700">{item.manpower_assigned}</td>
-                <td className="px-6 py-4 text-center font-bold text-blue-600">{item.capacity_per_day}</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{item.rate_per_day} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_month?.toFixed(1)} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_year?.toFixed(1)} T</td>
@@ -443,11 +405,7 @@ function CapacityView({ data, machines, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} placeholder="e.g. Drilling" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacity per Day (T)</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.capacity_per_day} onChange={e => setForm({...form, capacity_per_day: e.target.value})} />
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Rate (Tonnes)</label>
                   <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({...form, rate_per_day: e.target.value})} placeholder="0.00" />
@@ -470,7 +428,7 @@ function MachineView({ data, refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', machine_id: '', make: '', capacity_per_day: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: {} });
+  const [form, setForm] = useState({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: '' });
 
   const handleOpen = (item = null) => {
     if (item) {
@@ -478,7 +436,7 @@ function MachineView({ data, refresh }) {
       setForm({ ...item });
     } else {
       setEditItem(null);
-      setForm({ name: '', machine_id: '', make: '', capacity_per_day: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: {} });
+      setForm({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: '' });
     }
     setShowModal(true);
   };
@@ -513,8 +471,7 @@ function MachineView({ data, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine ID</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Make</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Day</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Model No</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Model No</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Serial No</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Shop</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Commissioned Date</th>
@@ -536,15 +493,16 @@ function MachineView({ data, refresh }) {
                 </td>
                 <td className="px-6 py-4 text-xs font-bold text-blue-600">{m.machine_id || '-'}</td>
                 <td className="px-6 py-4 font-bold text-amber-600 uppercase text-[10px] tracking-widest">{m.make}</td>
-                <td className="px-6 py-4 text-right font-black text-emerald-600">{m.capacity_per_day} T</td>
-                <td className="px-6 py-4 text-xs font-medium text-slate-600">{m.model_no || '-'}</td>
+                <td className="px-6 py-4 text-right text-xs font-medium text-slate-600">{m.model_no || '-'}</td>
                 <td className="px-6 py-4 text-xs font-medium text-slate-600">{m.serial_no || '-'}</td>
                 <td className="px-6 py-4 text-xs font-bold text-slate-900">{m.shop || '-'}</td>
                 <td className="px-6 py-4 font-medium text-slate-600">{m.commissioned_date || 'N/A'}</td>
                 <td className="px-6 py-4 font-medium text-slate-600">{m.validity_year || 'N/A'}</td>
                 <td className="px-6 py-4">
                   <p className="text-[10px] text-slate-400 italic truncate max-w-[150px]">
-                    {typeof m.other_fields === 'string' ? m.other_fields : JSON.stringify(m.other_fields)}
+                    {typeof m.other_fields === 'string' 
+                      ? (m.other_fields === '{}' ? '' : m.other_fields) 
+                      : (Object.keys(m.other_fields || {}).length === 0 ? '' : JSON.stringify(m.other_fields))}
                   </p>
                 </td>
                 <td className="px-6 py-4 text-right">
@@ -581,11 +539,7 @@ function MachineView({ data, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Make</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.make} onChange={e => setForm({...form, make: e.target.value})} placeholder="e.g. Voortman" />
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Capacity per Day (T)</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.capacity_per_day} onChange={e => setForm({...form, capacity_per_day: e.target.value})} placeholder="0.00" />
-                </div>
+              <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop</label>
                   <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.shop} onChange={e => setForm({...form, shop: e.target.value})} placeholder="Main Shop" />
@@ -613,7 +567,7 @@ function MachineView({ data, refresh }) {
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Other Fields (Notes)</label>
-                <textarea className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all min-h-[80px]" value={typeof form.other_fields === 'string' ? form.other_fields : JSON.stringify(form.other_fields, null, 2)} onChange={e => setForm({...form, other_fields: e.target.value})} placeholder="Additional details..." />
+                <textarea className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all min-h-[80px]" value={typeof form.other_fields === 'string' ? (form.other_fields === '{}' ? '' : form.other_fields) : (Object.keys(form.other_fields || {}).length === 0 ? '' : JSON.stringify(form.other_fields, null, 2))} onChange={e => setForm({...form, other_fields: e.target.value})} placeholder="Additional details..." />
               </div>
               <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
@@ -632,7 +586,7 @@ function ManpowerView({ data, refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ employee_name: '', skill_level: 'Medium', process: '', productivity_rate_per_day: '', rate_per_day: '' });
+  const [form, setForm] = useState({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '' });
 
   const handleOpen = (item = null) => {
     if (item) {
@@ -640,7 +594,7 @@ function ManpowerView({ data, refresh }) {
       setForm({ ...item });
     } else {
       setEditItem(null);
-      setForm({ employee_name: '', skill_level: 'Medium', process: '', productivity_rate_per_day: '', rate_per_day: '' });
+      setForm({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '' });
     }
     setShowModal(true);
   };
@@ -675,7 +629,6 @@ function ManpowerView({ data, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Employee Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Skill Level</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process / Trade</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Productivity Rate/Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate / Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
@@ -694,7 +647,6 @@ function ManpowerView({ data, refresh }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-600">{item.process}</td>
-                <td className="px-6 py-4 text-right font-bold text-blue-600">{item.productivity_rate_per_day} T</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600">{item.rate_per_day} T</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1">
@@ -731,10 +683,6 @@ function ManpowerView({ data, refresh }) {
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process / Trade</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} placeholder="e.g. Senior Welder" />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Productivity Rate / Day (Tonnes)</label>
-                <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.productivity_rate_per_day} onChange={e => setForm({...form, productivity_rate_per_day: e.target.value})} placeholder="0.00" />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rate / Day (Tonnes)</label>

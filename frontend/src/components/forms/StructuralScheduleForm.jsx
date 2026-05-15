@@ -106,7 +106,7 @@ export default function StructuralScheduleForm({
         <div className="flex items-center justify-end px-4 py-3 bg-slate-50 border-b border-slate-200 shrink-0">
           <button 
             onClick={addScheduleRow}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[11px] font-bold tracking-wider uppercase rounded shadow-sm hover:from-amber-400 hover:to-orange-400 transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 text-white text-[11px] font-bold tracking-wider uppercase rounded shadow-sm hover:bg-amber-700 transition-colors"
           >
             <Plus className="w-4 h-4" /> Add Sequence
           </button>

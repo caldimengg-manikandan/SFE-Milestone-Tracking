@@ -39,6 +39,10 @@ export const authAPI = {
   register: (data) => api.post('/auth/register/', data),
   forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
   resetPassword: (data) => api.post('/auth/reset-password/', data),
+  updateProfile: (data) => api.patch('/auth/profile/update/', data),
+  changePassword: (data) => api.post('/auth/profile/change-password/', data),
+  deleteAccount: () => api.delete('/auth/profile/delete/'),
+  me: () => api.get('/auth/me/'),
 };
 
 /* ── Employee API ── */

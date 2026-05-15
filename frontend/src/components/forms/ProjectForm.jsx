@@ -264,9 +264,11 @@ export default function ProjectForm({
                   className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
                 >
                   <option value="">Select PM</option>
-                  {Array.from(new Set(employees.map(emp => emp.designation).filter(Boolean))).map((pmName, idx) => (
-                    <option key={idx} value={pmName}>{pmName}</option>
-                  ))}
+                  {employees
+                    .filter(emp => emp.designation === 'Project Manager')
+                    .map((emp) => (
+                      <option key={emp.id} value={emp.name}>{emp.name}</option>
+                    ))}
                 </select>
               </div>
               <div>
@@ -290,20 +292,7 @@ export default function ProjectForm({
                   <option value="High">High</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
-                <select 
-                  value={form.status}
-                  onChange={e => setForm({...form, status: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="Planning">Planning</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Completed">Completed</option>
-                  <option value="Delayed">Delayed</option>
-                  <option value="On Hold">On Hold</option>
-                </select>
-              </div>
+
               <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                 <div>
                   <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>
@@ -366,7 +355,7 @@ export default function ProjectForm({
             <button 
               onClick={handleSave}
               disabled={loading}
-              className="px-8 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all flex items-center gap-2 disabled:opacity-50"
+              className="px-8 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:bg-amber-700 transition-all flex items-center gap-2 disabled:opacity-50"
             >
               {loading ? 'Saving...' : <><Save className="w-4 h-4" /> Save Project</>}
             </button>

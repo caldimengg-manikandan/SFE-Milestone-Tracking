@@ -168,7 +168,7 @@ export default function EmployeeMaster() {
               <tr className="border-b border-slate-300 bg-white">
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Employee</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Department</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Project Manager</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Designation</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Contact Info</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Status</th>
                 <th className="text-right px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Actions</th>
@@ -346,7 +346,7 @@ export default function EmployeeMaster() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Project Manager</label>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Designation</label>
                       <input
                         required
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm"

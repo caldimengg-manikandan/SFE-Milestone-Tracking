@@ -170,7 +170,7 @@ export default function PlanCreation() {
         </div>
         <button
           onClick={() => { resetForm(); setShowModal(true); }}
-          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg hover:from-amber-400 transition-all"
+          className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-bold shadow-lg hover:bg-amber-700 transition-all"
         >
           <Plus className="w-4 h-4" /> Create New Plan
         </button>
@@ -180,11 +180,10 @@ export default function PlanCreation() {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
+              <tr className="bg-amber-600 text-white">
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider">Project Name</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider">Code</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider">Customer</th>
-                <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider">Status</th>
                 <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-right">Actions</th>
               </tr>
             </thead>
@@ -194,9 +193,6 @@ export default function PlanCreation() {
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.name}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.code}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.customer_name || 'N/A'}</td>
-                  <td className="px-4 py-3 border-r border-slate-100">
-                    <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 text-[10px] font-bold uppercase">{p.status}</span>
-                  </td>
                   <td className="px-4 py-3 text-right">
                     <button
                       onClick={() => { setForm(p); setSchedules(allSchedules.filter(s => (s.project?.id || s.project) === p.id)); setIsEditing(true); setShowModal(true); }}

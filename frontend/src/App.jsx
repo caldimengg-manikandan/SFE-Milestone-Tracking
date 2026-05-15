@@ -14,6 +14,7 @@ import DetailerMaster from './pages/DetailerMaster';
 import PlanCreation from './pages/Structural/PlanCreation';
 import PlanTracking from './pages/Structural/PlanTracking';
 import CapacityMapping from './pages/CapacityMapping';
+import Settings from './pages/Settings';
 
 export default function App() {
   return (
@@ -49,7 +50,7 @@ export default function App() {
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
           <Route path="production/capacity-mapping/:tab?" element={<CapacityMapping />} />
 
-          <Route path="settings" element={<PlaceholderPage title="Settings" />} />
+          <Route path="settings" element={<Settings />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
