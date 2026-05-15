@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList } from 'lucide-react';
+import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList, ChevronDown } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../../services/api';
 
 export default function PlanTracking() {
@@ -81,6 +81,19 @@ export default function PlanTracking() {
     item.item_description?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const [openDropdownId, setOpenDropdownId] = useState(null);
+
+  const handleStatusUpdate = async (itemId, subStatus) => {
+    try {
+      await scheduleAPI.update(itemId, { tracking_status: subStatus });
+      setAllSchedules(prev => prev.map(s => s.id === itemId ? { ...s, tracking_status: subStatus } : s));
+      setOpenDropdownId(null);
+    } catch (err) {
+      console.error('Failed to update status:', err);
+      alert('Failed to update status');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6">
       <div className="flex flex-col gap-1">
@@ -105,8 +118,8 @@ export default function PlanTracking() {
       </div>
 
       {/* Standardized Table - Compressed for Static Width */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
-        <div className="overflow-x-hidden">
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="">
           <table className="w-full text-left border-collapse table-fixed">
             <thead>
               <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
@@ -130,6 +143,7 @@ export default function PlanTracking() {
                 filteredData.map((item) => {
                   const status = calculateStatus(item.rts_date, item.shop_lead_time_weeks);
                   const leadDays = (parseFloat(item.shop_lead_time_weeks) || 0) * 7;
+                  const isUnderProgress = status.label === 'Under Progress';
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
@@ -139,10 +153,53 @@ export default function PlanTracking() {
                       <td className="px-3 py-4 text-slate-900 text-[12px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
                       <td className="px-3 py-4 text-center text-slate-900 text-[12px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
                       <td className="px-3 py-4 text-center text-slate-900 text-[12px] font-medium border-r border-slate-100">{formatDate(item.rts_date)}</td>
-                      <td className="px-3 py-4 border-r border-slate-100">
-                        <div className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-tight ${status.bg} ${status.color} border border-current/10 whitespace-nowrap`}>
-                          <div className={`w-1 h-1 rounded-full ${status.dot}`} />
-                          {status.label}
+                      <td className="px-3 py-4 border-r border-slate-100 relative">
+                        <div className="flex flex-col items-center gap-1.5">
+                          <button
+                            onClick={() => isUnderProgress && setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
+                            className={`flex items-center justify-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border ${status.bg} ${status.color} border-current/10 ${isUnderProgress ? 'hover:scale-105 active:scale-95' : 'cursor-default'}`}
+                          >
+                            <div className={`w-1.5 h-1.5 rounded-full ${status.dot} shadow-[0_0_4px_rgba(0,0,0,0.1)]`} />
+                            {status.label}
+                            {isUnderProgress && <ChevronDown className={`w-3 h-3 ml-0.5 transition-transform ${openDropdownId === item.id ? 'rotate-180' : ''}`} />}
+                          </button>
+                          
+                          {item.tracking_status && (
+                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-white border border-slate-100 shadow-sm">
+                              <span className="text-[9px] font-bold uppercase text-slate-600 tracking-tight">
+                                {item.tracking_status}
+                              </span>
+                            </div>
+                          )}
+
+                          {openDropdownId === item.id && (
+                            <>
+                              <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
+                              <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[140px] mt-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                <div className="px-3 py-1.5 border-b border-slate-100 mb-1">
+                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Select Status</span>
+                                </div>
+                                {['Erected', 'Half Erected', 'In Fabrication', 'On Hold'].map((option) => (
+                                  <button
+                                    key={option}
+                                    onClick={() => handleStatusUpdate(item.id, option)}
+                                    className={`w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase transition-all flex items-center justify-between ${item.tracking_status === option ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
+                                  >
+                                    {option}
+                                    {item.tracking_status === option && <div className="w-1 h-1 rounded-full bg-amber-500" />}
+                                  </button>
+                                ))}
+                                <div className="mt-1 pt-1 border-t border-slate-100">
+                                  <button
+                                    onClick={() => handleStatusUpdate(item.id, null)}
+                                    className="w-full text-left px-4 py-2.5 text-[10px] font-bold uppercase text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
+                                  >
+                                    Reset to Default
+                                  </button>
+                                </div>
+                              </div>
+                            </>
+                          )}
                         </div>
                       </td>
                       <td className="px-3 py-4 text-center text-slate-900 text-[12px] font-medium border-r border-slate-100">{leadDays}</td>

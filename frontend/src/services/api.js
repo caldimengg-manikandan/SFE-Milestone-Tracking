@@ -63,7 +63,7 @@ export const projectAPI = {
 export const scheduleAPI = {
   getAll: (params = {}) => api.get('/projects/structural-schedules/', { params }),
   create: (data) => api.post('/projects/structural-schedules/', data),
-  update: (id, data) => api.put(`/projects/structural-schedules/${id}/`, data),
+  update: (id, data) => api.patch(`/projects/structural-schedules/${id}/`, data),
   delete: (id) => api.delete(`/projects/structural-schedules/${id}/`),
 };
 
