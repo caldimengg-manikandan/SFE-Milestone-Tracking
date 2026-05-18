@@ -49,7 +49,7 @@ export default function PlanTracking() {
     } else if (now >= completionDate) {
       return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
     } else {
-      return { label: 'Under Progress', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500', icon: Clock };
+      return { label: 'InProgress', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500', icon: Clock };
     }
   };
 
@@ -143,7 +143,7 @@ export default function PlanTracking() {
                 filteredData.map((item) => {
                   const status = calculateStatus(item.rts_date, item.shop_lead_time_weeks);
                   const leadDays = (parseFloat(item.shop_lead_time_weeks) || 0) * 7;
-                  const isUnderProgress = status.label === 'Under Progress';
+                  const isUnderProgress = status.label === 'InProgress';
 
                   return (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">

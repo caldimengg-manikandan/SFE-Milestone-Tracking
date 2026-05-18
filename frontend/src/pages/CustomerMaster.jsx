@@ -11,17 +11,41 @@ export default function CustomerMaster() {
   const [saving, setSaving] = useState(false);
 
   const [form, setForm] = useState({
-    category: 'Domestic',
     country: 'India',
     name: '',
     code: '',
     contacts: [{ person: '', email: '', phone: '+91 ' }]
   });
 
+  const countryCodeMap = {
+    'India': '+91 ',
+    'USA': '+1 ',
+    'UK': '+44 ',
+    'UAE': '+971 ',
+    'Other': ''
+  };
+
+  const handleCountryChange = (e) => {
+    const newCountry = e.target.value;
+    const oldCode = countryCodeMap[form.country] || '';
+    const newCode = countryCodeMap[newCountry] || '';
+
+    const newContacts = form.contacts.map(contact => {
+      let phone = contact.phone || '';
+      if (oldCode && phone.startsWith(oldCode)) {
+        phone = phone.replace(oldCode, newCode);
+      } else if (!phone && newCode) {
+        phone = newCode;
+      }
+      return { ...contact, phone };
+    });
+
+    setForm({ ...form, country: newCountry, contacts: newContacts });
+  };
+
   const openAdd = () => {
     setEditId(null);
     setForm({
-      category: 'Domestic',
       country: 'India',
       name: '',
       code: '',
@@ -146,7 +170,6 @@ export default function CustomerMaster() {
               <tr className="border-b border-slate-300 bg-slate-50/50">
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Name</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:table-cell">Customer Code</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden md:table-cell">Category</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Country</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Contact Person</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Phone</th>
@@ -184,9 +207,6 @@ export default function CustomerMaster() {
                     </td>
                     <td className="px-6 py-5 hidden sm:table-cell">
                       <p className="text-xs font-black text-amber-600 uppercase tracking-widest">{customer.code}</p>
-                    </td>
-                    <td className="px-6 py-5 hidden md:table-cell">
-                      <div className="text-xs font-bold text-slate-700">{customer.category}</div>
                     </td>
                     <td className="px-6 py-5 hidden lg:table-cell">
                       <div className="text-xs font-bold text-slate-700">{customer.country}</div>
@@ -252,23 +272,10 @@ export default function CustomerMaster() {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Code</label>
                   <input
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
-                    placeholder="Auto-generated if empty"
+                    placeholder="Customer Code"
                     value={form.code}
                     onChange={e => setForm({ ...form, code: e.target.value })}
                   />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Category <span className="text-red-500">*</span></label>
-                  <select
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
-                    value={form.category}
-                    onChange={e => setForm({ ...form, category: e.target.value })}
-                  >
-                    <option value="Domestic">Domestic</option>
-                    <option value="International">International</option>
-                    <option value="Government">Government</option>
-                  </select>
                 </div>
 
                 <div className="space-y-1.5">
@@ -276,7 +283,7 @@ export default function CustomerMaster() {
                   <select
                     className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
                     value={form.country}
-                    onChange={e => setForm({ ...form, country: e.target.value })}
+                    onChange={handleCountryChange}
                   >
                     <option value="India">India</option>
                     <option value="USA">USA</option>

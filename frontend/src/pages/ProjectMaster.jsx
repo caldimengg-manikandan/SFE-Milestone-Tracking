@@ -642,8 +642,8 @@ export default function ProjectMaster() {
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Erection</th>
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Priority</th>
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Ton</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M.Hrs</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">M/T</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">MH's</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">MH's/Ton</th>
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 text-right">Actions</th>
                 </tr>
               </thead>

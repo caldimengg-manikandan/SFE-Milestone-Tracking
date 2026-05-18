@@ -271,7 +271,7 @@ function CapacityView({ data, machines, refresh }) {
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', rate_per_day: ''
+    shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: ''
   });
 
   // Derived data for dynamic dropdowns
@@ -286,14 +286,12 @@ function CapacityView({ data, machines, refresh }) {
         location: item.location || '',
         category: item.category || 'Machine',
         machine: item.machine || '',
-        machine_assigned: item.machine_assigned || '',
-        manpower_assigned: item.manpower_assigned || '',
         process: item.process || '',
         rate_per_day: item.rate_per_day || ''
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', machine_assigned: '', manpower_assigned: '', process: '', rate_per_day: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '' });
     }
     setShowModal(true);
   };
@@ -341,8 +339,6 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Category</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Machinery Assigned</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Manpower Assigned</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Month</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Year</th>
@@ -361,8 +357,6 @@ function CapacityView({ data, machines, refresh }) {
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
                 <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
-                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.machine_assigned}</td>
-                <td className="px-6 py-4 text-center font-bold text-slate-700">{item.manpower_assigned}</td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{item.rate_per_day} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_month?.toFixed(1)} T</td>
                 <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_year?.toFixed(1)} T</td>
@@ -413,16 +407,6 @@ function CapacityView({ data, machines, refresh }) {
                   {filteredMachines.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                 </select>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Assigned</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.machine_assigned} onChange={e => setForm({...form, machine_assigned: e.target.value})} />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Manpower Assigned</label>
-                  <input type="number" step="0.01" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.manpower_assigned} onChange={e => setForm({...form, manpower_assigned: e.target.value})} />
-                </div>
-              </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} placeholder="e.g. Drilling" />
@@ -450,15 +434,22 @@ function MachineView({ data, refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: '' });
+  const [form, setForm] = useState({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', custom_fields: [] });
 
   const handleOpen = (item = null) => {
     if (item) {
       setEditItem(item);
-      setForm({ ...item });
+      let parsed = [];
+      try {
+        const obj = typeof item.other_fields === 'string' ? JSON.parse(item.other_fields) : item.other_fields;
+        if (obj && typeof obj === 'object') {
+           parsed = Object.entries(obj).map(([k, v]) => ({ label: k, value: v }));
+        }
+      } catch(e) {}
+      setForm({ ...item, custom_fields: parsed });
     } else {
       setEditItem(null);
-      setForm({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', other_fields: '' });
+      setForm({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', custom_fields: [] });
     }
     setShowModal(true);
   };
@@ -467,8 +458,14 @@ function MachineView({ data, refresh }) {
     e.preventDefault();
     setLoading(true);
     try {
-      if (editItem) await machineAPI.update(editItem.id, form);
-      else await machineAPI.create(form);
+      const other_fields = {};
+      (form.custom_fields || []).forEach(f => {
+         if (f.label) other_fields[f.label] = f.value;
+      });
+      const payload = { ...form, other_fields };
+      
+      if (editItem) await machineAPI.update(editItem.id, payload);
+      else await machineAPI.create(payload);
       setShowModal(false);
       refresh();
     } catch (err) {
@@ -498,7 +495,6 @@ function MachineView({ data, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Shop</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Commissioned Date</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Validity Year</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Other Fields</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
           </thead>
@@ -520,13 +516,6 @@ function MachineView({ data, refresh }) {
                 <td className="px-6 py-4 text-xs font-bold text-slate-900">{m.shop || '-'}</td>
                 <td className="px-6 py-4 font-medium text-slate-600">{m.commissioned_date || 'N/A'}</td>
                 <td className="px-6 py-4 font-medium text-slate-600">{m.validity_year || 'N/A'}</td>
-                <td className="px-6 py-4">
-                  <p className="text-[10px] text-slate-400 italic truncate max-w-[150px]">
-                    {typeof m.other_fields === 'string' 
-                      ? (m.other_fields === '{}' ? '' : m.other_fields) 
-                      : (Object.keys(m.other_fields || {}).length === 0 ? '' : JSON.stringify(m.other_fields))}
-                  </p>
-                </td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => handleOpen(m)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
@@ -587,9 +576,32 @@ function MachineView({ data, refresh }) {
                   <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.validity_year || ''} onChange={e => setForm({...form, validity_year: e.target.value})} placeholder="12/26" />
                 </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Other Fields (Notes)</label>
-                <textarea className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all min-h-[80px]" value={typeof form.other_fields === 'string' ? (form.other_fields === '{}' ? '' : form.other_fields) : (Object.keys(form.other_fields || {}).length === 0 ? '' : JSON.stringify(form.other_fields, null, 2))} onChange={e => setForm({...form, other_fields: e.target.value})} placeholder="Additional details..." />
+              <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                <div className="flex items-center justify-between">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Custom Additional Fields</label>
+                  <button type="button" onClick={() => setForm({...form, custom_fields: [...(form.custom_fields || []), {label: '', value: ''}]})} className="text-[10px] px-2 py-1 bg-white border border-slate-200 rounded text-amber-600 font-bold hover:bg-amber-50 hover:border-amber-200 transition-all flex items-center gap-1 shadow-sm"><Plus className="w-3 h-3" /> Add Field</button>
+                </div>
+                {(form.custom_fields || []).map((field, idx) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <input className="w-1/3 px-3 py-2 rounded-lg border border-slate-200 text-xs font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20" value={field.label} onChange={e => {
+                      const newFields = [...form.custom_fields];
+                      newFields[idx].label = e.target.value;
+                      setForm({...form, custom_fields: newFields});
+                    }} placeholder="Label (e.g. Phase)" />
+                    <input className="flex-1 px-3 py-2 rounded-lg border border-slate-200 text-xs font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/20" value={field.value} onChange={e => {
+                      const newFields = [...form.custom_fields];
+                      newFields[idx].value = e.target.value;
+                      setForm({...form, custom_fields: newFields});
+                    }} placeholder="Value" />
+                    <button type="button" onClick={() => {
+                      const newFields = form.custom_fields.filter((_, i) => i !== idx);
+                      setForm({...form, custom_fields: newFields});
+                    }} className="p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-500 hover:border-red-200 hover:bg-red-50 transition-all"><X className="w-4 h-4" /></button>
+                  </div>
+                ))}
+                {(form.custom_fields || []).length === 0 && (
+                  <p className="text-xs text-slate-400 italic text-center py-2">No custom fields added</p>
+                )}
               </div>
               <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}

@@ -120,8 +120,8 @@ export default function StructuralScheduleForm({
             <thead className="sticky top-0 z-20">
               <tr className="bg-slate-800 text-white text-[9px] font-bold uppercase tracking-wider">
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-0 z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">SEQ #</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-[48px] z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Tons</th>
-                <th className="px-1 py-1 border-r border-white/10 w-48 sticky left-[96px] z-40 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Item Description</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-24 sticky left-[48px] z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Tons</th>
+                <th className="px-1 py-1 border-r border-white/10 w-48 sticky left-[144px] z-40 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Item Description</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">Category</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled OFA Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual OFA Date</th>
@@ -131,10 +131,10 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">RTS Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-amber-500/10">Shop Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Start of Erection</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Budget Shop Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Budget Field Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-slate-700/50">Shop Hours actual</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-slate-700/50">Field Hours Actual</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Shop Hours</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Field Hours</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Shop Hours actual</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Field Hours Actual</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12">Detailer / Vendor</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12">Dwg Status</th>
                 <th className="px-1 py-1 border-r border-white/10 w-48">Notes</th>
@@ -161,7 +161,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'tons', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 sticky left-[96px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50">
+                  <td className="px-1 py-1 border-r border-slate-200 sticky left-[144px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50">
                     <div className="flex flex-col gap-1.5 p-1">
                       <input 
                         readOnly={isViewOnly}
