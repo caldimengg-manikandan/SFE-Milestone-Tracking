@@ -7,7 +7,7 @@ class StructuralScheduleItemSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'project', 'seq_no', 'tons', 'item_description', 'category',
             'scheduled_ofa_date', 'actual_ofa_date', 'scheduled_bfa_date', 'actual_bfa_date',
-            'scheduled_field_measure_date', 'rts_date', 'shop_lead_time_weeks',
+            'scheduled_field_measure_date', 'rts_date', 'ship_date', 'shop_lead_time_weeks',
             'scheduled_erection_date', 'budget_shop_hours', 'budget_field_hours',
             'actual_shop_hours', 'actual_field_hours', 'detailer_vendor',
             'dwg_status', 'tracking_status', 'notes', 'fabrication_details', 'created_at', 'updated_at'

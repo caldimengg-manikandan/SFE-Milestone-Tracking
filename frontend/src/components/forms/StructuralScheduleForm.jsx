@@ -116,7 +116,7 @@ export default function StructuralScheduleForm({
       {/* Table Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/30 p-4">
         <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-auto h-max max-h-full relative [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-100/50 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-white [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-900">
-          <table className="w-full border-collapse text-left min-w-[2200px]">
+          <table className="w-full border-collapse text-left min-w-[2350px]">
             <thead className="sticky top-0 z-20">
               <tr className="bg-slate-800 text-white text-[9px] font-bold uppercase tracking-wider">
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-0 z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">SEQ #</th>
@@ -129,6 +129,7 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual BFA Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Field Measure Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-28">RTS Date</th>
+                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-amber-500/10">Ship Date</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-amber-500/10">Shop Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Start of Erection</th>
                 <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Shop Hours</th>
@@ -258,6 +259,15 @@ export default function StructuralScheduleForm({
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all" 
                       value={row.rts_date} 
                       onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)} 
+                    />
+                  </td>
+                  <td className="px-1 py-1 border-r border-slate-200">
+                    <input 
+                      type="date"
+                      readOnly={isViewOnly}
+                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all" 
+                      value={row.ship_date || ''} 
+                      onChange={e => handleRowChange(row.id, 'ship_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-slate-200 bg-amber-500/5">

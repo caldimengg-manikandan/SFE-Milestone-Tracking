@@ -88,6 +88,7 @@ export default function PlanCreation() {
     category: '',
     scheduled_erection_date: projectData.erection_date || '',
     ...calculateDates(projectData.erection_date),
+    ship_date: '',
     shop_lead_time_weeks: '0',
     budget_shop_hours: '0',
     budget_field_hours: '0',

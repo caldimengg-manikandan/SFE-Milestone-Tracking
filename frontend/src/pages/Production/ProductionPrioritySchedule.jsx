@@ -287,7 +287,7 @@ export default function ProductionPrioritySchedule() {
                                             {status.label}
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-400">—</td>
+                                        <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.ship_date)}</td>
                                         <td className="px-4 py-3 text-slate-400 italic text-[10px]">{item.notes || '—'}</td>
                                       </tr>
                                     );

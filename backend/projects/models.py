@@ -43,6 +43,7 @@ class StructuralScheduleItem(models.Model):
     actual_bfa_date = models.DateField(null=True, blank=True)
     scheduled_field_measure_date = models.DateField(null=True, blank=True)
     rts_date = models.DateField(null=True, blank=True)
+    ship_date = models.DateField(null=True, blank=True)
     shop_lead_time_weeks = models.IntegerField(default=0)
     scheduled_erection_date = models.DateField(null=True, blank=True)
     budget_shop_hours = models.DecimalField(max_digits=12, decimal_places=2, default=0)

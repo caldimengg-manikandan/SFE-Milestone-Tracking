@@ -209,14 +209,15 @@ export default function PlanTracking() {
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
                                       <th className="px-2 py-3 border-r border-white/10 w-[11%]">Job Name</th>
                                       <th className="px-2 py-3 border-r border-white/10 w-[11%]">Customer Name</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[15%]">Item Description</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[8%]">Material</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Weight</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[13%]">Item Description</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[7%]">Material</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[6%]">Weight</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">RTS date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[12%]">Status</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[8%]">Lead Time</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Exp. Completion</th>
-                                      <th className="px-2 py-3 text-center w-[9%]">Notes</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Ship date</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[11%]">Status</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Lead Time</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Exp. Completion</th>
+                                      <th className="px-2 py-3 text-center w-[7%]">Notes</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100 bg-white">
@@ -235,6 +236,7 @@ export default function PlanTracking() {
                                             <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.rts_date)}</td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.ship_date)}</td>
                                             <td className="px-2 py-2.5 border-r border-slate-100 relative">
                                               <div className="flex flex-col items-center gap-1">
                                                 <button

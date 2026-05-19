@@ -2,11 +2,26 @@ import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Loader2, ChevronDown } from 'lucide-react';
 import { productionAPI, projectAPI } from '../../services/api';
 
+const parseLocalDate = (dateStr) => {
+  if (!dateStr) return null;
+  const [year, month, day] = dateStr.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const formatDateString = (d) => {
+  if (!d) return '';
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export default function ProductionScheduleForm({ onClose, onSuccess, editSchedule, nextNumber }) {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [userChangedProjects, setUserChangedProjects] = useState(false);
   const [header, setHeader] = useState({
     scheduleNumber: `SCH-${String(nextNumber || 1).padStart(2, '0')}`,
     startDate: '',
@@ -50,45 +65,46 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
   // Auto-calculate schedule Start/End dates when selected projects change
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && !editSchedule && projects.length > 0) {
+    if (selectedProjectIds.length > 0 && (!editSchedule || userChangedProjects) && projects.length > 0) {
       const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
-      let minRTS = null;
-      let maxShip = null;
-      let leadWeeksForMaxShip = 0;
+      let minRTSObj = null;
+      let maxRTSObj = null;
+      let leadWeeksForMaxRTS = 0;
 
       selectedProjects.forEach(proj => {
         if (proj.structural_schedules) {
           proj.structural_schedules.forEach(item => {
             if (item.notes && item.notes.toLowerCase() === 'not in scope') return;
             if (item.rts_date) {
-              const rtsDateObj = new Date(item.rts_date);
-              if (!minRTS || rtsDateObj < minRTS) {
-                minRTS = rtsDateObj;
+              const rtsDateObj = parseLocalDate(item.rts_date);
+              if (!rtsDateObj) return;
+
+              // 2. Early RTS date -> production start date
+              if (!minRTSObj || rtsDateObj < minRTSObj) {
+                minRTSObj = rtsDateObj;
               }
 
-              const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
-              const itemShipDateObj = new Date(rtsDateObj.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
-              if (!maxShip || itemShipDateObj > maxShip) {
-                maxShip = itemShipDateObj;
-                leadWeeksForMaxShip = weeks;
+              // 3. Late RTS date -> add Shop Lead Time in WEEKS -> production end date
+              if (!maxRTSObj || rtsDateObj > maxRTSObj) {
+                maxRTSObj = rtsDateObj;
+                leadWeeksForMaxRTS = parseFloat(item.shop_lead_time_weeks) || 0;
+              } else if (rtsDateObj.getTime() === maxRTSObj.getTime()) {
+                // If RTS dates are equal, take the one with the larger lead time
+                const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
+                if (weeks > leadWeeksForMaxRTS) {
+                  leadWeeksForMaxRTS = weeks;
+                }
               }
             }
           });
         }
       });
 
-      const formatDateString = (d) => {
-        if (!d) return '';
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
-      const calculatedStart = minRTS ? formatDateString(minRTS) : '';
+      const calculatedStart = minRTSObj ? formatDateString(minRTSObj) : '';
       let calculatedEnd = '';
-      if (maxShip) {
-        const calculatedEndDateObj = new Date(maxShip.getTime() + leadWeeksForMaxShip * 7 * 24 * 60 * 60 * 1000);
+      if (maxRTSObj) {
+        // Add leadWeeksForMaxRTS in WEEKS to the late RTS date
+        const calculatedEndDateObj = new Date(maxRTSObj.getTime() + leadWeeksForMaxRTS * 7 * 24 * 60 * 60 * 1000);
         calculatedEnd = formatDateString(calculatedEndDateObj);
       }
 
@@ -98,22 +114,14 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         endDate: calculatedEnd
       }));
     }
-  }, [selectedProjectIds, projects, editSchedule]);
+  }, [selectedProjectIds, projects, editSchedule, userChangedProjects]);
 
   // Auto-populate logic when projects or dates change
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && !editSchedule && projects.length > 0) {
+    if (selectedProjectIds.length > 0 && (!editSchedule || userChangedProjects) && projects.length > 0) {
       const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
       let allItems = [];
       
-      const formatDateString = (d) => {
-        if (!d) return '';
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
-
       selectedProjects.forEach(proj => {
         if (proj.structural_schedules) {
           proj.structural_schedules.forEach(item => {
@@ -121,14 +129,14 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             
             let inRange = true;
             if (header.startDate && header.endDate && item.rts_date) {
-              const rts = new Date(item.rts_date);
-              const start = new Date(header.startDate);
-              const end = new Date(header.endDate);
-              inRange = rts >= start && rts <= end;
+              const rts = parseLocalDate(item.rts_date);
+              const start = parseLocalDate(header.startDate);
+              const end = parseLocalDate(header.endDate);
+              inRange = rts && start && end && rts >= start && rts <= end;
             }
             
             if (inRange) {
-              const rts = item.rts_date ? new Date(item.rts_date) : null;
+              const rts = parseLocalDate(item.rts_date);
               const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
               const calculatedShip = rts ? new Date(rts.getTime() + weeks * 7 * 24 * 60 * 60 * 1000) : null;
 
@@ -138,7 +146,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                 weight: item.tons,
                 quantity: 1,
                 rtsDate: item.rts_date || '',
-                shipDate: calculatedShip ? formatDateString(calculatedShip) : '',
+                shipDate: item.ship_date || (calculatedShip ? formatDateString(calculatedShip) : ''),
                 notes: item.notes || '',
                 // For sorting
                 erectionDate: item.scheduled_erection_date || '',
@@ -152,16 +160,16 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       if (allItems.length > 0) {
         // Sort items by RTS, then Seq, then Erection, then Priority
         allItems.sort((a, b) => {
-          const dateA = new Date(a.rtsDate || '9999-12-31');
-          const dateB = new Date(b.rtsDate || '9999-12-31');
+          const dateA = parseLocalDate(a.rtsDate) || new Date('9999-12-31');
+          const dateB = parseLocalDate(b.rtsDate) || new Date('9999-12-31');
           if (dateA - dateB !== 0) return dateA - dateB;
 
           const seqA = parseFloat(a.seq) || 999;
           const seqB = parseFloat(b.seq) || 999;
           if (seqA !== seqB) return seqA - seqB;
 
-          const erecA = new Date(a.erectionDate || '9999-12-31');
-          const erecB = new Date(b.erectionDate || '9999-12-31');
+          const erecA = parseLocalDate(a.erectionDate) || new Date('9999-12-31');
+          const erecB = parseLocalDate(b.erectionDate) || new Date('9999-12-31');
           if (erecA - erecB !== 0) return erecA - erecB;
 
           const priorityMap = { 'High': 1, 'Medium': 2, 'Low': 3 };
@@ -172,9 +180,10 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         setRows(allItems);
       }
     }
-  }, [selectedProjectIds, header.startDate, header.endDate, projects, editSchedule]);
+  }, [selectedProjectIds, header.startDate, header.endDate, projects, editSchedule, userChangedProjects]);
 
   const toggleProjectSelection = (projectId) => {
+    setUserChangedProjects(true);
     setSelectedProjectIds(prev => 
       prev.includes(projectId) 
         ? prev.filter(id => id !== projectId) 
@@ -197,6 +206,29 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   const updateRow = (index, field, value) => {
     const newRows = [...rows];
     newRows[index][field] = value;
+
+    // Automatically lookup and autofetch item details if job and seq are entered
+    if (field === 'job' || field === 'seq') {
+      const jobVal = field === 'job' ? value : newRows[index].job;
+      const seqVal = field === 'seq' ? value : newRows[index].seq;
+
+      if (jobVal && seqVal) {
+        const matchingProj = projects.find(p => p.code === jobVal);
+        if (matchingProj && matchingProj.structural_schedules) {
+          const matchingItem = matchingProj.structural_schedules.find(item => item.seq_no === seqVal);
+          if (matchingItem) {
+            newRows[index].weight = matchingItem.tons || '';
+            newRows[index].rtsDate = matchingItem.rts_date || '';
+            
+            const rts = parseLocalDate(matchingItem.rts_date);
+            const weeks = parseFloat(matchingItem.shop_lead_time_weeks) || 0;
+            const calculatedShip = rts ? new Date(rts.getTime() + weeks * 7 * 24 * 60 * 60 * 1000) : null;
+            newRows[index].shipDate = matchingItem.ship_date || (calculatedShip ? formatDateString(calculatedShip) : '');
+          }
+        }
+      }
+    }
+
     setRows(newRows);
   };
 
