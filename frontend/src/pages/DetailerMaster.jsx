@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
-import { Layers, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2 } from 'lucide-react';
+import { Layers, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2, ChevronDown, Eye } from 'lucide-react';
 import { detailerAPI } from '../services/api';
 
 export default function DetailerMaster() {
   const [detailers, setDetailers] = useState([]);
-  const [search, setSearch] = useState('');
+  const [nameFilter, setNameFilter] = useState('All');
+  const [codeFilter, setCodeFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const [form, setForm] = useState({
     name: '',
@@ -18,6 +20,7 @@ export default function DetailerMaster() {
 
   const openAdd = () => {
     setEditId(null);
+    setIsViewMode(false);
     setForm({
       name: '',
       code: '',
@@ -28,11 +31,17 @@ export default function DetailerMaster() {
 
   const openEdit = (detailer) => {
     setEditId(detailer.id);
+    setIsViewMode(false);
     setForm({
       ...detailer,
       contacts: detailer.contacts.length ? [...detailer.contacts] : [{ person: '', email: '', phone: '+91 ' }]
     });
     setShowModal(true);
+  };
+
+  const openView = (detailer) => {
+    openEdit(detailer);
+    setIsViewMode(true);
   };
 
   const fetchDetailers = async () => {
@@ -98,11 +107,11 @@ export default function DetailerMaster() {
     setForm({ ...form, contacts: newContacts });
   };
 
-  const filtered = detailers.filter(
-    (d) =>
-      d.name.toLowerCase().includes(search.toLowerCase()) ||
-      d.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = detailers.filter((d) => {
+    const matchName = nameFilter === 'All' || (d.name && d.name.toLowerCase().trim() === nameFilter.toLowerCase().trim());
+    const matchCode = codeFilter === 'All' || (d.code && d.code.toLowerCase().trim() === codeFilter.toLowerCase().trim());
+    return matchName && matchCode;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -120,17 +129,36 @@ export default function DetailerMaster() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by detailer name or code..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
-          />
+      {/* Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Name Filter */}
+        <div className="relative">
+          <select
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Detailers</option>
+            {[...new Set(detailers.map(d => d.name))].filter(Boolean).map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
+        {/* Code Filter */}
+        <div className="relative">
+          <select
+            value={codeFilter}
+            onChange={(e) => setCodeFilter(e.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Codes</option>
+            {[...new Set(detailers.map(d => d.code))].filter(Boolean).map(code => (
+              <option key={code} value={code}>{code}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
@@ -195,6 +223,7 @@ export default function DetailerMaster() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openView(detailer)} className="p-2.5 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="View"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => openEdit(detailer)} className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><Edit2 className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(detailer.id)} className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -214,7 +243,7 @@ export default function DetailerMaster() {
 
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200">
-              <h3 className="text-xl font-bold text-slate-900">{editId ? 'Edit Detailer' : 'Add Detailer'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">{isViewMode ? 'View Detailer' : editId ? 'Edit Detailer' : 'Add Detailer'}</h3>
               <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -230,7 +259,8 @@ export default function DetailerMaster() {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Detailer Name <span className="text-red-500">*</span></label>
                   <input
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
                     placeholder="Enter detailer name"
                     value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
@@ -240,7 +270,8 @@ export default function DetailerMaster() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Detailer Code</label>
                   <input
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
                     placeholder="Auto-generated if empty"
                     value={form.code}
                     onChange={e => setForm({ ...form, code: e.target.value })}
@@ -252,13 +283,15 @@ export default function DetailerMaster() {
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-800">Contact Persons</h4>
-                  <button
-                    type="button"
-                    onClick={addContact}
-                    className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md hover:bg-slate-800 transition-colors"
-                  >
-                    Add Contact
-                  </button>
+                  {!isViewMode && (
+                    <button
+                      type="button"
+                      onClick={addContact}
+                      className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md hover:bg-slate-800 transition-colors"
+                    >
+                      Add Contact
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -267,7 +300,8 @@ export default function DetailerMaster() {
                       <div className="flex-1 w-full space-y-1.5">
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Person</label>}
                         <input
-                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                          disabled={isViewMode}
+                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                           placeholder="Contact Person Name"
                           value={contact.person}
                           onChange={e => updateContact(index, 'person', e.target.value)}
@@ -278,7 +312,8 @@ export default function DetailerMaster() {
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Email</label>}
                         <input
                           type="email"
-                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                          disabled={isViewMode}
+                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                           placeholder="Email Address"
                           value={contact.email}
                           onChange={e => updateContact(index, 'email', e.target.value)}
@@ -289,7 +324,8 @@ export default function DetailerMaster() {
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Phone</label>}
                         <div className="relative">
                           <input
-                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                            disabled={isViewMode}
+                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                             placeholder="+91 "
                             value={contact.phone}
                             onChange={e => updateContact(index, 'phone', e.target.value)}
@@ -297,15 +333,17 @@ export default function DetailerMaster() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeContact(index)}
-                        disabled={form.contacts.length === 1}
-                        className="p-2.5 bg-slate-900 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        title="Delete Contact"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isViewMode && (
+                        <button
+                          type="button"
+                          onClick={() => removeContact(index)}
+                          disabled={form.contacts.length === 1}
+                          className="p-2.5 bg-slate-900 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          title="Delete Contact"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -319,16 +357,18 @@ export default function DetailerMaster() {
                 onClick={() => setShowModal(false)}
                 className="px-6 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
               >
-                Cancel
+                {isViewMode ? 'Close' : 'Cancel'}
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-8 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {saving ? 'Saving...' : 'Save Detailer'}
-              </button>
+              {!isViewMode && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-8 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {saving ? 'Saving...' : 'Save Detailer'}
+                </button>
+              )}
             </div>
 
           </div>

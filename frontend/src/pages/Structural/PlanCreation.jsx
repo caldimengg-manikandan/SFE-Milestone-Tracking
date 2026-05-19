@@ -129,7 +129,10 @@ export default function PlanCreation() {
       fetchAllSchedules();
       setShowModal(false);
       resetForm();
-    } catch (err) { console.error(err); alert('Failed to save'); }
+    } catch (err) { 
+      console.error(err); 
+      alert('Failed to save: ' + JSON.stringify(err.response?.data || err.message)); 
+    }
     finally { setLoading(false); }
   };
 
@@ -195,7 +198,19 @@ export default function PlanCreation() {
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.customer_name || 'N/A'}</td>
                   <td className="px-4 py-3 text-right">
                     <button
-                      onClick={() => { setForm(p); setSchedules(allSchedules.filter(s => (s.project?.id || s.project) === p.id)); setIsEditing(true); setShowModal(true); }}
+                      onClick={() => {
+                        setForm(p);
+                        const filtered = allSchedules.filter(s => (s.project?.id || s.project) === p.id);
+                        const sorted = [...filtered].sort((a, b) => {
+                          const aNum = parseFloat(a.seq_no);
+                          const bNum = parseFloat(b.seq_no);
+                          if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                          return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+                        });
+                        setSchedules(sorted);
+                        setIsEditing(true);
+                        setShowModal(true);
+                      }}
                       className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-all"
                     >
                       <Edit2 className="w-4 h-4" />
@@ -234,7 +249,13 @@ export default function PlanCreation() {
               (s.project?.id || s.project) === selected.id
             );
             if (existingSchedules.length > 0) {
-              setSchedules(existingSchedules.map(s => ({ ...s, is_new: false })));
+              const sorted = [...existingSchedules].sort((a, b) => {
+                const aNum = parseFloat(a.seq_no);
+                const bNum = parseFloat(b.seq_no);
+                if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+              });
+              setSchedules(sorted.map(s => ({ ...s, is_new: false })));
             } else {
               setSchedules([createDefaultRow(selected)]);
             }

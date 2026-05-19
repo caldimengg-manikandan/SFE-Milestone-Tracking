@@ -142,7 +142,12 @@ export default function StructuralScheduleForm({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {schedules.map((row) => (
+              {[...schedules].sort((a, b) => {
+                const aNum = parseFloat(a.seq_no);
+                const bNum = parseFloat(b.seq_no);
+                if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+                return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+              }).map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td className="px-1 py-1 border-r border-slate-200 sticky left-0 z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50">
                     <input 

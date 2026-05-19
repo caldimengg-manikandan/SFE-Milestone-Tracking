@@ -48,15 +48,77 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
     }
   }, [editSchedule]);
 
-  // Auto-populate logic when projects or dates change
+  // Auto-calculate schedule Start/End dates when selected projects change
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && !editSchedule) {
+    if (selectedProjectIds.length > 0 && !editSchedule && projects.length > 0) {
       const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
-      let allItems = [];
-      
+      let minRTS = null;
+      let maxShip = null;
+      let leadWeeksForMaxShip = 0;
+
       selectedProjects.forEach(proj => {
         if (proj.structural_schedules) {
           proj.structural_schedules.forEach(item => {
+            if (item.notes && item.notes.toLowerCase() === 'not in scope') return;
+            if (item.rts_date) {
+              const rtsDateObj = new Date(item.rts_date);
+              if (!minRTS || rtsDateObj < minRTS) {
+                minRTS = rtsDateObj;
+              }
+
+              const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
+              const itemShipDateObj = new Date(rtsDateObj.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+              if (!maxShip || itemShipDateObj > maxShip) {
+                maxShip = itemShipDateObj;
+                leadWeeksForMaxShip = weeks;
+              }
+            }
+          });
+        }
+      });
+
+      const formatDateString = (d) => {
+        if (!d) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      const calculatedStart = minRTS ? formatDateString(minRTS) : '';
+      let calculatedEnd = '';
+      if (maxShip) {
+        const calculatedEndDateObj = new Date(maxShip.getTime() + leadWeeksForMaxShip * 7 * 24 * 60 * 60 * 1000);
+        calculatedEnd = formatDateString(calculatedEndDateObj);
+      }
+
+      setHeader(prev => ({
+        ...prev,
+        startDate: calculatedStart,
+        endDate: calculatedEnd
+      }));
+    }
+  }, [selectedProjectIds, projects, editSchedule]);
+
+  // Auto-populate logic when projects or dates change
+  useEffect(() => {
+    if (selectedProjectIds.length > 0 && !editSchedule && projects.length > 0) {
+      const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
+      let allItems = [];
+      
+      const formatDateString = (d) => {
+        if (!d) return '';
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      };
+
+      selectedProjects.forEach(proj => {
+        if (proj.structural_schedules) {
+          proj.structural_schedules.forEach(item => {
+            if (item.notes && item.notes.toLowerCase() === 'not in scope') return;
+            
             let inRange = true;
             if (header.startDate && header.endDate && item.rts_date) {
               const rts = new Date(item.rts_date);
@@ -66,13 +128,17 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             }
             
             if (inRange) {
+              const rts = item.rts_date ? new Date(item.rts_date) : null;
+              const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
+              const calculatedShip = rts ? new Date(rts.getTime() + weeks * 7 * 24 * 60 * 60 * 1000) : null;
+
               allItems.push({
                 job: proj.code,
                 seq: item.seq_no,
                 weight: item.tons,
                 quantity: 1,
                 rtsDate: item.rts_date || '',
-                shipDate: '',
+                shipDate: calculatedShip ? formatDateString(calculatedShip) : '',
                 notes: item.notes || '',
                 // For sorting
                 erectionDate: item.scheduled_erection_date || '',

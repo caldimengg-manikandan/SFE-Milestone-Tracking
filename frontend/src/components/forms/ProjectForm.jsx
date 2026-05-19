@@ -87,7 +87,14 @@ export default function ProjectForm({
 
     const tableHeaders = [["SEQ #", "Tons", "Description", "Category", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
     
-    const tableData = (schedules || []).map(s => [
+    const sortedSchedules = [...(schedules || [])].sort((a, b) => {
+      const aNum = parseFloat(a.seq_no);
+      const bNum = parseFloat(b.seq_no);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+    });
+
+    const tableData = sortedSchedules.map(s => [
       s.seq_no,
       s.tons,
       s.item_description,

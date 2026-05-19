@@ -28,8 +28,11 @@ class ProductionPriorityViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = ProductionPriority.objects.all().order_by('-created_at')
         module_type = self.request.query_params.get('module_type', None)
+        schedule = self.request.query_params.get('schedule', None)
         if module_type is not None:
             queryset = queryset.filter(module_type=module_type)
+        if schedule is not None:
+            queryset = queryset.filter(schedule=schedule)
         return queryset
 
 class ProductionPriorityItemViewSet(viewsets.ModelViewSet):

@@ -50,6 +50,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
   const [structuralItems, setStructuralItems] = useState([]);
   const [fetchingSchedules, setFetchingSchedules] = useState(true);
   const [loading, setLoading] = useState(false);
+  const [isScheduleLoading, setIsScheduleLoading] = useState(false);
 
   // Fetch initial data
   useEffect(() => {
@@ -91,6 +92,23 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
   // Load existing records for the schedule
   useEffect(() => {
     if (selectedSchedule) {
+      // Block auto-populate while we check for existing records
+      setIsScheduleLoading(true);
+      setExistingRecords([]);
+
+      // Reset sectionData to clean defaults before loading new schedule data
+      setSectionData(() => {
+        const data = {};
+        STEPS.forEach(step => {
+          if (step.processes) {
+            step.processes.forEach(proc => {
+              data[proc] = { rate: DEFAULT_RATES[proc] || '', rows: [emptyRow()] };
+            });
+          }
+        });
+        return data;
+      });
+
       const loadExisting = async () => {
         try {
           const res = await priorityAPI.getAll({ schedule: selectedSchedule });
@@ -98,8 +116,8 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
           setExistingRecords(records);
 
           if (records.length > 0) {
+            // Schedule has saved records — load them directly, don't auto-populate
             setSectionData(prev => {
-              // Deep copy to avoid stale references
               const next = {};
               for (const key of Object.keys(prev)) {
                 next[key] = { rate: prev[key].rate, rows: [...prev[key].rows] };
@@ -129,11 +147,29 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
               return next;
             });
           }
+          // If no records: allow auto-populate to run by releasing the loading lock
         } catch (e) {
           console.error("Failed to load existing data", e);
+        } finally {
+          setIsScheduleLoading(false);
         }
       };
       loadExisting();
+    } else {
+      // No schedule selected: reset to empty
+      setSectionData(() => {
+        const data = {};
+        STEPS.forEach(step => {
+          if (step.processes) {
+            step.processes.forEach(proc => {
+              data[proc] = { rate: DEFAULT_RATES[proc] || '', rows: [emptyRow()] };
+            });
+          }
+        });
+        return data;
+      });
+      setExistingRecords([]);
+      setIsScheduleLoading(false);
     }
   }, [selectedSchedule]);
 
@@ -146,8 +182,9 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
 
 
   // Auto-populate logic based on selected projects and machine types
+  // Only runs when: not editing, schedule has NO existing saved records, and schedule loading is done
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && structuralItems.length > 0 && !editRecord) {
+    if (selectedProjectIds.length > 0 && structuralItems.length > 0 && !editRecord && !isScheduleLoading && existingRecords.length === 0) {
       setSectionData(prev => {
         const next = {};
         // Deep copy all process sections
@@ -229,7 +266,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
         return dataChanged ? next : prev;
       });
     }
-  }, [selectedProjectIds, structuralItems, projects, editRecord]);
+  }, [selectedProjectIds, structuralItems, projects, editRecord, isScheduleLoading, existingRecords]);
 
   const [sectionData, setSectionData] = useState(() => {
     const data = {};

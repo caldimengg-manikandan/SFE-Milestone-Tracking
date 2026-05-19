@@ -1,14 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Building2, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2 } from 'lucide-react';
+import { Building2, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2, ChevronDown, Eye } from 'lucide-react';
 import { customerAPI } from '../services/api';
 
 export default function CustomerMaster() {
   const [customers, setCustomers] = useState([]);
-  const [search, setSearch] = useState('');
+  const [nameFilter, setNameFilter] = useState('All');
+  const [codeFilter, setCodeFilter] = useState('All');
+  const [countryFilter, setCountryFilter] = useState('All');
   const [showModal, setShowModal] = useState(false);
   const [editId, setEditId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [isViewMode, setIsViewMode] = useState(false);
 
   const [form, setForm] = useState({
     country: 'India',
@@ -45,6 +48,7 @@ export default function CustomerMaster() {
 
   const openAdd = () => {
     setEditId(null);
+    setIsViewMode(false);
     setForm({
       country: 'India',
       name: '',
@@ -56,11 +60,17 @@ export default function CustomerMaster() {
 
   const openEdit = (customer) => {
     setEditId(customer.id);
+    setIsViewMode(false);
     setForm({
       ...customer,
       contacts: customer.contacts.length ? [...customer.contacts] : [{ person: '', email: '', phone: '+91 ' }]
     });
     setShowModal(true);
+  };
+
+  const openView = (customer) => {
+    openEdit(customer);
+    setIsViewMode(true);
   };
 
   const fetchCustomers = async () => {
@@ -126,11 +136,12 @@ export default function CustomerMaster() {
     setForm({ ...form, contacts: newContacts });
   };
 
-  const filtered = customers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.code.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = customers.filter((c) => {
+    const matchName = nameFilter === 'All' || (c.name && c.name.toLowerCase().trim() === nameFilter.toLowerCase().trim());
+    const matchCode = codeFilter === 'All' || (c.code && c.code.toLowerCase().trim() === codeFilter.toLowerCase().trim());
+    const matchCountry = countryFilter === 'All' || (c.country && c.country.toLowerCase().trim() === countryFilter.toLowerCase().trim());
+    return matchName && matchCode && matchCountry;
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -148,17 +159,51 @@ export default function CustomerMaster() {
         </button>
       </div>
 
-      {/* Search */}
-      <div className="flex gap-4">
-        <div className="relative flex-1 max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search by customer name or code..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
-          />
+      {/* Filters */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        {/* Name Filter */}
+        <div className="relative">
+          <select
+            value={nameFilter}
+            onChange={(e) => setNameFilter(e.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Customers</option>
+            {[...new Set(customers.map(c => c.name))].filter(Boolean).map(name => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
+        {/* Code Filter */}
+        <div className="relative">
+          <select
+            value={codeFilter}
+            onChange={(e) => setCodeFilter(e.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Codes</option>
+            {[...new Set(customers.map(c => c.code))].filter(Boolean).map(code => (
+              <option key={code} value={code}>{code}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+        </div>
+
+        {/* Country Filter */}
+        <div className="relative">
+          <select
+            value={countryFilter}
+            onChange={(e) => setCountryFilter(e.target.value)}
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+          >
+            <option value="All">All Countries</option>
+            {['India', 'USA', 'UK', 'UAE', 'Other'].map(country => (
+              <option key={country} value={country}>{country}</option>
+            ))}
+          </select>
+          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         </div>
       </div>
 
@@ -169,7 +214,7 @@ export default function CustomerMaster() {
             <thead>
               <tr className="border-b border-slate-300 bg-slate-50/50">
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Name</th>
-                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden sm:table-cell">Customer Code</th>
+                <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Code</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden lg:table-cell">Country</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Contact Person</th>
                 <th className="text-left px-6 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-widest hidden xl:table-cell">Phone</th>
@@ -205,7 +250,7 @@ export default function CustomerMaster() {
                         <p className="font-bold text-slate-900">{customer.name}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-5 hidden sm:table-cell">
+                    <td className="px-6 py-5">
                       <p className="text-xs font-black text-amber-600 uppercase tracking-widest">{customer.code}</p>
                     </td>
                     <td className="px-6 py-5 hidden lg:table-cell">
@@ -227,6 +272,7 @@ export default function CustomerMaster() {
                     </td>
                     <td className="px-6 py-5">
                       <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openView(customer)} className="p-2.5 rounded-xl text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 transition-all" title="View"><Eye className="w-4 h-4" /></button>
                         <button onClick={() => openEdit(customer)} className="p-2.5 rounded-xl text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all" title="Edit"><Edit2 className="w-4 h-4" /></button>
                         <button onClick={() => handleDelete(customer.id)} className="p-2.5 rounded-xl text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all" title="Delete"><Trash2 className="w-4 h-4" /></button>
                       </div>
@@ -246,7 +292,7 @@ export default function CustomerMaster() {
 
             {/* Header */}
             <div className="flex items-center justify-between px-8 py-6 border-b border-slate-200">
-              <h3 className="text-xl font-bold text-slate-900">{editId ? 'Edit Customer' : 'Add Customer'}</h3>
+              <h3 className="text-xl font-bold text-slate-900">{isViewMode ? 'View Customer' : editId ? 'Edit Customer' : 'Add Customer'}</h3>
               <button onClick={() => setShowModal(false)} className="p-2 text-slate-400 hover:bg-slate-100 rounded-xl transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -261,7 +307,8 @@ export default function CustomerMaster() {
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Name <span className="text-red-500">*</span></label>
                   <input
                     required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
                     placeholder="Enter customer name"
                     value={form.name}
                     onChange={e => setForm({ ...form, name: e.target.value })}
@@ -271,7 +318,8 @@ export default function CustomerMaster() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Customer Code</label>
                   <input
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
                     placeholder="Customer Code"
                     value={form.code}
                     onChange={e => setForm({ ...form, code: e.target.value })}
@@ -281,7 +329,8 @@ export default function CustomerMaster() {
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Country</label>
                   <select
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all"
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
                     value={form.country}
                     onChange={handleCountryChange}
                   >
@@ -298,13 +347,15 @@ export default function CustomerMaster() {
               <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="text-sm font-bold text-slate-800">Contact Persons</h4>
-                  <button
-                    type="button"
-                    onClick={addContact}
-                    className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md hover:bg-slate-800 transition-colors"
-                  >
-                    Add Contact
-                  </button>
+                  {!isViewMode && (
+                    <button
+                      type="button"
+                      onClick={addContact}
+                      className="px-4 py-2 bg-slate-900 text-white text-xs font-bold rounded-lg shadow-md hover:bg-slate-800 transition-colors"
+                    >
+                      Add Contact
+                    </button>
+                  )}
                 </div>
 
                 <div className="space-y-4">
@@ -313,7 +364,8 @@ export default function CustomerMaster() {
                       <div className="flex-1 w-full space-y-1.5">
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Person</label>}
                         <input
-                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                          disabled={isViewMode}
+                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                           placeholder="Contact Person Name"
                           value={contact.person}
                           onChange={e => updateContact(index, 'person', e.target.value)}
@@ -324,7 +376,8 @@ export default function CustomerMaster() {
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Email</label>}
                         <input
                           type="email"
-                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                          disabled={isViewMode}
+                          className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                           placeholder="Email Address"
                           value={contact.email}
                           onChange={e => updateContact(index, 'email', e.target.value)}
@@ -335,7 +388,8 @@ export default function CustomerMaster() {
                         {index === 0 && <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Contact Phone</label>}
                         <div className="relative">
                           <input
-                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none"
+                            disabled={isViewMode}
+                            className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none disabled:opacity-75 disabled:bg-slate-50"
                             placeholder="+91 "
                             value={contact.phone}
                             onChange={e => updateContact(index, 'phone', e.target.value)}
@@ -343,15 +397,17 @@ export default function CustomerMaster() {
                         </div>
                       </div>
 
-                      <button
-                        type="button"
-                        onClick={() => removeContact(index)}
-                        disabled={form.contacts.length === 1}
-                        className="p-2.5 bg-slate-900 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
-                        title="Delete Contact"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isViewMode && (
+                        <button
+                          type="button"
+                          onClick={() => removeContact(index)}
+                          disabled={form.contacts.length === 1}
+                          className="p-2.5 bg-slate-900 text-white rounded-lg hover:bg-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
+                          title="Delete Contact"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -365,16 +421,18 @@ export default function CustomerMaster() {
                 onClick={() => setShowModal(false)}
                 className="px-6 py-2.5 rounded-xl border border-slate-300 text-sm font-bold text-slate-600 hover:bg-slate-50 transition-colors"
               >
-                Cancel
+                {isViewMode ? 'Close' : 'Cancel'}
               </button>
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="px-8 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
-              >
-                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {saving ? 'Saving...' : 'Save Customer'}
-              </button>
+              {!isViewMode && (
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="px-8 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 transition-all transform hover:scale-[1.02] disabled:opacity-50 flex items-center gap-2"
+                >
+                  {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {saving ? 'Saving...' : 'Save Customer'}
+                </button>
+              )}
             </div>
 
           </div>

@@ -1,7 +1,12 @@
 from django.db import models
 
 class Project(models.Model):
-    STATUS_CHOICES = [('In Progress', 'In Progress'), ('Yet to Complete', 'Yet to Complete'), ('Completed', 'Completed')]
+    STATUS_CHOICES = [
+        ('Planning', 'Planning'),
+        ('In Progress', 'In Progress'),
+        ('Yet to Complete', 'Yet to Complete'),
+        ('Completed', 'Completed')
+    ]
     PRIORITY_CHOICES = [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')]
 
     code = models.CharField(max_length=30, unique=True)
