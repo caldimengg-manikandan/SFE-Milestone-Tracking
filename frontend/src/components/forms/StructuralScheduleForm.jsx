@@ -116,31 +116,7 @@ export default function StructuralScheduleForm({
       {/* Table Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/30 p-4">
         <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-auto h-max max-h-full relative [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-100/50 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-white [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-900">
-          <table className="w-full border-collapse text-left min-w-[2350px]">
-            <thead className="sticky top-0 z-20">
-              <tr className="bg-slate-800 text-white text-[9px] font-bold uppercase tracking-wider">
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-0 z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">SEQ #</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 sticky left-[48px] z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Tons</th>
-                <th className="px-1 py-1 border-r border-white/10 w-48 sticky left-[144px] z-40 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Item Description</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Category</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled OFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual OFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled BFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual BFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Field Measure Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">RTS Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-amber-500/10">Ship Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-amber-500/10">Shop Lead Time in WEEKS</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Start of Erection</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Shop Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Field Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Shop Hours actual</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Field Hours Actual</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Detailer / Vendor</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Dwg Status</th>
-                <th className="px-1 py-1 border-r border-white/10 w-48">Notes</th>
-                <th className="px-1 py-1 text-center w-12">Action</th>
-          <table className="w-full text-left min-w-[2200px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <table className="w-full text-left min-w-[2350px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr className="text-white text-[9px] font-bold uppercase tracking-wider bg-slate-800">
                 <th 
@@ -168,7 +144,8 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual BFA Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-amber-600/90 text-white sticky top-0 z-20">Shop Lead Time in WEEKS</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-amber-600/90 text-white sticky top-0 z-20">Ship Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Shop Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Shop Hours</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Field Hours</th>
@@ -308,8 +285,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)} 
                     />
                   </td>
-<<<<<<< HEAD
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -318,10 +294,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'ship_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-amber-500/5">
-=======
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-amber-500/5">
->>>>>>> 21195a35e1d079f190282ef79321a772c4b2fbee
                     <input 
                       type="number"
                       readOnly={isViewOnly}
