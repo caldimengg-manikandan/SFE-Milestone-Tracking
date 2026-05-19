@@ -12,6 +12,7 @@ export default function ProjectMaster() {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [initialTab, setInitialTab] = useState("basic");
+  const [deletedSchedules, setDeletedSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState('view');
@@ -212,16 +213,10 @@ export default function ProjectMaster() {
     setSchedules([...schedules, newRow]);
   };
 
-  const handleDeleteSchedule = async (id) => {
+  const handleDeleteSchedule = (id) => {
     const row = schedules.find(s => s.id === id);
-    if (!row.is_new) {
-      if (!window.confirm("Delete this schedule permanently?")) return;
-      try {
-        await scheduleAPI.delete(id);
-      } catch (err) {
-        console.error(err);
-        return;
-      }
+    if (row && !row.is_new) {
+      setDeletedSchedules(prev => [...prev, id]);
     }
     setSchedules(schedules.filter(s => s.id !== id));
   };
@@ -424,6 +419,7 @@ export default function ProjectMaster() {
       });
     }
     setSchedules(projSchedules);
+    setDeletedSchedules([]);
     setShowModal(true);
   };
 
@@ -453,6 +449,15 @@ export default function ProjectMaster() {
         setProjects([res.data, ...projects]);
         projectId = res.data.id;
         setForm(res.data); // Update form with new ID to allow subsequent updates if schedule save fails
+      }
+
+      // Delete removed schedules
+      for (const deleteId of deletedSchedules) {
+        try {
+          await scheduleAPI.delete(deleteId);
+        } catch (err) {
+          console.error('Failed to delete schedule:', deleteId, err);
+        }
       }
 
       // Save schedules - skip rows that have no description (prevents mandatory field errors if only basic details are filled)
@@ -525,6 +530,7 @@ export default function ProjectMaster() {
     setIsEditing(false);
     setInitialTab("basic");
     setSchedules([createDefaultRow({})]);
+    setDeletedSchedules([]);
   };
 
   const handleDelete = async (id) => {

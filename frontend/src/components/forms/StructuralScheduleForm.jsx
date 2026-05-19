@@ -116,29 +116,44 @@ export default function StructuralScheduleForm({
       {/* Table Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/30 p-4">
         <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-auto h-max max-h-full relative [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-100/50 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-white [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-900">
-          <table className="w-full border-collapse text-left min-w-[2200px]">
-            <thead className="sticky top-0 z-20">
-              <tr className="bg-slate-800 text-white text-[9px] font-bold uppercase tracking-wider">
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 sticky left-0 z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">SEQ #</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 sticky left-[48px] z-40 bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]">Tons</th>
-                <th className="px-1 py-1 border-r border-white/10 w-48 sticky left-[144px] z-40 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]">Item Description</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Category</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled OFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual OFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">Scheduled BFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28 bg-slate-700/50">Actual BFA Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Field Measure Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-28">RTS Date</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12 bg-amber-500/10">Shop Lead Time in WEEKS</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Scheduled Start of Erection</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Shop Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24">Budget Field Hours</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Shop Hours actual</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-24 bg-slate-700/50">Field Hours Actual</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Detailer / Vendor</th>
-                <th className="px-1 py-1 border-r border-white/10 text-center w-12">Dwg Status</th>
-                <th className="px-1 py-1 border-r border-white/10 w-48">Notes</th>
-                <th className="px-1 py-1 text-center w-12">Action</th>
+          <table className="w-full text-left min-w-[2200px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+            <thead>
+              <tr className="text-white text-[9px] font-bold uppercase tracking-wider bg-slate-800">
+                <th 
+                  className="px-1 py-1 border-r border-b border-white/10 text-center bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]"
+                  style={{ width: '48px', minWidth: '48px', maxWidth: '48px', left: '0px', top: '0px', position: 'sticky', zIndex: 50 }}
+                >
+                  SEQ #
+                </th>
+                <th 
+                  className="px-1 py-1 border-r border-b border-white/10 text-center bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]"
+                  style={{ width: '96px', minWidth: '96px', maxWidth: '96px', left: '48px', top: '0px', position: 'sticky', zIndex: 50 }}
+                >
+                  Tons
+                </th>
+                <th 
+                  className="px-1 py-1 border-r border-b border-white/10 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]"
+                  style={{ width: '240px', minWidth: '240px', maxWidth: '240px', left: '144px', top: '0px', position: 'sticky', zIndex: 50 }}
+                >
+                  Item Description
+                </th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Category</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Scheduled OFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual OFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Scheduled BFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual BFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-amber-600/90 text-white sticky top-0 z-20">Shop Lead Time in WEEKS</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Shop Hours</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Field Hours</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">Shop Hours actual</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">Field Hours Actual</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Detailer / Vendor</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Dwg Status</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 w-48 bg-slate-800 sticky top-0 z-20">Notes</th>
+                <th className="px-1 py-1 border-b text-center w-12 bg-slate-800 sticky top-0 z-20">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -149,7 +164,10 @@ export default function StructuralScheduleForm({
                 return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
               }).map((row) => (
                 <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group">
-                  <td className="px-1 py-1 border-r border-slate-200 sticky left-0 z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50">
+                  <td 
+                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-0 z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50"
+                    style={{ width: '48px', minWidth: '48px', maxWidth: '48px', left: '0px' }}
+                  >
                     <input 
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-center text-[10px] font-black focus:border-amber-400 bg-white transition-all relative z-10" 
@@ -157,7 +175,10 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'seq_no', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 sticky left-[48px] z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50">
+                  <td 
+                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[48px] z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50"
+                    style={{ width: '96px', minWidth: '96px', maxWidth: '96px', left: '48px' }}
+                  >
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -166,7 +187,10 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'tons', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 sticky left-[144px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50">
+                  <td 
+                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[144px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50"
+                    style={{ width: '240px', minWidth: '240px', maxWidth: '240px', left: '144px' }}
+                  >
                     <div className="flex flex-col gap-1.5 p-1">
                       <input 
                         readOnly={isViewOnly}
@@ -198,7 +222,7 @@ export default function StructuralScheduleForm({
                       )}
                     </div>
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all" 
@@ -206,7 +230,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'category', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -215,7 +239,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'scheduled_ofa_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-slate-50/50">
+                  <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -224,7 +248,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'actual_ofa_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -233,7 +257,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'scheduled_bfa_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-slate-50/50">
+                  <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -242,7 +266,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'actual_bfa_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -251,7 +275,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'scheduled_field_measure_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -260,7 +284,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-amber-500/5">
+                  <td className="px-1 py-1 border-r border-b border-slate-200 bg-amber-500/5">
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -269,7 +293,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'shop_lead_time_weeks', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"
                       readOnly={isViewOnly}
@@ -278,7 +302,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'scheduled_erection_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -287,7 +311,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'budget_shop_hours', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -296,7 +320,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'budget_field_hours', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-slate-50/50">
+                  <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -305,7 +329,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'actual_shop_hours', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200 bg-slate-50/50">
+                  <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
                     <input 
                       type="number"
                       readOnly={isViewOnly}
@@ -314,7 +338,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'actual_field_hours', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all" 
@@ -322,7 +346,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'detailer_vendor', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all" 
@@ -330,7 +354,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'dwg_status', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-slate-200">
+                  <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all" 
@@ -338,7 +362,7 @@ export default function StructuralScheduleForm({
                       onChange={e => handleRowChange(row.id, 'notes', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 text-center">
+                  <td className="px-1 py-1 border-b text-center">
                     {!isViewOnly && (
                       <button onClick={() => handleDeleteRow(row.id)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500 transition-all">
                         <Trash2 className="w-4 h-4" />
