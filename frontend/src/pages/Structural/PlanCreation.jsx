@@ -12,6 +12,7 @@ export default function PlanCreation() {
   const [loading, setLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [deletedSchedules, setDeletedSchedules] = useState([]);
   const itemsPerPage = 10;
 
   const [form, setForm] = useState({
@@ -121,6 +122,15 @@ export default function PlanCreation() {
         projectId = res.data.id;
       }
 
+      // Delete removed schedules from backend
+      for (const deleteId of deletedSchedules) {
+        try {
+          await scheduleAPI.delete(deleteId);
+        } catch (err) {
+          console.error('Failed to delete schedule:', deleteId, err);
+        }
+      }
+
       for (const row of schedules) {
         if (!row.item_description && !row.tons && row.is_new) continue;
         const schedPayload = { ...row, project: projectId, tons: parseFloat(row.tons) || 0 };
@@ -144,6 +154,7 @@ export default function PlanCreation() {
       erection_date: '', status: 'Planning', priority: 'Medium'
     });
     setSchedules([createDefaultRow({})]);
+    setDeletedSchedules([]);
     setIsEditing(false);
   };
 
@@ -201,6 +212,7 @@ export default function PlanCreation() {
                     <button
                       onClick={() => {
                         setForm(p);
+                        setDeletedSchedules([]);
                         const filtered = allSchedules.filter(s => (s.project?.id || s.project) === p.id);
                         const sorted = [...filtered].sort((a, b) => {
                           const aNum = parseFloat(a.seq_no);
@@ -245,6 +257,7 @@ export default function PlanCreation() {
               status: selected.status,
               priority: selected.priority
             });
+            setDeletedSchedules([]);
             // Fetch and set existing schedules for this project
             const existingSchedules = allSchedules.filter(s =>
               (s.project?.id || s.project) === selected.id
@@ -261,7 +274,15 @@ export default function PlanCreation() {
               setSchedules([createDefaultRow(selected)]);
             }
           }}
-          addScheduleRow={() => setSchedules([...schedules, createDefaultRow(form)])}
+          addScheduleRow={() => {
+            const maxSeq = schedules.reduce((max, row) => {
+              const num = parseInt(row.seq_no);
+              return !isNaN(num) && num > max ? num : max;
+            }, 0);
+            const nextRow = createDefaultRow(form);
+            nextRow.seq_no = (maxSeq + 1).toString();
+            setSchedules([...schedules, nextRow]);
+          }}
           handleScheduleChange={(id, f, v) => {
             setSchedules(prev => prev.map(s => {
               if (s.id !== id) return s;
@@ -279,7 +300,13 @@ export default function PlanCreation() {
               return updated;
             }));
           }}
-          handleDeleteSchedule={(id) => setSchedules(schedules.filter(s => s.id !== id))}
+          handleDeleteSchedule={(id) => {
+            const row = schedules.find(s => s.id === id);
+            if (row && !row.is_new) {
+              setDeletedSchedules(prev => [...prev, id]);
+            }
+            setSchedules(schedules.filter(s => s.id !== id));
+          }}
           handleSave={handleSave}
           onClose={() => setShowModal(false)}
           isEditing={isEditing}
