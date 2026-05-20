@@ -311,7 +311,7 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
 
-    const tableHeaders = [["SEQ #", "Tons", "Description", "Category", "OFA Sch", "OFA Act", "BFA Sch", "BFA Act", "FM Sch", "RTS", "Lead", "Erection", "B.Shop", "B.Field", "A.Shop", "A.Field", "Vendor", "Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA Date", "Actual OFA Date", "Scheduled BFA Date", "Actual BFA Date", "Scheduled Field Measure Date", "RTS Date", "Ship Date", "Shop Lead Time in WEEKS", "Scheduled Start of Erection", "Budget Shop Hours", "Budget Field Hours", "Shop Hours Actual", "Field Hours Actual", "Detailer / Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -331,6 +331,7 @@ export default function ProjectMaster() {
       s.actual_bfa_date || '-',
       s.scheduled_field_measure_date || '-',
       s.rts_date,
+      s.ship_date || '-',
       s.shop_lead_time_weeks,
       s.scheduled_erection_date,
       s.budget_shop_hours,
@@ -347,39 +348,453 @@ export default function ProjectMaster() {
       head: tableHeaders,
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], fontSize: 6, fontStyle: 'bold' },
-      bodyStyles: { fontSize: 5 },
-      styles: { cellPadding: 1 },
-      didDrawPage: (data) => {
-        const pageSize = doc.internal.pageSize;
-        const pageHeight = pageSize.height ? pageSize.height : pageSize.getHeight();
-        doc.setFontSize(8);
-        doc.setTextColor(148, 163, 184); // slate-400
-        doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, pageHeight - 10);
-      },
+      headStyles: { fillColor: [30, 41, 59], fontSize: 5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 5, valign: 'middle' },
+      styles: { cellPadding: 1, overflow: 'linebreak' },
       columnStyles: {
-        0: { cellWidth: 8 }, // SEQ
-        1: { cellWidth: 10 }, // Tons
-        2: { cellWidth: 'auto' }, // Desc
-        3: { cellWidth: 20 }, // Category
-        4: { cellWidth: 15 }, // OFA Sch
-        5: { cellWidth: 15 }, // OFA Act
-        6: { cellWidth: 15 }, // BFA Sch
-        7: { cellWidth: 15 }, // BFA Act
-        8: { cellWidth: 15 }, // FM Sch
-        9: { cellWidth: 15 }, // RTS
-        10: { cellWidth: 8 }, // Lead
-        11: { cellWidth: 15 }, // Erection
-        12: { cellWidth: 12 }, // B.Shop
-        13: { cellWidth: 12 }, // B.Field
-        14: { cellWidth: 12 }, // A.Shop
-        15: { cellWidth: 12 }, // A.Field
-        16: { cellWidth: 15 }, // Vendor
-        17: { cellWidth: 15 }, // Status
-        18: { cellWidth: 20 }  // Notes
+        0: { cellWidth: 8, halign: 'center' },   // SEQ #
+        1: { cellWidth: 9, halign: 'center' },  // Tons
+        2: { cellWidth: 'auto' }, // Item Description
+        3: { cellWidth: 14 },  // Category
+        4: { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
+        5: { cellWidth: 12, halign: 'center' },  // Actual OFA Date
+        6: { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
+        7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
+        8: { cellWidth: 14, halign: 'center' },  // Scheduled Field Measure Date
+        9: { cellWidth: 12, halign: 'center' },  // RTS Date
+        10: { cellWidth: 12, halign: 'center' }, // Ship Date
+        11: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
+        12: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
+        13: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
+        14: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
+        15: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
+        16: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
+        17: { cellWidth: 13 }, // Detailer / Vendor
+        18: { cellWidth: 12 }, // Dwg Status
+        19: { cellWidth: 14 }  // Notes
+      }
+    });
+
+    // --- GANTT CHART IN PDF ---
+    // Helper to safely parse dates
+    const parseDate = (dStr) => {
+      if (!dStr) return null;
+      const d = new Date(dStr);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    // Helper to determine active range for a sequence
+    const getSequenceRange = (s) => {
+      let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
+      let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
+      
+      if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+      if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+      
+      return { start, end };
+    };
+
+    // Calculate sequence status color
+    const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
+      if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] }; // Slate 400
+      const now = new Date();
+      const rtsDate = new Date(rtsDateStr);
+      const weeks = parseFloat(leadWeeks) || 0;
+      const completionDate = new Date(rtsDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
+      const twoDaysFromNow = new Date();
+      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+
+      if (rtsDate > twoDaysFromNow) {
+        return { label: 'Yet to Start', color: [59, 130, 246] }; // Blue 500
+      } else if (now >= completionDate) {
+        return { label: 'Completed', color: [34, 197, 94] }; // Emerald 500
+      } else {
+        return { label: 'InProgress', color: [245, 158, 11] }; // Amber 500
+      }
+    };
+
+    // Collect all valid dates to compute the project boundaries
+    let minDate = null;
+    let maxDate = null;
+
+    sortedSchedules.forEach(s => {
+      const dates = [
+        parseDate(s.scheduled_ofa_date),
+        parseDate(s.actual_ofa_date),
+        parseDate(s.scheduled_bfa_date),
+        parseDate(s.actual_bfa_date),
+        parseDate(s.scheduled_field_measure_date),
+        parseDate(s.rts_date),
+        parseDate(s.ship_date),
+        parseDate(s.scheduled_erection_date)
+      ].filter(Boolean);
+
+      dates.forEach(d => {
+        if (!minDate || d < minDate) minDate = d;
+        if (!maxDate || d > maxDate) maxDate = d;
+      });
+    });
+
+    if (!minDate) {
+      minDate = parseDate(project.erection_date) || new Date();
+    }
+    if (!maxDate) {
+      maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000); // 3 months later
+    }
+
+    // Align to month starts/ends
+    const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+
+    const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
+    
+    // Page dimensions and layout config
+    const timelineStart = 14 + 60; // 74mm
+    const timelineWidth = 209; // 209mm (A4 Landscape = 297mm width, 14mm margins -> 269mm total width)
+    const monthWidth = timelineWidth / totalMonths;
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
+    const getX = (date) => {
+      if (!date) return null;
+      const timeDiff = date.getTime() - startMonth.getTime();
+      const totalTime = endMonth.getTime() - startMonth.getTime();
+      if (totalTime <= 0) return timelineStart;
+      return timelineStart + (timeDiff / totalTime) * timelineWidth;
+    };
+
+    const rowHeight = 10;
+    const totalSequences = sortedSchedules.length;
+
+    // Determine where to start Gantt
+    let currentY = doc.lastAutoTable.finalY || 50;
+    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
+
+    // Min height required to start Gantt chart on current page:
+    // Header (Title, metadata, divider, month header bar) = 30mm
+    // Minimum 1 sequence row = 10mm
+    // So minimum space required = 40mm.
+    const spaceRemaining = pageHeight - currentY - 15;
+
+    let seqIdx = 0;
+    let isFirstGanttPage = true;
+
+    if (spaceRemaining < 40) {
+      doc.addPage();
+      currentY = 15; // Start at top of new page
+      isFirstGanttPage = false;
+    } else {
+      // Start directly below the table!
+      currentY = currentY + 12;
+    }
+
+    while (seqIdx < totalSequences) {
+      let rowStartY = 0;
+
+      if (isFirstGanttPage) {
+        // 1. Draw Gantt Header (on page 1, below the table)
+        doc.setFontSize(14); // slightly smaller title to look extremely clean when on the same page
+        doc.setTextColor(15, 23, 42); // Slate 900
+        doc.setFont(undefined, 'bold');
+        doc.text("STRUCTURAL GANTT CHART", 14, currentY);
+
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105); // Slate 600
+        doc.text("PROJECT NAME:", 14, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 40, currentY + 5);
+
+        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 140, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
+
+        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
+
+        // Divider Line
+        doc.setDrawColor(203, 213, 225); // Slate 300
+        doc.setLineWidth(0.5);
+        doc.line(14, currentY + 8, 283, currentY + 8);
+
+        // 2. Draw Monthly Header Bar
+        const monthHeaderY = currentY + 12;
+        doc.setFillColor(248, 250, 252); // Slate 50
+        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'F');
+        doc.setDrawColor(226, 232, 240); // Slate 200
+        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'S');
+
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont(undefined, 'bold');
+
+        for (let i = 0; i < totalMonths; i++) {
+          const mDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
+          const mLabel = `${monthNames[mDate.getMonth()]} ${mDate.getFullYear().toString().slice(-2)}`;
+          const xLeft = timelineStart + i * monthWidth;
+          doc.text(mLabel, xLeft + monthWidth / 2, monthHeaderY + 5.5, { align: 'center' });
+          if (i > 0) {
+            doc.setDrawColor(226, 232, 240);
+            doc.line(xLeft, monthHeaderY, xLeft, monthHeaderY + 8);
+          }
+        }
+
+        // Label Header on Left
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text("SEQUENCE DESCRIPTION", 14, monthHeaderY + 5.5);
+
+        rowStartY = currentY + 20;
+        isFirstGanttPage = false; // Next page loops will start fresh
+      } else {
+        // Draw Gantt Header (on subsequent pages)
+        doc.setFontSize(14);
+        doc.setTextColor(15, 23, 42); // Slate 900
+        doc.setFont(undefined, 'bold');
+        doc.text("STRUCTURAL GANTT CHART (Contd.)", 14, currentY);
+
+        doc.setFontSize(8);
+        doc.setTextColor(71, 85, 105); // Slate 600
+        doc.text("PROJECT NAME:", 14, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 40, currentY + 5);
+
+        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 140, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
+
+        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
+
+        // Divider Line
+        doc.setDrawColor(203, 213, 225); // Slate 300
+        doc.setLineWidth(0.5);
+        doc.line(14, currentY + 8, 283, currentY + 8);
+
+        // 2. Draw Monthly Header Bar
+        const monthHeaderY = currentY + 12;
+        doc.setFillColor(248, 250, 252); // Slate 50
+        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'F');
+        doc.setDrawColor(226, 232, 240); // Slate 200
+        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'S');
+
+        doc.setFontSize(7.5);
+        doc.setTextColor(71, 85, 105);
+        doc.setFont(undefined, 'bold');
+
+        for (let i = 0; i < totalMonths; i++) {
+          const mDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
+          const mLabel = `${monthNames[mDate.getMonth()]} ${mDate.getFullYear().toString().slice(-2)}`;
+          const xLeft = timelineStart + i * monthWidth;
+          doc.text(mLabel, xLeft + monthWidth / 2, monthHeaderY + 5.5, { align: 'center' });
+          if (i > 0) {
+            doc.setDrawColor(226, 232, 240);
+            doc.line(xLeft, monthHeaderY, xLeft, monthHeaderY + 8);
+          }
+        }
+
+        // Label Header on Left
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text("SEQUENCE DESCRIPTION", 14, monthHeaderY + 5.5);
+
+        rowStartY = currentY + 20;
       }
 
-    });
+      // Determine page capacity
+      const rem = totalSequences - seqIdx;
+      // If remaining sequences all fit on this page WITH legend
+      const fitsWithLegend = (rowStartY + rem * rowHeight <= pageHeight - 20); // 20mm for legend + margins
+      
+      let numRowsOnPage = 0;
+      let drawLegendOnThisPage = false;
+
+      if (fitsWithLegend) {
+        numRowsOnPage = rem;
+        drawLegendOnThisPage = true;
+      } else {
+        // Find how many fit on this page without legend
+        const maxLimit = pageHeight - 15; // 15mm bottom margin
+        numRowsOnPage = Math.floor((maxLimit - rowStartY) / rowHeight);
+        if (numRowsOnPage < 1) {
+          // If we can't even fit 1 row, force add page and loop again
+          doc.addPage();
+          currentY = 15;
+          continue;
+        }
+      }
+
+      // Draw Grid vertical lines down the chart
+      const gridBottomY = rowStartY + numRowsOnPage * rowHeight;
+      doc.setDrawColor(241, 245, 249); // Slate 100
+      doc.setLineWidth(0.3);
+      for (let i = 0; i <= totalMonths; i++) {
+        const xCol = timelineStart + i * monthWidth;
+        doc.line(xCol, rowStartY - 8, xCol, gridBottomY);
+      }
+
+      // Draw sequence rows
+      for (let rIdx = 0; rIdx < numRowsOnPage; rIdx++) {
+        const s = sortedSchedules[seqIdx + rIdx];
+        const yRow = rowStartY + rIdx * rowHeight;
+
+        // Row Divider line
+        doc.setDrawColor(241, 245, 249);
+        doc.setLineWidth(0.5);
+        doc.line(14, yRow + rowHeight, 283, yRow + rowHeight);
+
+        // Sequence label
+        doc.setFontSize(8);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(15, 23, 42); // Slate 900
+        const labelText = `Seq ${s.seq_no}: ${s.item_description || 'N/A'}`;
+        const truncatedLabel = doc.splitTextToSize(labelText, 55)[0];
+        doc.text(truncatedLabel, 14, yRow + 5.5);
+
+        // Meta info below label
+        doc.setFontSize(6.5);
+        doc.setFont(undefined, 'normal');
+        doc.setTextColor(100, 116, 139); // Slate 500
+        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons | ${s.category || 'N/A'}`, 14, yRow + 8.5);
+
+        // Draw Gantt Bar
+        const { start, end } = getSequenceRange(s);
+        if (start && end) {
+          const xStart = Math.max(timelineStart, getX(start));
+          const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
+          
+          if (xEnd > xStart) {
+            const barWidth = xEnd - xStart;
+            const barY = yRow + 2.5;
+            const barHeight = 4.5;
+            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks);
+            const [r, g, b] = seqStatus.color;
+
+            // Draw schedule bar
+            doc.setFillColor(r, g, b);
+            doc.rect(xStart, barY, barWidth, barHeight, 'F');
+
+            // Draw Milestone markers
+            const milestones = [
+              { date: s.scheduled_ofa_date, color: [168, 85, 247] },
+              { date: s.actual_ofa_date, color: [236, 72, 153] },
+              { date: s.scheduled_bfa_date, color: [6, 182, 212] },
+              { date: s.actual_bfa_date, color: [20, 184, 166] },
+              { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
+              { date: s.rts_date, color: [30, 41, 59] },
+              { date: s.ship_date, color: [220, 38, 38] },
+              { date: s.scheduled_erection_date, color: [132, 204, 22] }
+            ];
+
+            milestones.forEach(ms => {
+              const d = parseDate(ms.date);
+              if (d) {
+                const xMs = getX(d);
+                if (xMs >= timelineStart && xMs <= timelineStart + timelineWidth) {
+                  // White halo
+                  doc.setFillColor(255, 255, 255);
+                  doc.circle(xMs, barY + barHeight / 2, 1.4, 'F');
+                  // Colored dot
+                  doc.setFillColor(ms.color[0], ms.color[1], ms.color[2]);
+                  doc.circle(xMs, barY + barHeight / 2, 1.0, 'F');
+                }
+              }
+            });
+
+            // Text overlay if space permits
+            if (barWidth > 20) {
+               doc.setFontSize(5.5);
+               doc.setFont(undefined, 'bold');
+               doc.setTextColor(255, 255, 255);
+               const fmtLabel = `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
+               doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
+            }
+          }
+        } else {
+          doc.setFontSize(7.5);
+          doc.setFont(undefined, 'italic');
+          doc.setTextColor(148, 163, 184);
+          doc.text("Timeline TBD (Dates missing)", timelineStart + 5, yRow + 6);
+        }
+      }
+
+      // Draw Legend if needed
+      if (drawLegendOnThisPage) {
+        const yLegend = pageHeight - 18;
+        
+        // --- Bar Colors Legend ---
+        doc.setFontSize(7);
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text("BAR COLORS:", 14, yLegend);
+
+        let xOffset = 35;
+        const barLegend = [
+          { name: "Yet to Start", color: [59, 130, 246] },
+          { name: "In Progress", color: [245, 158, 11] },
+          { name: "Completed", color: [34, 197, 94] }
+        ];
+
+        barLegend.forEach(st => {
+          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
+          doc.rect(xOffset, yLegend - 2.2, 5, 2.5, 'F');
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(st.name, xOffset + 6, yLegend);
+          xOffset += 25;
+        });
+
+        // --- Milestone Dots Legend ---
+        doc.setFont(undefined, 'bold');
+        doc.setTextColor(71, 85, 105);
+        doc.text("MILESTONE DOTS:", 115, yLegend);
+
+        const dotLegend1 = [
+          { name: "OFA Sch", color: [168, 85, 247], x: 140 },
+          { name: "OFA Act", color: [236, 72, 153], x: 168 },
+          { name: "BFA Sch", color: [6, 182, 212], x: 192 },
+          { name: "BFA Act", color: [20, 184, 166], x: 216 }
+        ];
+        
+        dotLegend1.forEach(st => {
+          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
+          doc.circle(st.x, yLegend - 1, 1.2, 'F');
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(st.name, st.x + 2.5, yLegend);
+        });
+
+        // Line 2 for Milestone dots
+        const yLegend2 = pageHeight - 14;
+        const dotLegend2 = [
+          { name: "Field Measure", color: [249, 115, 22], x: 140 },
+          { name: "RTS", color: [30, 41, 59], x: 168 },
+          { name: "Ship", color: [220, 38, 38], x: 192 },
+          { name: "Erection Sch", color: [132, 204, 22], x: 216 }
+        ];
+
+        dotLegend2.forEach(st => {
+          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
+          doc.circle(st.x, yLegend2 - 1, 1.2, 'F');
+          doc.setFont(undefined, 'normal');
+          doc.setTextColor(100, 116, 139);
+          doc.text(st.name, st.x + 2.5, yLegend2);
+        });
+      }
+
+      seqIdx += numRowsOnPage;
+
+      if (seqIdx < totalSequences) {
+        doc.addPage();
+        currentY = 15;
+      }
+    }
+
+    // --- UNIVERSAL FOOTER ON ALL PAGES ---
+    const totalPagesCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPagesCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184); // Slate 400
+      doc.text(`Page ${i} of ${totalPagesCount}`, 260, pageHeight - 8);
+      doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, pageHeight - 8);
+    }
 
     doc.save(`Plan_${project.code}.pdf`);
   };
