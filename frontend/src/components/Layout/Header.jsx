@@ -17,15 +17,24 @@ import {
 const pageTitles = {
   '/dashboard': 'Dashboard',
   '/employees': 'Employee Master',
+  '/customers': 'Customer Master',
+  '/management': 'Detailer Master',
   '/projects': 'Project Master',
   '/milestones': 'Milestone Management',
   '/settings': 'Settings',
   '/help': 'Help & Support',
+  '/structural/plan-creation': 'Plan Creation',
+  '/structural/plan-tracking': 'Plan Tracking',
   '/production/process-master': 'Process Master',
   '/production/priority-schedule': 'Production Priority Schedule',
   '/production/priority-plate': 'Priority Plate',
   '/production/angle-priority': 'Angle Priority',
   '/production/structural-priority': 'Structural Priority',
+  '/production/capacity-mapping': 'Capacity Mapping',
+  '/production/capacity-mapping/capacity': 'Capacity Configuration',
+  '/production/capacity-mapping/machine': 'Machine Master',
+  '/production/capacity-mapping/manpower': 'Workforce Master',
+  '/production/capacity-mapping/summary': 'Capacity Mapping Summary',
 };
 
 export default function Header({ onMenuClick }) {

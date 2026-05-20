@@ -116,11 +116,7 @@ export default function DetailerMaster() {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-900">Detailer Master</h2>
-          <p className="text-sm text-slate-500 mt-0.5">Manage detailer vendors and contact persons</p>
-        </div>
+      <div className="flex justify-end">
         <button
           onClick={openAdd}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all hover:shadow-xl transform hover:scale-[1.02]"
