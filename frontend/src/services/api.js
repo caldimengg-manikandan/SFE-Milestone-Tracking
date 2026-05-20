@@ -85,6 +85,7 @@ export const productionAPI = {
   updateSchedule: (id, data) => api.put(`/production/schedules/${id}/`, data),
   deleteSchedule: (id) => api.delete(`/production/schedules/${id}/`),
   getItems: (params = {}) => api.get('/production/items/', { params }),
+  updateItem: (id, data) => api.patch(`/production/items/${id}/`, data),
 };
 
 /* ── Production Priority API (Generic for Plate, Angle, Structural) ── */
