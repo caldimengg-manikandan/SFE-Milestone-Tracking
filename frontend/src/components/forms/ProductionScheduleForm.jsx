@@ -136,17 +136,13 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             }
             
             if (inRange) {
-              const rts = parseLocalDate(item.rts_date);
-              const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
-              const calculatedShip = rts ? new Date(rts.getTime() + weeks * 7 * 24 * 60 * 60 * 1000) : null;
-
               allItems.push({
                 job: proj.code,
                 seq: item.seq_no,
                 weight: item.tons,
                 quantity: 1,
                 rtsDate: item.rts_date || '',
-                shipDate: item.ship_date || (calculatedShip ? formatDateString(calculatedShip) : ''),
+                shipDate: item.ship_date || '',
                 notes: item.notes || '',
                 // For sorting
                 erectionDate: item.scheduled_erection_date || '',
@@ -219,11 +215,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
           if (matchingItem) {
             newRows[index].weight = matchingItem.tons || '';
             newRows[index].rtsDate = matchingItem.rts_date || '';
-            
-            const rts = parseLocalDate(matchingItem.rts_date);
-            const weeks = parseFloat(matchingItem.shop_lead_time_weeks) || 0;
-            const calculatedShip = rts ? new Date(rts.getTime() + weeks * 7 * 24 * 60 * 60 * 1000) : null;
-            newRows[index].shipDate = matchingItem.ship_date || (calculatedShip ? formatDateString(calculatedShip) : '');
+            newRows[index].shipDate = matchingItem.ship_date || '';
           }
         }
       }
@@ -411,19 +403,20 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                   <tbody className="divide-y divide-slate-100">
                     {rows.map((row, index) => {
                       const calculateStatus = () => {
-                        if (!row.rtsDate) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
-                        
-                        const now = new Date();
-                        const rtsDate = new Date(row.rtsDate);
                         const shipDate = row.shipDate ? new Date(row.shipDate) : null;
                         
+                        if (shipDate) {
+                          return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
+                        }
+
+                        if (!row.rtsDate) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
+                        
+                        const rtsDate = new Date(row.rtsDate);
                         const twoDaysFromNow = new Date();
                         twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
 
                         if (rtsDate > twoDaysFromNow) {
                           return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
-                        } else if (shipDate && now >= shipDate) {
-                          return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
                         } else {
                           return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
                         }

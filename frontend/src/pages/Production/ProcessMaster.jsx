@@ -1,12 +1,14 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Loader2, Columns, Download, ChevronRight } from 'lucide-react';
 import ProcessMasterForm from '../../components/forms/ProcessMasterForm';
-import { priorityAPI } from '../../services/api';
+import { priorityAPI, scheduleAPI, projectAPI } from '../../services/api';
 
 export default function ProcessMaster() {
   const [showModal, setShowModal] = useState(false);
   const [search, setSearch] = useState('');
   const [records, setRecords] = useState([]);
+  const [structuralItems, setStructuralItems] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editRecord, setEditRecord] = useState(null);
   const [selectedScheduleId, setSelectedScheduleId] = useState(null);
@@ -38,8 +40,14 @@ export default function ProcessMaster() {
   const fetchRecords = async () => {
     try {
       setLoading(true);
-      const response = await priorityAPI.getAll();
-      setRecords(response.data.results || response.data);
+      const [priorityRes, structRes, projRes] = await Promise.all([
+        priorityAPI.getAll(),
+        scheduleAPI.getAll(),
+        projectAPI.getAll(),
+      ]);
+      setRecords(priorityRes.data.results || priorityRes.data);
+      setStructuralItems(structRes.data.results || structRes.data);
+      setProjects(projRes.data.results || projRes.data);
     } catch (error) {
       console.error('Error fetching records:', error);
     } finally {
@@ -268,36 +276,61 @@ export default function ProcessMaster() {
                                       <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Process / Job</th>
                                       <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center w-20">Seq #</th>
                                       <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Sched. OFA</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Actual OFA</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Sched. BFA</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Actual BFA</th>
+                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
+                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
+                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Start Run Date</th>
+                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Complete Run Date</th>
                                       <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Notes</th>
                                     </tr>
                                   </thead>
-                                  <tbody className="divide-y divide-slate-50">
-                                    {getSubTableData(row.schedule_number).map((prec) => (
-                                      prec.items?.map((item, iIdx) => (
-                                        <tr key={`${prec.id}-${iIdx}`} className="hover:bg-slate-50/30 transition-colors text-[11px]">
-                                          <td className="px-4 py-2.5 text-center">
-                                            <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-slate-100 text-slate-500 font-bold text-[9px]">{iIdx + 1}</span>
-                                          </td>
-                                          <td className="px-4 py-2.5">
-                                            <div className="flex flex-col">
-                                              <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">{prec.process_type}</span>
-                                              <span className="font-bold text-slate-800">{item.job_number}</span>
-                                            </div>
-                                          </td>
-                                          <td className="px-4 py-2.5 text-center font-bold text-slate-500">{item.sequence_number}</td>
-                                          <td className="px-4 py-2.5 text-center font-black text-orange-600">{item.weight}</td>
-                                          <td className="px-4 py-2.5 text-slate-500 font-medium">{formatDate(item.rts_date)}</td>
-                                          <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>
-                                          <td className="px-4 py-2.5 text-slate-500 font-medium">{formatDate(item.complete_run_date)}</td>
-                                          <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.actual_bfa) || '-'}</td>
-                                          <td className="px-4 py-2.5 text-slate-400 italic text-[10px]">{item.notes || '-'}</td>
-                                        </tr>
-                                      ))
-                                    ))}
+                                   <tbody className="divide-y divide-slate-50">
+                                    {(() => {
+                                      // Build a live lookup: "jobCode__seqNo" -> { tons, rts_date }
+                                      // so the sub-table always shows the current weight from Project Master
+                                      const weightLookup = {};
+                                      structuralItems.forEach(si => {
+                                        const proj = projects.find(p =>
+                                          String(p.id) === String(si.project) ||
+                                          (si.project?.id && String(si.project.id) === String(p.id))
+                                        );
+                                        if (proj) {
+                                          weightLookup[`${proj.code}__${si.seq_no}`] = {
+                                            tons: si.tons,
+                                            rts_date: si.rts_date,
+                                          };
+                                        }
+                                      });
+
+                                      return getSubTableData(row.schedule_number).map((prec) => {
+                                        const rate = parseFloat(prec.rate) || 0;
+                                        return prec.items?.map((item, iIdx) => {
+                                          const liveData = weightLookup[`${item.job_number}__${item.sequence_number}`];
+                                          const liveWeight = liveData ? parseFloat(liveData.tons) : (parseFloat(item.weight) || 0);
+                                          const liveRtsDate = liveData?.rts_date || item.rts_date;
+                                          const runDays = (rate > 0 && liveWeight > 0) ? Math.ceil(liveWeight / rate) : '-';
+                                          return (
+                                            <tr key={`${prec.id}-${iIdx}`} className="hover:bg-slate-50/30 transition-colors text-[11px]">
+                                              <td className="px-4 py-2.5 text-center">
+                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-slate-100 text-slate-500 font-bold text-[9px]">{iIdx + 1}</span>
+                                              </td>
+                                              <td className="px-4 py-2.5">
+                                                <div className="flex flex-col">
+                                                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">{prec.process_type}</span>
+                                                  <span className="font-bold text-slate-800">{item.job_number}</span>
+                                                </div>
+                                              </td>
+                                              <td className="px-4 py-2.5 text-center font-bold text-slate-500">{item.sequence_number}</td>
+                                              <td className="px-4 py-2.5 text-center font-black text-orange-600">{liveWeight > 0 ? liveWeight.toFixed(2) : '0.00'}</td>
+                                              <td className="px-4 py-2.5 text-slate-500 font-medium">{formatDate(liveRtsDate)}</td>
+                                              <td className="px-4 py-2.5 text-center font-bold text-slate-600">{runDays}</td>
+                                              <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>
+                                              <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.complete_run_date) || '-'}</td>
+                                              <td className="px-4 py-2.5 text-slate-400 italic text-[10px]">{item.notes || '-'}</td>
+                                            </tr>
+                                          );
+                                        });
+                                      });
+                                    })()}
                                     {getSubTableData(row.schedule_number).length === 0 && (
                                       <tr>
                                         <td colSpan="9" className="px-6 py-8 text-center text-slate-400 italic">No items found for the selected process type.</td>

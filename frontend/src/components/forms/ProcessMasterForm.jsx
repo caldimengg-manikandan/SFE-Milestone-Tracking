@@ -116,7 +116,9 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
           setExistingRecords(records);
 
           if (records.length > 0) {
-            // Schedule has saved records — load them directly, don't auto-populate
+            // Load saved records into section data (preserving all manual fields).
+            // NOTE: weight/rtsDate sync from project master runs in a separate
+            // useEffect below so it always has fresh structuralItems/projects data.
             setSectionData(prev => {
               const next = {};
               for (const key of Object.keys(prev)) {
@@ -172,6 +174,110 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
       setIsScheduleLoading(false);
     }
   }, [selectedSchedule]);
+
+  // Sync weight, rtsDate and new sequences from project master into saved rows.
+  // Runs whenever existingRecords OR structuralItems change, so it always has
+  // fresh data regardless of which resolves first.
+  useEffect(() => {
+    if (existingRecords.length === 0 || structuralItems.length === 0 || !selectedSchedule) return;
+
+    const clean = (s) => s.replace(/[^a-z0-9]/g, '');
+    const getKey = (job, seq) => `${String(job)}__${String(seq)}`;
+
+    const sched = schedules.find(s => String(s.id) === String(selectedSchedule));
+    const projIds = sched?.projects || [];
+    if (projIds.length === 0) return;
+
+    setSectionData(prev => {
+      const next = {};
+      for (const key of Object.keys(prev)) {
+        // Deep-clone rows so we don't mutate prev directly
+        next[key] = { rate: prev[key].rate, rows: prev[key].rows.map(r => ({ ...r })) };
+      }
+
+      projIds.forEach(projId => {
+        const proj = projects.find(p => String(p.id) === String(projId));
+        if (!proj) return;
+
+        const projectStructs = structuralItems.filter(item =>
+          String(item.project) === String(projId) ||
+          (item.project?.id && String(item.project.id) === String(projId))
+        );
+
+        projectStructs.forEach(item => {
+          let fabDetails = item.fabrication_details || [];
+          if (typeof fabDetails === 'string') {
+            try { fabDetails = JSON.parse(fabDetails); } catch (e) { fabDetails = []; }
+          }
+          if (!Array.isArray(fabDetails) || fabDetails.length === 0) return;
+
+          fabDetails.forEach(fab => {
+            const machineName = fab.machine?.trim()?.toLowerCase();
+            if (!machineName) return;
+            const cm = clean(machineName);
+
+            let matchedProc = null;
+            for (const step of STEPS) {
+              if (step.processes) {
+                const found = step.processes.find(p => {
+                  const cp = clean(p.toLowerCase());
+                  if (cp.includes(cm) || cm.includes(cp)) return true;
+                  if (cp === 'ironworker' && cm === 'ironmaster') return true;
+                  if (cp === 'anglemaster' && cm === 'anglemaster') return true;
+                  return false;
+                });
+                if (found) { matchedProc = found; break; }
+              }
+            }
+
+            if (matchedProc && next[matchedProc]) {
+              const rowKey = getKey(proj.code, item.seq_no);
+              const existingRowIdx = next[matchedProc].rows.findIndex(
+                r => getKey(r.job, r.seq) === rowKey
+              );
+
+              if (existingRowIdx >= 0) {
+                // Sync weight and rtsDate from project master; recalculate run days
+                const rate = parseFloat(next[matchedProc].rate) || 0;
+                const weight = parseFloat(item.tons) || 0;
+                const runDays = (rate > 0 && weight > 0)
+                  ? Math.ceil(weight / rate)
+                  : next[matchedProc].rows[existingRowIdx].runDays;
+                next[matchedProc].rows[existingRowIdx] = {
+                  ...next[matchedProc].rows[existingRowIdx],
+                  weight: item.tons,            // sync latest weight
+                  rtsDate: item.rts_date || '', // sync latest RTS date
+                  runDays,
+                };
+              } else {
+                // New sequence added in project master — append it
+                const rate = parseFloat(next[matchedProc].rate) || 0;
+                const weight = parseFloat(item.tons) || 0;
+                const runDays = (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : '';
+                const isInitialEmpty = next[matchedProc].rows.length === 1 &&
+                  Object.values(next[matchedProc].rows[0]).every(v => v === '');
+                const newRow = {
+                  job: proj.code,
+                  seq: item.seq_no,
+                  weight: item.tons,
+                  rtsDate: item.rts_date || '',
+                  runDays,
+                  startRunDate: '',
+                  completeRunDate: '',
+                  notes: '',
+                  _machine: machineName
+                };
+                if (isInitialEmpty) next[matchedProc].rows = [newRow];
+                else next[matchedProc].rows = [...next[matchedProc].rows, newRow];
+              }
+            }
+          });
+        });
+      });
+
+      return next;
+    });
+  }, [existingRecords, structuralItems, schedules, projects, selectedSchedule]);
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -252,7 +358,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                     runDays,
                     startRunDate: '',
                     completeRunDate: '',
-                    notes: item.item_description || item.notes || '',
+                    notes: '',
                     _machine: machineName // internal tracking key
                   };
                   if (isInitialEmpty) next[matchedProc].rows = [newRow];

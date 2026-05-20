@@ -249,19 +249,22 @@ export default function ProductionPrioritySchedule() {
 
                                   return sortedItems.length > 0 ? sortedItems.map((item, idx) => {
                                     const calculateStatus = () => {
-                                      if (!item.rts_date) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
-
-                                      const now = new Date();
-                                      const rtsDate = new Date(item.rts_date);
                                       const shipDate = item.ship_date ? new Date(item.ship_date) : null;
 
+                                      if (shipDate) {
+                                        return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
+                                      }
+
+                                      if (!item.rts_date) {
+                                        return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
+                                      }
+
+                                      const rtsDate = new Date(item.rts_date);
                                       const twoDaysFromNow = new Date();
                                       twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
 
                                       if (rtsDate > twoDaysFromNow) {
                                         return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
-                                      } else if (shipDate && now >= shipDate) {
-                                        return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
                                       } else {
                                         return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
                                       }
@@ -287,7 +290,23 @@ export default function ProductionPrioritySchedule() {
                                             {status.label}
                                           </div>
                                         </td>
-                                        <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.ship_date)}</td>
+                                        <td className="px-4 py-2">
+                                          <input
+                                            type="date"
+                                            value={item.ship_date || ''}
+                                            onChange={async (e) => {
+                                              const newDate = e.target.value || null;
+                                              try {
+                                                await productionAPI.updateItem(item.id, { ship_date: newDate });
+                                                fetchSchedules();
+                                              } catch (err) {
+                                                console.error('Failed to update ship date:', err);
+                                                alert('Failed to update ship date');
+                                              }
+                                            }}
+                                            className="px-2 py-1 rounded border border-slate-300 focus:border-amber-400 outline-none text-[11px] bg-white text-slate-700 font-medium w-[120px] transition-all"
+                                          />
+                                        </td>
                                         <td className="px-4 py-3 text-slate-400 italic text-[10px]">{item.notes || '—'}</td>
                                       </tr>
                                     );
