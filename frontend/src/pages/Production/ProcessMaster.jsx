@@ -265,22 +265,22 @@ export default function ProcessMaster() {
                         </td>
                       </tr>
                       {expandedId === row.schedule_number && (
-                        <tr className="bg-slate-50/50">
+                        <tr className="bg-slate-50/30">
                           <td colSpan="6" className="px-0 py-0 border-b border-slate-200">
                             <div className="overflow-hidden animate-in slide-in-from-top-2 duration-300">
-                              <div className="bg-white border-x border-slate-100 mx-6 my-4 rounded-2xl shadow-inner border border-slate-200 overflow-hidden">
+                              <div className="bg-white border border-slate-200 mx-3 my-2 rounded-xl shadow-sm overflow-hidden">
                                 <table className="w-full text-left border-collapse">
                                   <thead>
-                                    <tr className="bg-slate-100/80 border-b border-slate-200">
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center w-16">Serial</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Process / Job</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center w-20">Seq #</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Start Run Date</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Complete Run Date</th>
-                                      <th className="px-4 py-3 text-[9px] font-black text-slate-500 uppercase tracking-widest">Notes</th>
+                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center w-12">Serial</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Process / Job</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center w-16">Seq #</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Start Run Date</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Complete Run Date</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Notes</th>
                                     </tr>
                                   </thead>
                                    <tbody className="divide-y divide-slate-50">
@@ -301,50 +301,91 @@ export default function ProcessMaster() {
                                         }
                                       });
 
-                                      return getSubTableData(row.schedule_number).map((prec) => {
+                                      const flatItems = [];
+                                      getSubTableData(row.schedule_number).forEach((prec) => {
                                         const rate = parseFloat(prec.rate) || 0;
-                                        return prec.items?.map((item, iIdx) => {
+                                        prec.items?.forEach((item) => {
                                           const liveData = weightLookup[`${item.job_number}__${item.sequence_number}`];
                                           const liveWeight = liveData ? parseFloat(liveData.tons) : (parseFloat(item.weight) || 0);
                                           const liveRtsDate = liveData?.rts_date || item.rts_date;
                                           const runDays = (rate > 0 && liveWeight > 0) ? Math.ceil(liveWeight / rate) : '-';
-                                          return (
-                                            <tr key={`${prec.id}-${iIdx}`} className="hover:bg-slate-50/30 transition-colors text-[11px]">
-                                              <td className="px-4 py-2.5 text-center">
-                                                <span className="inline-flex items-center justify-center w-5 h-5 rounded bg-slate-100 text-slate-500 font-bold text-[9px]">{iIdx + 1}</span>
-                                              </td>
-                                              <td className="px-4 py-2.5">
-                                                <div className="flex flex-col">
-                                                  <span className="text-[10px] font-black text-amber-600 uppercase tracking-tighter">{prec.process_type}</span>
-                                                  <span className="font-bold text-slate-800">{item.job_number}</span>
-                                                </div>
-                                              </td>
-                                              <td className="px-4 py-2.5 text-center font-bold text-slate-500">{item.sequence_number}</td>
-                                              <td className="px-4 py-2.5 text-center font-black text-orange-600">{liveWeight > 0 ? liveWeight.toFixed(2) : '0.00'}</td>
-                                              <td className="px-4 py-2.5 text-slate-500 font-medium">{formatDate(liveRtsDate)}</td>
-                                              <td className="px-4 py-2.5 text-center font-bold text-slate-600">{runDays}</td>
-                                              <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>
-                                              <td className="px-4 py-2.5 text-slate-900 font-bold">{formatDate(item.complete_run_date) || '-'}</td>
-                                              <td className="px-4 py-2.5 text-slate-400 italic text-[10px]">{item.notes || '-'}</td>
-                                            </tr>
-                                          );
+                                          flatItems.push({
+                                            prec,
+                                            item,
+                                            liveWeight,
+                                            liveRtsDate,
+                                            runDays,
+                                          });
                                         });
                                       });
+
+                                      // Sort flatItems according to RTS date
+                                      flatItems.sort((a, b) => {
+                                        // 1. RTS Date (Soonest first)
+                                        const dateA = a.liveRtsDate ? new Date(a.liveRtsDate).getTime() : Infinity;
+                                        const dateB = b.liveRtsDate ? new Date(b.liveRtsDate).getTime() : Infinity;
+
+                                        // Handle invalid dates
+                                        const isInvalidA = isNaN(dateA);
+                                        const isInvalidB = isNaN(dateB);
+
+                                        if (isInvalidA && isInvalidB) {
+                                          // Secondary sort: Sequence Number
+                                          const seqA = parseFloat(a.item.sequence_number) || 999;
+                                          const seqB = parseFloat(b.item.sequence_number) || 999;
+                                          return seqA - seqB;
+                                        }
+                                        if (isInvalidA) return 1;
+                                        if (isInvalidB) return -1;
+
+                                        if (dateA !== dateB) return dateA - dateB;
+
+                                        // Secondary sort: Sequence Number
+                                        const seqA = parseFloat(a.item.sequence_number) || 999;
+                                        const seqB = parseFloat(b.item.sequence_number) || 999;
+                                        return seqA - seqB;
+                                      });
+
+                                      if (flatItems.length === 0) {
+                                        return (
+                                          <tr>
+                                            <td colSpan="9" className="px-6 py-8 text-center text-slate-400 italic">No items found for the selected process type.</td>
+                                          </tr>
+                                        );
+                                      }
+
+                                      return flatItems.map(({ prec, item, liveWeight, liveRtsDate, runDays }, idx) => {
+                                        return (
+                                          <tr key={`${prec.id}-${idx}`} className="hover:bg-slate-50/30 transition-colors text-[10px]">
+                                            <td className="px-3 py-1.5 text-center">
+                                              <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-slate-100 text-slate-500 font-bold text-[8px]">{idx + 1}</span>
+                                            </td>
+                                            <td className="px-3 py-1.5">
+                                              <div className="flex flex-col">
+                                                <span className="text-[8px] font-black text-amber-600 uppercase tracking-tighter">{prec.process_type}</span>
+                                                <span className="font-bold text-slate-800">{item.job_number}</span>
+                                              </div>
+                                            </td>
+                                            <td className="px-3 py-1.5 text-center font-bold text-slate-500">{item.sequence_number}</td>
+                                            <td className="px-3 py-1.5 text-center font-black text-orange-600">{liveWeight > 0 ? liveWeight.toFixed(2) : '0.00'}</td>
+                                            <td className="px-3 py-1.5 text-slate-500 font-medium">{formatDate(liveRtsDate)}</td>
+                                            <td className="px-3 py-1.5 text-center font-bold text-slate-600">{runDays}</td>
+                                            <td className="px-3 py-1.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>
+                                            <td className="px-3 py-1.5 text-slate-900 font-bold">{formatDate(item.complete_run_date) || '-'}</td>
+                                            <td className="px-3 py-1.5 text-slate-400 italic text-[9px]">{item.notes || '-'}</td>
+                                          </tr>
+                                        );
+                                      });
                                     })()}
-                                    {getSubTableData(row.schedule_number).length === 0 && (
-                                      <tr>
-                                        <td colSpan="9" className="px-6 py-8 text-center text-slate-400 italic">No items found for the selected process type.</td>
-                                      </tr>
-                                    )}
                                   </tbody>
                                 </table>
-                                <div className="px-6 py-2 bg-slate-50/50 border-t border-slate-100 flex items-center justify-between">
-                                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                <div className="px-4 py-1.5 bg-slate-50 border-t border-slate-100 flex items-center justify-between">
+                                  <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">
                                     {activeSubFilter ? `Filtered by ${activeSubFilter}` : 'All Processes View'}
                                   </span>
                                   <button
                                     onClick={() => toggleExpand(row.schedule_number)}
-                                    className="text-[9px] font-black text-amber-600 uppercase tracking-widest hover:underline"
+                                    className="text-[8px] font-black text-amber-600 uppercase tracking-widest hover:underline"
                                   >
                                     Close Sub-Table
                                   </button>
