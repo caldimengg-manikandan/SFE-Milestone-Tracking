@@ -940,7 +940,7 @@ export default function ProjectMaster() {
     setForm({
       name: '', code: '', customer_name: '', detailer_name: '',
       project_manager_name: '', total_ton: '', total_manhours: '',
-      erection_date: '', status: 'Planning', priority: 'Medium'
+      erection_date: '', status: 'In Progress', priority: 'Medium'
     });
     setIsEditing(false);
     setInitialTab("basic");
@@ -1054,6 +1054,7 @@ export default function ProjectMaster() {
             <button
               onClick={() => {
                 resetForm();
+                setViewMode('edit');
                 setShowModal(true);
               }}
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all"
