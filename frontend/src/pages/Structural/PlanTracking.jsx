@@ -78,7 +78,7 @@ export default function PlanTracking() {
     // Sort by Project Name first
     const projCompare = a.projectName.localeCompare(b.projectName);
     if (projCompare !== 0) return projCompare;
-    
+
     // Sort by Sequence Number numerically
     const aNum = parseFloat(a.seq_no);
     const bNum = parseFloat(b.seq_no);
@@ -118,16 +118,6 @@ export default function PlanTracking() {
 
   return (
     <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6">
-      {/* Title Header */}
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
-          <ListChecks className="w-6 h-6 text-amber-600" /> Plan Tracking
-        </h1>
-        <p className="text-sm text-slate-500 font-medium">
-          Real-time status monitoring for all structural plans. Click any project row to view its detailed milestones.
-        </p>
-      </div>
-
       {/* Search Bar */}
       <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-sm">
         <div className="relative w-full max-w-md">
@@ -169,11 +159,10 @@ export default function PlanTracking() {
                       {/* Main Project Row */}
                       <tr
                         onClick={() => setSelectedProject(isSelected ? null : proj)}
-                        className={`cursor-pointer transition-colors group ${
-                          isSelected 
-                            ? 'bg-amber-50/50 hover:bg-amber-100/30 font-semibold' 
+                        className={`cursor-pointer transition-colors group ${isSelected
+                            ? 'bg-amber-50/50 hover:bg-amber-100/30 font-semibold'
                             : 'hover:bg-slate-50/50'
-                        }`}
+                          }`}
                       >
                         <td className="px-6 py-4 text-slate-900 text-[13px] border-r border-slate-100 truncate" title={proj.name}>
                           {proj.name}
@@ -187,11 +176,10 @@ export default function PlanTracking() {
                         <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                           <button
                             onClick={() => setSelectedProject(isSelected ? null : proj)}
-                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${
-                              isSelected 
-                                ? 'bg-amber-100 text-amber-800' 
+                            className={`px-3 py-1.5 rounded-lg text-xs font-bold uppercase transition-all ${isSelected
+                                ? 'bg-amber-100 text-amber-800'
                                 : 'text-amber-600 hover:bg-amber-50'
-                            }`}
+                              }`}
                           >
                             {isSelected ? 'Collapse' : 'Track Plan'}
                           </button>
@@ -247,7 +235,7 @@ export default function PlanTracking() {
                                                   {status.label}
                                                   {isUnderProgress && <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform ${openDropdownId === item.id ? 'rotate-180' : ''}`} />}
                                                 </button>
-                                                
+
                                                 {item.tracking_status && (
                                                   <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-slate-100 shadow-sm">
                                                     <span className="text-[8px] font-bold uppercase text-slate-600 tracking-tight">

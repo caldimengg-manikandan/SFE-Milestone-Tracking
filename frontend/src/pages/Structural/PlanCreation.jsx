@@ -143,9 +143,9 @@ export default function PlanCreation() {
       fetchAllSchedules();
       setShowModal(false);
       resetForm();
-    } catch (err) { 
-      console.error(err); 
-      alert('Failed to save: ' + JSON.stringify(err.response?.data || err.message)); 
+    } catch (err) {
+      console.error(err);
+      alert('Failed to save: ' + JSON.stringify(err.response?.data || err.message));
     }
     finally { setLoading(false); }
   };
@@ -233,7 +233,7 @@ export default function PlanCreation() {
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA Date", "Actual OFA Date", "Scheduled BFA Date", "Actual BFA Date", "Scheduled Field Measure Date", "RTS Date", "Ship Date", "Shop Lead Time in WEEKS", "Scheduled Start of Erection", "Budget Shop Hours", "Budget Field Hours", "Shop Hours Actual", "Field Hours Actual", "Detailer / Vendor", "Dwg Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -270,8 +270,8 @@ export default function PlanCreation() {
       head: tableHeaders,
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], fontSize: 5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
-      bodyStyles: { fontSize: 5, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 6.0, valign: 'middle' },
       styles: { cellPadding: 1, overflow: 'linebreak' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },   // SEQ #
@@ -309,10 +309,10 @@ export default function PlanCreation() {
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
       let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
-      
+
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       return { start, end };
     };
 
@@ -369,7 +369,7 @@ export default function PlanCreation() {
     const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
     const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-    
+
     // Page dimensions and layout config
     const timelineStart = 14 + 60; // 74mm
     const timelineWidth = 209; // 209mm (A4 Landscape = 297mm width, 14mm margins -> 269mm total width)
@@ -394,19 +394,19 @@ export default function PlanCreation() {
     // Min height required to start Gantt chart on current page:
     // Header (Title, metadata, divider, month header bar) = 30mm
     // Minimum 1 sequence row = 10mm
-    // So minimum space required = 40mm.
+    // So minimum space required = 55mm (including 25mm gap).
     const spaceRemaining = pageHeight - currentY - 15;
 
     let seqIdx = 0;
     let isFirstGanttPage = true;
 
-    if (spaceRemaining < 40) {
+    if (spaceRemaining < 55) {
       doc.addPage();
       currentY = 15; // Start at top of new page
       isFirstGanttPage = false;
     } else {
-      // Start directly below the table!
-      currentY = currentY + 12;
+      // Start directly below the table with a 25mm gap!
+      currentY = currentY + 25;
     }
 
     while (seqIdx < totalSequences) {
@@ -523,7 +523,7 @@ export default function PlanCreation() {
       const rem = totalSequences - seqIdx;
       // If remaining sequences all fit on this page WITH legend
       const fitsWithLegend = (rowStartY + rem * rowHeight <= pageHeight - 20); // 20mm for legend + margins
-      
+
       let numRowsOnPage = 0;
       let drawLegendOnThisPage = false;
 
@@ -580,7 +580,7 @@ export default function PlanCreation() {
         if (start && end) {
           const xStart = Math.max(timelineStart, getX(start));
           const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-          
+
           if (xEnd > xStart) {
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
@@ -621,11 +621,11 @@ export default function PlanCreation() {
 
             // Text overlay if space permits
             if (barWidth > 20) {
-               doc.setFontSize(5.5);
-               doc.setFont(undefined, 'bold');
-               doc.setTextColor(255, 255, 255);
-               const fmtLabel = `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
-               doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
+              doc.setFontSize(5.5);
+              doc.setFont(undefined, 'bold');
+              doc.setTextColor(255, 255, 255);
+              const fmtLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+              doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
             }
           }
         } else {
@@ -639,7 +639,7 @@ export default function PlanCreation() {
       // Draw Legend if needed
       if (drawLegendOnThisPage) {
         const yLegend = pageHeight - 18;
-        
+
         // --- Bar Colors Legend ---
         doc.setFontSize(7);
         doc.setFont(undefined, 'bold');
@@ -673,7 +673,7 @@ export default function PlanCreation() {
           { name: "BFA Sch", color: [6, 182, 212], x: 192 },
           { name: "BFA Act", color: [20, 184, 166], x: 216 }
         ];
-        
+
         dotLegend1.forEach(st => {
           doc.setFillColor(st.color[0], st.color[1], st.color[2]);
           doc.circle(st.x, yLegend - 1, 1.2, 'F');
@@ -730,11 +730,6 @@ export default function PlanCreation() {
 
   return (
     <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6">
-      <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Plan Creation</h1>
-        <p className="text-sm text-slate-500">Create new structural plans and initialize project schedules</p>
-      </div>
-
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
