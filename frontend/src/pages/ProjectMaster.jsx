@@ -226,10 +226,10 @@ export default function ProjectMaster() {
       setLoading(true);
       setError('');
       const res = await projectAPI.getAll();
-      
+
       // Handle both { results: [] } and directly []
       const data = res.data.results || res.data;
-      
+
       if (Array.isArray(data)) {
         setProjects(data);
       } else if (data && typeof data === 'object') {
@@ -311,7 +311,7 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA Date", "Actual OFA Date", "Scheduled BFA Date", "Actual BFA Date", "Scheduled Field Measure Date", "RTS Date", "Ship Date", "Shop Lead Time in WEEKS", "Scheduled Start of Erection", "Budget Shop Hours", "Budget Field Hours", "Shop Hours Actual", "Field Hours Actual", "Detailer / Vendor", "Dwg Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -348,8 +348,8 @@ export default function ProjectMaster() {
       head: tableHeaders,
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], fontSize: 5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
-      bodyStyles: { fontSize: 5, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 6.0, valign: 'middle' },
       styles: { cellPadding: 1, overflow: 'linebreak' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },   // SEQ #
@@ -387,10 +387,10 @@ export default function ProjectMaster() {
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
       let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
-      
+
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       return { start, end };
     };
 
@@ -447,7 +447,7 @@ export default function ProjectMaster() {
     const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
     const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-    
+
     // Page dimensions and layout config
     const timelineStart = 14 + 60; // 74mm
     const timelineWidth = 209; // 209mm (A4 Landscape = 297mm width, 14mm margins -> 269mm total width)
@@ -472,19 +472,19 @@ export default function ProjectMaster() {
     // Min height required to start Gantt chart on current page:
     // Header (Title, metadata, divider, month header bar) = 30mm
     // Minimum 1 sequence row = 10mm
-    // So minimum space required = 40mm.
+    // So minimum space required = 55mm (including 25mm gap).
     const spaceRemaining = pageHeight - currentY - 15;
 
     let seqIdx = 0;
     let isFirstGanttPage = true;
 
-    if (spaceRemaining < 40) {
+    if (spaceRemaining < 55) {
       doc.addPage();
       currentY = 15; // Start at top of new page
       isFirstGanttPage = false;
     } else {
-      // Start directly below the table!
-      currentY = currentY + 12;
+      // Start directly below the table with a 25mm gap!
+      currentY = currentY + 25;
     }
 
     while (seqIdx < totalSequences) {
@@ -601,7 +601,7 @@ export default function ProjectMaster() {
       const rem = totalSequences - seqIdx;
       // If remaining sequences all fit on this page WITH legend
       const fitsWithLegend = (rowStartY + rem * rowHeight <= pageHeight - 20); // 20mm for legend + margins
-      
+
       let numRowsOnPage = 0;
       let drawLegendOnThisPage = false;
 
@@ -658,7 +658,7 @@ export default function ProjectMaster() {
         if (start && end) {
           const xStart = Math.max(timelineStart, getX(start));
           const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-          
+
           if (xEnd > xStart) {
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
@@ -699,11 +699,11 @@ export default function ProjectMaster() {
 
             // Text overlay if space permits
             if (barWidth > 20) {
-               doc.setFontSize(5.5);
-               doc.setFont(undefined, 'bold');
-               doc.setTextColor(255, 255, 255);
-               const fmtLabel = `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
-               doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
+              doc.setFontSize(5.5);
+              doc.setFont(undefined, 'bold');
+              doc.setTextColor(255, 255, 255);
+              const fmtLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+              doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
             }
           }
         } else {
@@ -717,7 +717,7 @@ export default function ProjectMaster() {
       // Draw Legend if needed
       if (drawLegendOnThisPage) {
         const yLegend = pageHeight - 18;
-        
+
         // --- Bar Colors Legend ---
         doc.setFontSize(7);
         doc.setFont(undefined, 'bold');
@@ -751,7 +751,7 @@ export default function ProjectMaster() {
           { name: "BFA Sch", color: [6, 182, 212], x: 192 },
           { name: "BFA Act", color: [20, 184, 166], x: 216 }
         ];
-        
+
         dotLegend1.forEach(st => {
           doc.setFillColor(st.color[0], st.color[1], st.color[2]);
           doc.circle(st.x, yLegend - 1, 1.2, 'F');
@@ -986,9 +986,9 @@ export default function ProjectMaster() {
     const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
       (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
       (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase());
-    
+
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
-    
+
     return matchesSearch && matchesStatus;
   });
 
@@ -1003,13 +1003,13 @@ export default function ProjectMaster() {
 
       <div className="space-y-4 animate-fade-in">
         {/* Error Message */}
-      {error && (
-        <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
-          <AlertCircle className="w-5 h-5" />
-          {error}
-          <button onClick={fetchProjects} className="ml-auto underline">Try Again</button>
-        </div>
-      )}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
+            <AlertCircle className="w-5 h-5" />
+            {error}
+            <button onClick={fetchProjects} className="ml-auto underline">Try Again</button>
+          </div>
+        )}
         {/* Control Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
           <div className="relative flex-1 max-w-md">
@@ -1103,8 +1103,8 @@ export default function ProjectMaster() {
                     </td>
                     <td className="px-2 py-3 border-r border-slate-100 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
-                          p.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                            'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                        p.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
+                          'bg-emerald-50 text-emerald-600 border border-emerald-100'
                         }`}>
                         {p.priority}
                       </span>

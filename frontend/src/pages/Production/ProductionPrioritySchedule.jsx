@@ -1,27 +1,33 @@
 import { useState, useEffect, Fragment } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, ClipboardList, FileText } from "lucide-react";
 import ProductionScheduleForm from '../../components/forms/ProductionScheduleForm';
-import { productionAPI } from '../../services/api';
+import { productionAPI, projectAPI } from '../../services/api';
 
 export default function ProductionPrioritySchedule() {
   const [showModal, setShowModal] = useState(false);
   const [showPlanModal, setShowPlanModal] = useState(false);
   const [search, setSearch] = useState('');
   const [schedules, setSchedules] = useState([]);
+  const [projects, setProjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editSchedule, setEditSchedule] = useState(null);
   const [selectedSchedule, setSelectedSchedule] = useState(null);
   const [expandedId, setExpandedId] = useState(null);
+  const [expandedViewMode, setExpandedViewMode] = useState('table'); // 'table' or 'gantt'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 10;
 
   const fetchSchedules = async () => {
     try {
       setLoading(true);
-      const response = await productionAPI.getSchedules();
-      setSchedules(response.data.results || response.data);
+      const [schedulesRes, projectsRes] = await Promise.all([
+        productionAPI.getSchedules(),
+        projectAPI.getAll()
+      ]);
+      setSchedules(schedulesRes.data.results || schedulesRes.data);
+      setProjects(projectsRes.data.results || projectsRes.data);
     } catch (error) {
-      console.error('Error fetching schedules:', error);
+      console.error('Error fetching schedules and projects:', error);
     } finally {
       setLoading(false);
     }
@@ -39,6 +45,15 @@ export default function ProductionPrioritySchedule() {
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const y = date.getFullYear();
     return `${d}-${m}-${y}`;
+  };
+
+  const getPlanCreationDates = (item) => {
+    const proj = projects.find(p => p.code === item.job_number);
+    const seq = proj?.structural_schedules?.find(s => String(s.seq_no) === String(item.sequence_number));
+    return {
+      rts_date: seq?.rts_date || item.rts_date,
+      scheduled_erection_date: seq?.scheduled_erection_date || item.ship_date
+    };
   };
 
   const handleDelete = async (id) => {
@@ -67,8 +82,50 @@ export default function ProductionPrioritySchedule() {
     setShowPlanModal(true);
   };
 
-  const toggleExpand = (id) => {
-    setExpandedId(expandedId === id ? null : id);
+  const toggleExpand = (id, mode = 'table') => {
+    if (expandedId === id && expandedViewMode === mode) {
+      setExpandedId(null);
+    } else {
+      setExpandedId(id);
+      setExpandedViewMode(mode);
+    }
+  };
+
+  const getScheduleTimelineRange = (schedule) => {
+    let minDate = schedule.start_date ? new Date(schedule.start_date) : null;
+    let maxDate = schedule.end_date ? new Date(schedule.end_date) : null;
+
+    (schedule.items || []).forEach(item => {
+      const planDates = getPlanCreationDates(item);
+      if (planDates.rts_date) {
+        const d = new Date(planDates.rts_date);
+        if (!isNaN(d.getTime())) {
+          if (!minDate || d < minDate) minDate = d;
+          if (!maxDate || d > maxDate) maxDate = d;
+        }
+      }
+      if (planDates.scheduled_erection_date) {
+        const d = new Date(planDates.scheduled_erection_date);
+        if (!isNaN(d.getTime())) {
+          if (!minDate || d < minDate) minDate = d;
+          if (!maxDate || d > maxDate) maxDate = d;
+        }
+      }
+    });
+
+    if (!minDate) minDate = new Date();
+    if (!maxDate) maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+
+    const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+
+    const months = [];
+    let curr = new Date(startMonth);
+    while (curr <= endMonth) {
+      months.push(new Date(curr));
+      curr.setMonth(curr.getMonth() + 1);
+    }
+    return { startMonth, endMonth, months };
   };
 
 
@@ -173,7 +230,7 @@ export default function ProductionPrioritySchedule() {
                   <Fragment key={schedule.id}>
                     <tr
                       className={`hover:bg-slate-50/50 transition-colors group cursor-pointer text-[12px] ${expandedId === schedule.id ? 'bg-slate-50' : ''}`}
-                      onClick={() => toggleExpand(schedule.id)}
+                      onClick={() => toggleExpand(schedule.id, 'table')}
                     >
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -187,6 +244,13 @@ export default function ProductionPrioritySchedule() {
                       <td className="px-6 py-4 text-slate-600 font-medium">{formatDate(schedule.end_date)}</td>
                       <td className="px-6 py-4">
                         <div className="flex items-center justify-end gap-1">
+                          <button
+                            onClick={(e) => { e.stopPropagation(); toggleExpand(schedule.id, 'gantt'); }}
+                            className={`p-1.5 rounded transition-colors ${expandedId === schedule.id && expandedViewMode === 'gantt' ? 'text-amber-600 bg-amber-50' : 'text-slate-400 hover:text-amber-600 hover:bg-amber-50'}`}
+                            title="View Gantt Chart"
+                          >
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
                           <button
                             onClick={(e) => { e.stopPropagation(); openEdit(schedule); }}
                             className="p-1.5 rounded text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
@@ -208,7 +272,136 @@ export default function ProductionPrioritySchedule() {
                       <tr>
                         <td colSpan="4" className="px-0 py-4 bg-slate-50/50">
                           <div className="border-y border-slate-200 overflow-hidden shadow-inner bg-white animate-in slide-in-from-top-4 duration-300">
-                            <table className="w-full text-left border-collapse">
+                            {expandedViewMode === 'gantt' ? (
+                              <div className="overflow-x-auto">
+                                {(() => {
+                                  const { startMonth, endMonth, months } = getScheduleTimelineRange(schedule);
+                                  
+                                  const sortedItems = [...(schedule.items || [])].sort((a, b) => {
+                                    const datesA = getPlanCreationDates(a);
+                                    const datesB = getPlanCreationDates(b);
+                                    const dateA = new Date(datesA.rts_date || '9999-12-31');
+                                    const dateB = new Date(datesB.rts_date || '9999-12-31');
+                                    if (dateA - dateB !== 0) return dateA - dateB;
+                                    const seqA = parseFloat(a.sequence_number) || 999;
+                                    const seqB = parseFloat(b.sequence_number) || 999;
+                                    return seqA - seqB;
+                                  });
+
+                                  return (
+                                    <div className="min-w-[800px] p-4 bg-white">
+                                      <table className="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
+                                        <thead>
+                                          <tr className="bg-slate-50 border-b border-slate-200">
+                                            <th className="px-4 py-3 text-[10px] font-black uppercase tracking-wider w-[180px] border-r border-slate-200 text-slate-500">
+                                              Job #
+                                            </th>
+                                            {months.map((m, mIdx) => (
+                                              <th key={mIdx} className="px-4 py-3 text-[10px] font-black uppercase tracking-wider text-center text-slate-500 border-r border-slate-200 last:border-r-0">
+                                                {m.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }).toUpperCase()}
+                                              </th>
+                                            ))}
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-100">
+                                          {sortedItems.length > 0 ? sortedItems.map((item, idx) => {
+                                            const planDates = getPlanCreationDates(item);
+                                            const rts = planDates.rts_date ? new Date(planDates.rts_date) : null;
+                                            const erection = planDates.scheduled_erection_date ? new Date(planDates.scheduled_erection_date) : null;
+                                            const hasValidDates = rts && !isNaN(rts.getTime()) && erection && !isNaN(erection.getTime());
+                                            
+                                            let leftPct = 0;
+                                            let widthPct = 0;
+                                            
+                                            if (hasValidDates) {
+                                              let dStart = rts < erection ? rts : erection;
+                                              let dEnd = rts < erection ? erection : rts;
+                                              
+                                              const totalMs = endMonth - startMonth;
+                                              const startMs = dStart - startMonth;
+                                              const durationMs = dEnd - dStart;
+                                              
+                                              leftPct = Math.max(0, Math.min(100, (startMs / totalMs) * 100));
+                                              widthPct = Math.max(0.5, Math.min(100 - leftPct, (durationMs / totalMs) * 100));
+                                            }
+
+                                            return (
+                                              <tr key={idx} className="hover:bg-slate-50/50 transition-colors text-[11px] h-[55px]">
+                                                <td className="px-4 py-3 font-bold text-slate-800 w-[180px] shrink-0 border-r border-slate-200">
+                                                  <div className="flex flex-col">
+                                                    <span className="font-bold text-slate-800">{item.job_number}</span>
+                                                    <span className="text-[9px] text-slate-400 font-medium">
+                                                      Seq {item.sequence_number} | {parseFloat(item.weight || 0).toFixed(2)} Tons
+                                                    </span>
+                                                  </div>
+                                                </td>
+                                                <td colSpan={months.length} className="p-0 relative h-[55px] bg-slate-50/10">
+                                                  {/* Column grid lines */}
+                                                  <div className="absolute inset-0 flex pointer-events-none">
+                                                    {months.map((_, mIdx) => (
+                                                      <div key={mIdx} className="flex-1 border-r border-slate-100 last:border-r-0 h-full" />
+                                                    ))}
+                                                  </div>
+                                                  {/* Gantt Bar */}
+                                                  {hasValidDates ? (
+                                                    <div 
+                                                      className="absolute top-1/2 -translate-y-1/2 h-8 bg-amber-500/10 border border-amber-500 border-l-4 text-amber-800 rounded-lg shadow-sm flex items-center px-3 justify-between transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group"
+                                                      style={{
+                                                        left: `${leftPct}%`,
+                                                        width: `${widthPct}%`,
+                                                        minWidth: '24px'
+                                                      }}
+                                                    >
+                                                      <span className="text-[10px] font-black tracking-tight truncate">{item.job_number}</span>
+                                                      {widthPct > 15 && (
+                                                        <span className="text-[9px] font-bold opacity-80 whitespace-nowrap ml-2">
+                                                          {formatDate(planDates.rts_date)} → {formatDate(planDates.scheduled_erection_date)}
+                                                        </span>
+                                                      )}
+                                                      {/* Floating Tooltip */}
+                                                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900 text-white text-[9px] font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
+                                                        <div className="font-extrabold text-[10px] text-amber-400 mb-0.5">{item.job_number}</div>
+                                                        <div>RTS Date: {formatDate(planDates.rts_date)}</div>
+                                                        <div>Scheduled Start of Erection: {formatDate(planDates.scheduled_erection_date)}</div>
+                                                        <div>Weight: {item.weight} Tons</div>
+                                                      </div>
+                                                    </div>
+                                                  ) : (
+                                                    <div className="absolute inset-0 flex items-center pl-4 text-[10px] text-slate-400 italic">
+                                                      Timeline TBD (Dates missing)
+                                                    </div>
+                                                  )}
+                                                </td>
+                                              </tr>
+                                            );
+                                          }) : (
+                                            <tr>
+                                              <td colSpan={months.length + 1} className="px-6 py-8 text-center text-slate-400 italic">
+                                                No production items defined for this schedule
+                                              </td>
+                                            </tr>
+                                          )}
+                                        </tbody>
+                                      </table>
+                                      
+                                      {/* Legend */}
+                                      <div className="bg-slate-50 px-6 py-3 border border-t-0 border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-500 rounded-b-lg">
+                                        <div className="flex items-center gap-6">
+                                          <div className="flex items-center gap-2">
+                                            <div className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500 border-l-4" />
+                                            <span>Project Timeline (RTS to Scheduled Start of Erection Date)</span>
+                                          </div>
+                                        </div>
+                                        <div className="uppercase tracking-widest text-[9px] font-bold text-slate-400">
+                                          {schedule.items?.length || 0} Project Timelines Rendered
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })()}
+                              </div>
+                            ) : (
+                              <table className="w-full text-left border-collapse">
                               <thead>
                                 <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider w-20 text-center">Serial No.</th>
@@ -266,7 +459,7 @@ export default function ProductionPrioritySchedule() {
                                       if (rtsDate > twoDaysFromNow) {
                                         return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
                                       } else {
-                                        return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                                        return { label: 'IN PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
                                       }
                                     };
 
@@ -318,13 +511,14 @@ export default function ProductionPrioritySchedule() {
                                 })()}
                               </tbody>
                             </table>
-                            <div className="bg-slate-50 px-6 py-2 border-t border-slate-100 flex items-center">
-                              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{schedule.items?.length || 0} Production Items Tracked</span>
-                            </div>
+                          )}
+                          <div className="bg-slate-50 px-6 py-2 border-t border-slate-100 flex items-center">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{schedule.items?.length || 0} Production Items Tracked</span>
                           </div>
-                        </td>
-                      </tr>
-                    )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   </Fragment>
                 ))}
               </tbody>

@@ -5,16 +5,16 @@ import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronR
 import StructuralScheduleForm from './StructuralScheduleForm';
 import { customerAPI, detailerAPI, employeeAPI } from '../../services/api';
 
-export default function ProjectForm({ 
+export default function ProjectForm({
   schedules,
   addScheduleRow,
   handleScheduleChange,
   handleDeleteSchedule,
-  form, 
-  setForm, 
-  handleSave, 
-  onClose, 
-  isEditing, 
+  form,
+  setForm,
+  handleSave,
+  onClose,
+  isEditing,
   loading,
   autocalculateManhourTon,
   initialTab = "basic",
@@ -84,7 +84,7 @@ export default function ProjectForm({
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.project_manager_name || 'N/A', 180, 38);
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA Date", "Actual OFA Date", "Scheduled BFA Date", "Actual BFA Date", "Scheduled Field Measure Date", "RTS Date", "Ship Date", "Shop Lead Time in WEEKS", "Scheduled Start of Erection", "Budget Shop Hours", "Budget Field Hours", "Shop Hours Actual", "Field Hours Actual", "Detailer / Vendor", "Dwg Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...schedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -121,8 +121,8 @@ export default function ProjectForm({
       head: tableHeaders,
       body: tableData,
       theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], fontSize: 5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
-      bodyStyles: { fontSize: 5, valign: 'middle' },
+      headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
+      bodyStyles: { fontSize: 6.0, valign: 'middle' },
       styles: { cellPadding: 1, overflow: 'linebreak' },
       columnStyles: {
         0: { cellWidth: 8, halign: 'center' },   // SEQ #
@@ -160,10 +160,10 @@ export default function ProjectForm({
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
       let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
-      
+
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
-      
+
       return { start, end };
     };
 
@@ -220,7 +220,7 @@ export default function ProjectForm({
     const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
 
     const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-    
+
     // Page dimensions and layout config
     const timelineStart = 14 + 60; // 74mm
     const timelineWidth = 209; // 209mm (A4 Landscape = 297mm width, 14mm margins -> 269mm total width)
@@ -245,19 +245,19 @@ export default function ProjectForm({
     // Min height required to start Gantt chart on current page:
     // Header (Title, metadata, divider, month header bar) = 30mm
     // Minimum 1 sequence row = 10mm
-    // So minimum space required = 40mm.
+    // So minimum space required = 55mm (including 25mm gap).
     const spaceRemaining = pageHeight - currentY - 15;
 
     let seqIdx = 0;
     let isFirstGanttPage = true;
 
-    if (spaceRemaining < 40) {
+    if (spaceRemaining < 55) {
       doc.addPage();
       currentY = 15; // Start at top of new page
       isFirstGanttPage = false;
     } else {
-      // Start directly below the table!
-      currentY = currentY + 12;
+      // Start directly below the table with a 25mm gap!
+      currentY = currentY + 25;
     }
 
     while (seqIdx < totalSequences) {
@@ -374,7 +374,7 @@ export default function ProjectForm({
       const rem = totalSequences - seqIdx;
       // If remaining sequences all fit on this page WITH legend
       const fitsWithLegend = (rowStartY + rem * rowHeight <= pageHeight - 20); // 20mm for legend + margins
-      
+
       let numRowsOnPage = 0;
       let drawLegendOnThisPage = false;
 
@@ -431,7 +431,7 @@ export default function ProjectForm({
         if (start && end) {
           const xStart = Math.max(timelineStart, getX(start));
           const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-          
+
           if (xEnd > xStart) {
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
@@ -472,11 +472,11 @@ export default function ProjectForm({
 
             // Text overlay if space permits
             if (barWidth > 20) {
-               doc.setFontSize(5.5);
-               doc.setFont(undefined, 'bold');
-               doc.setTextColor(255, 255, 255);
-               const fmtLabel = `${start.toLocaleDateString('en-US', {month:'short', day:'numeric'})} - ${end.toLocaleDateString('en-US', {month:'short', day:'numeric'})}`;
-               doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
+              doc.setFontSize(5.5);
+              doc.setFont(undefined, 'bold');
+              doc.setTextColor(255, 255, 255);
+              const fmtLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+              doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
             }
           }
         } else {
@@ -490,7 +490,7 @@ export default function ProjectForm({
       // Draw Legend if needed
       if (drawLegendOnThisPage) {
         const yLegend = pageHeight - 18;
-        
+
         // --- Bar Colors Legend ---
         doc.setFontSize(7);
         doc.setFont(undefined, 'bold');
@@ -524,7 +524,7 @@ export default function ProjectForm({
           { name: "BFA Sch", color: [6, 182, 212], x: 192 },
           { name: "BFA Act", color: [20, 184, 166], x: 216 }
         ];
-        
+
         dotLegend1.forEach(st => {
           doc.setFillColor(st.color[0], st.color[1], st.color[2]);
           doc.circle(st.x, yLegend - 1, 1.2, 'F');
@@ -587,9 +587,9 @@ export default function ProjectForm({
             <h3 className="text-xl font-bold text-slate-900">{isEditing ? 'Project Details' : 'New Project Master Setup'}</h3>
             <p className="text-xs text-slate-500 mt-0.5">{isEditing ? 'View and update project schedules' : 'Fill in the basic project details'}</p>
           </div>
-                    <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2">
             {activeTab === 'structural' && (
-              <button 
+              <button
                 onClick={exportToPDF}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-50 text-emerald-600 text-xs font-bold border border-emerald-100 hover:bg-emerald-100 transition-all"
               >
@@ -604,13 +604,13 @@ export default function ProjectForm({
         {/* Tabs */}
         {showTabs && (
           <div className="flex px-8 border-b border-slate-200 bg-white">
-            <button 
+            <button
               onClick={() => setActiveTab('basic')}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'basic' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
             >
               <LayoutTemplate className="w-4 h-4" /> Basic Details
             </button>
-            <button 
+            <button
               onClick={() => setActiveTab('structural')}
               className={`flex items-center gap-2 px-6 py-4 text-sm font-bold border-b-2 transition-all ${activeTab === 'structural' ? 'border-amber-500 text-amber-600' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}`}
             >
@@ -622,149 +622,149 @@ export default function ProjectForm({
         {/* Modal Body */}
         <div className={`flex-1 ${activeTab === 'basic' ? 'overflow-y-auto p-8 space-y-8' : 'overflow-hidden flex flex-col p-4 bg-slate-50/50'}`}>
           {activeTab === "basic" && (
-          <div className="space-y-6 animate-fade-in">
-          {/* Basic Details Section */}
-          <section className="space-y-6">
-            <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
-              <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
-                <FolderKanban className="w-4 h-4" />
-              </div>
-              <h4 className="font-bold text-slate-800">Basic Project Information</h4>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Name</label>
-                <input 
-                  value={form.name}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                  placeholder="e.g. Skyline Tower" 
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Code</label>
-                <input 
-                  value={form.code}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, code: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                  placeholder="e.g. PRJ-001" 
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer Name</label>
-                <select 
-                  value={form.customer_name || ''}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, customer_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="">Select Customer</option>
-                  {customers.map(c => (
-                    <option key={c.id} value={c.name}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
-                <select 
-                  value={form.detailer_name || ''}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, detailer_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="">Select Detailer</option>
-                  {detailers.map(d => (
-                    <option key={d.id} value={d.name}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>
-                <select 
-                  value={form.project_manager_name || ''}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, project_manager_name: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="">Select PM</option>
-                  {employees
-                    .filter(emp => emp.designation === 'Project Manager')
-                    .map((emp) => (
-                      <option key={emp.id} value={emp.name}>{emp.name}</option>
-                    ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
-                <input 
-                  type="date"
-                  value={form.erection_date}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, erection_date: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" 
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Priority</label>
-                <select 
-                  value={form.priority}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, priority: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
-                <select 
-                  value={form.status}
-                  disabled={mode === 'view'}
-                  onChange={e => setForm({...form, status: e.target.value})}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                >
-                  <option value="In Progress">In Progress</option>
-                  <option value="Yet to Complete">Yet to Complete</option>
-                  <option value="Completed">Completed</option>
-                </select>
-              </div>
+            <div className="space-y-6 animate-fade-in">
+              {/* Basic Details Section */}
+              <section className="space-y-6">
+                <div className="flex items-center gap-3 pb-2 border-b border-slate-100">
+                  <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+                    <FolderKanban className="w-4 h-4" />
+                  </div>
+                  <h4 className="font-bold text-slate-800">Basic Project Information</h4>
+                </div>
 
-              <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
-                <div>
-                  <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>
-                  <input 
-                    type="number"
-                    value={form.total_ton}
-                    disabled={mode === 'view'}
-                    onChange={e => setForm({...form, total_ton: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Manhours</label>
-                  <input 
-                    type="number"
-                    value={form.total_manhours}
-                    disabled={mode === 'view'}
-                    onChange={e => setForm({...form, total_manhours: e.target.value})}
-                    className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400" 
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Manhour / Ton</label>
-                  <div className="w-full px-3 py-2 rounded-lg bg-amber-100/50 text-amber-900 font-bold text-sm border border-amber-200 text-center">
-                    {autocalculateManhourTon()}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Name</label>
+                    <input
+                      value={form.name}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      placeholder="e.g. Skyline Tower"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Code</label>
+                    <input
+                      value={form.code}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, code: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      placeholder="e.g. PRJ-001"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer Name</label>
+                    <select
+                      value={form.customer_name || ''}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, customer_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="">Select Customer</option>
+                      {customers.map(c => (
+                        <option key={c.id} value={c.name}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
+                    <select
+                      value={form.detailer_name || ''}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, detailer_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="">Select Detailer</option>
+                      {detailers.map(d => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>
+                    <select
+                      value={form.project_manager_name || ''}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, project_manager_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="">Select PM</option>
+                      {employees
+                        .filter(emp => emp.designation === 'Project Manager')
+                        .map((emp) => (
+                          <option key={emp.id} value={emp.name}>{emp.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
+                    <input
+                      type="date"
+                      value={form.erection_date}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, erection_date: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Priority</label>
+                    <select
+                      value={form.priority}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, priority: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
+                    <select
+                      value={form.status}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, status: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="In Progress">In Progress</option>
+                      <option value="Yet to Complete">Yet to Complete</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
+
+                  <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>
+                      <input
+                        type="number"
+                        value={form.total_ton}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, total_ton: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Manhours</label>
+                      <input
+                        type="number"
+                        value={form.total_manhours}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, total_manhours: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Manhour / Ton</label>
+                      <div className="w-full px-3 py-2 rounded-lg bg-amber-100/50 text-amber-900 font-bold text-sm border border-amber-200 text-center">
+                        {autocalculateManhourTon()}
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              </section>
             </div>
-          </section>
-          </div>
           )}
 
           {activeTab === "structural" && (
@@ -788,7 +788,7 @@ export default function ProjectForm({
         <div className="flex justify-end gap-3 px-8 py-5 border-t border-slate-100 bg-slate-50/50">
           <button onClick={onClose} className="px-6 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold text-slate-600 hover:bg-white transition-all shadow-sm">Cancel</button>
           {showTabs && activeTab === 'basic' ? (
-            <button 
+            <button
               onClick={(e) => { e.preventDefault(); setActiveTab('structural'); }}
               className="px-8 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all flex items-center gap-2"
             >
@@ -796,7 +796,7 @@ export default function ProjectForm({
             </button>
           ) : (
             mode !== 'view' && (
-              <button 
+              <button
                 onClick={handleSave}
                 disabled={loading}
                 className="px-8 py-2.5 rounded-xl bg-amber-600 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:bg-amber-700 transition-all flex items-center gap-2 disabled:opacity-50"

@@ -80,13 +80,6 @@ export default function Dashboard() {
   return (
     <div className="space-y-6">
       {/* Header Row */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 tracking-tight">Executive Dashboard</h2>
-          <p className="text-sm text-slate-500 font-medium">Real-time production and workforce overview</p>
-        </div>
-      </div>
-      
       {error && (
         <div className="bg-red-50 border border-red-100 p-4 rounded-lg text-red-600 text-xs font-bold animate-shake">
           {error}
@@ -167,7 +160,7 @@ export default function Dashboard() {
               <div className="gantt-header-cell gantt-pink-header flex flex-col justify-center">
                 <span>Schedule / Project</span>
               </div>
-              
+
               {data.ganttData?.months?.slice(fromMonth, toMonth + 1).map((m, i) => (
                 <div key={fromMonth + i} className="gantt-header-cell text-center py-2">
                   {m}
@@ -178,7 +171,7 @@ export default function Dashboard() {
               {data.ganttData?.tasks && data.ganttData.tasks.length > 0 ? (
                 data.ganttData.tasks.map((task, idx) => (
                   <div key={idx} className="contents">
-                    <div 
+                    <div
                       className={`gantt-row cursor-pointer transition-colors hover:bg-slate-50/50 ${expandedTaskId === task.id ? 'bg-slate-50' : ''}`}
                       onClick={() => toggleExpand(task.id)}
                     >
@@ -201,9 +194,9 @@ export default function Dashboard() {
                           <div key={colIdx} className="gantt-cell">
                             {/* Task Bar */}
                             {isFirstVisibleMonth && (
-                              <div 
+                              <div
                                 className="gantt-bar shadow-sm"
-                                style={{ 
+                                style={{
                                   width: `calc(${visibleEnd - visibleStart + 1} * 100% + (${visibleEnd - visibleStart} * 1px))`,
                                   backgroundColor: task.color + '20',
                                   borderLeft: `4px solid ${task.color}`,
@@ -259,9 +252,9 @@ export default function Dashboard() {
                               <div key={`sub-cell-${colIdx}`} className="gantt-cell bg-slate-50/50 border-dashed border-slate-200">
                                 {/* Sub-task Bar */}
                                 {isFirstVisibleMonth && (
-                                  <div 
+                                  <div
                                     className="gantt-bar shadow-sm"
-                                    style={{ 
+                                    style={{
                                       width: `calc(${visibleEnd - visibleStart + 1} * 100% + (${visibleEnd - visibleStart} * 1px))`,
                                       backgroundColor: task.color + '15',
                                       borderLeft: `3px solid ${task.color}`,
@@ -291,17 +284,17 @@ export default function Dashboard() {
               )}
             </div>
           </div>
-          
+
           <div className="p-4 bg-slate-50/50 border-t border-slate-200 flex justify-end">
-             <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">© Steel Fab Enterprises • Production Intelligence Unit</p>
+            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">© Steel Fab Enterprises • Production Intelligence Unit</p>
           </div>
         </div>
       </div>
 
       {/* Activities Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         {/* Bar Chart */}
-         <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
+        {/* Bar Chart */}
+        <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
           <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-1">Section Performance</h3>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8">Completed vs Pending by Workcenter</p>
           <ResponsiveContainer width="100%" height={260}>
@@ -323,12 +316,11 @@ export default function Dashboard() {
             <div className="space-y-5">
               {data.recentActivities.map((a) => (
                 <div key={a.id} className="flex items-start gap-4">
-                  <div className={`w-8 h-8 flex items-center justify-center shrink-0 mt-0.5 ${
-                    a.type === 'success' ? 'bg-emerald-50' : a.type === 'warning' ? 'bg-amber-50' : 'bg-slate-50'
-                  }`}>
+                  <div className={`w-8 h-8 flex items-center justify-center shrink-0 mt-0.5 ${a.type === 'success' ? 'bg-emerald-50' : a.type === 'warning' ? 'bg-amber-50' : 'bg-slate-50'
+                    }`}>
                     {a.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> :
-                     a.type === 'warning' ? <AlertTriangle className="w-4 h-4 text-amber-600" /> :
-                     <Clock className="w-4 h-4 text-slate-600" />}
+                      a.type === 'warning' ? <AlertTriangle className="w-4 h-4 text-amber-600" /> :
+                        <Clock className="w-4 h-4 text-slate-600" />}
                   </div>
                   <div className="min-w-0">
                     <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{a.action}</p>
@@ -345,9 +337,8 @@ export default function Dashboard() {
             <div className="space-y-4">
               {announcements.map((a) => (
                 <div key={a.id} className="flex items-start gap-3">
-                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${
-                    a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
-                  }`} />
+                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                    }`} />
                   <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
                 </div>
               ))}
