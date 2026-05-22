@@ -92,7 +92,7 @@ export default function PlanCreation() {
     category: '',
     scheduled_erection_date: projectData.erection_date || '',
     ...calculateDates(projectData.erection_date),
-    ship_date: '',
+
     shop_lead_time_weeks: '0',
     budget_shop_hours: '0',
     budget_field_hours: '0',
@@ -233,7 +233,7 @@ export default function PlanCreation() {
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -253,7 +253,7 @@ export default function PlanCreation() {
       s.actual_bfa_date || '-',
       s.scheduled_field_measure_date || '-',
       s.rts_date,
-      s.ship_date || '-',
+
       s.shop_lead_time_weeks,
       s.scheduled_erection_date,
       s.budget_shop_hours,
@@ -284,16 +284,15 @@ export default function PlanCreation() {
         7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
         8: { cellWidth: 14, halign: 'center' },  // Scheduled Field Measure Date
         9: { cellWidth: 12, halign: 'center' },  // RTS Date
-        10: { cellWidth: 12, halign: 'center' }, // Ship Date
-        11: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
-        12: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-        13: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
-        14: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-        15: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
-        16: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
-        17: { cellWidth: 13 }, // Detailer / Vendor
-        18: { cellWidth: 12 }, // Dwg Status
-        19: { cellWidth: 14 }  // Notes
+        10: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
+        11: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
+        12: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
+        13: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
+        14: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
+        15: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
+        16: { cellWidth: 13 }, // Detailer / Vendor
+        17: { cellWidth: 12 }, // Dwg Status
+        18: { cellWidth: 14 }  // Notes
       }
     });
 
@@ -308,7 +307,7 @@ export default function PlanCreation() {
     // Helper to determine active range for a sequence
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
+      let end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
 
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);

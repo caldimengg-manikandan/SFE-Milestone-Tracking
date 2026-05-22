@@ -144,7 +144,6 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual BFA Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-amber-600/90 text-white sticky top-0 z-20">Ship Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Shop Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Shop Hours</th>
@@ -283,15 +282,6 @@ export default function StructuralScheduleForm({
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all" 
                       value={row.rts_date} 
                       onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)} 
-                    />
-                  </td>
-                  <td className="px-1 py-1 border-r border-b border-slate-200">
-                    <input 
-                      type="date"
-                      readOnly={isViewOnly}
-                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all" 
-                      value={row.ship_date || ''} 
-                      onChange={e => handleRowChange(row.id, 'ship_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-amber-500/5">
