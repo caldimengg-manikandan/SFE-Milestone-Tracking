@@ -241,10 +241,6 @@ export default function Dashboard() {
               {/* Header Row: Weeks */}
               {Array.from({ length: toMonth - fromMonth + 1 }).map((_, mIdx) => (
                 <Fragment key={mIdx}>
-                  <div className="gantt-header-cell text-center text-[8px] font-extrabold border-t border-slate-200 bg-slate-50/80" style={{ padding: '4px 0' }}>W1</div>
-                  <div className="gantt-header-cell text-center text-[8px] font-extrabold border-t border-slate-200 bg-slate-50/80" style={{ padding: '4px 0' }}>W2</div>
-                  <div className="gantt-header-cell text-center text-[8px] font-extrabold border-t border-slate-200 bg-slate-50/80" style={{ padding: '4px 0' }}>W3</div>
-                  <div className="gantt-header-cell text-center text-[8px] font-extrabold border-t border-slate-200 bg-slate-50/80" style={{ padding: '4px 0' }}>W4</div>
                 </Fragment>
               ))}
 
