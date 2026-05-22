@@ -418,7 +418,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                         if (rtsDate > twoDaysFromNow) {
                           return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
                         } else {
-                          return { label: 'UNDER PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                          return { label: 'IN PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
                         }
                       };
 

@@ -51,6 +51,9 @@ class DashboardStatsView(APIView):
                     for item in schedule.items.all():
                         ofa_date = None
                         erection_date = None
+                        start_date = None
+                        end_date = None
+                        shop_lead_time_weeks = 0
                         try:
                             # Link to StructuralScheduleItem via job_number (code) and sequence_number
                             struct_item = StructuralScheduleItem.objects.filter(
@@ -60,8 +63,20 @@ class DashboardStatsView(APIView):
                             if struct_item:
                                 ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
                                 erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
+                                shop_lead_time_weeks = struct_item.shop_lead_time_weeks
+                                if struct_item.rts_date:
+                                    start_date = struct_item.rts_date.isoformat()
+                                    end_date = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
+                                else:
+                                    start_date = ofa_date
+                                    end_date = erection_date
                         except:
                             pass
+
+                        if not start_date:
+                            start_date = item.rts_date.isoformat() if item.rts_date else ofa_date
+                        if not end_date:
+                            end_date = item.ship_date.isoformat() if item.ship_date else erection_date
 
                         items_data.append({
                             'job_number': item.job_number,
@@ -72,12 +87,17 @@ class DashboardStatsView(APIView):
                             'erection_date': erection_date,
                             'rts_date': item.rts_date.isoformat() if item.rts_date else None,
                             'ship_date': item.ship_date.isoformat() if item.ship_date else None,
+                            'start_date': start_date,
+                            'end_date': end_date,
+                            'shop_lead_time_weeks': shop_lead_time_weeks,
                             'notes': item.notes,
                         })
 
                     gantt_tasks.append({
                         'id': schedule.id,
                         'name': schedule.schedule_number,
+                        'startDate': schedule.start_date.isoformat() if schedule.start_date else None,
+                        'endDate': schedule.end_date.isoformat() if schedule.end_date else None,
                         'startMonth': start_month,
                         'duration': max(1, duration),
                         'color': color_palette[idx % len(color_palette)],
@@ -86,9 +106,9 @@ class DashboardStatsView(APIView):
                     })
             if len(gantt_tasks) < 3:
                 extras = [
-                    {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'color': '#f59e0b', 'priority': 'High'},
-                    {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'color': '#6366f1', 'priority': 'Medium'},
-                    {'name': 'Harbor Link', 'startMonth': 6, 'duration': 3, 'color': '#10b981', 'priority': 'High'},
+                    {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'startDate': f"{year}-01-01", 'endDate': f"{year}-02-28", 'color': '#f59e0b', 'priority': 'High'},
+                    {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'startDate': f"{year}-05-01", 'endDate': f"{year}-06-30", 'color': '#6366f1', 'priority': 'Medium'},
+                    {'name': 'Harbor Link', 'startMonth': 6, 'duration': 3, 'startDate': f"{year}-07-01", 'endDate': f"{year}-09-30", 'color': '#10b981', 'priority': 'High'},
                 ]
                 for extra in extras[:max(0, 3 - len(gantt_tasks))]:
                     gantt_tasks.append(extra)
@@ -125,6 +145,8 @@ class DashboardStatsView(APIView):
                         gantt_tasks.append({
                             'id': project.id,
                             'name': project.name,
+                            'startDate': start_date.isoformat() if start_date else None,
+                            'endDate': end_date.isoformat() if end_date else None,
                             'startMonth': start_month,
                             'duration': max(1, duration),
                             'color': color_palette[idx % len(color_palette)],
@@ -132,14 +154,14 @@ class DashboardStatsView(APIView):
                         })
                 if len(gantt_tasks) < 3:
                     gantt_tasks.extend([
-                        {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'color': '#f59e0b', 'priority': 'High'},
-                        {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'color': '#6366f1', 'priority': 'Medium'},
+                        {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'startDate': f"{year}-01-01", 'endDate': f"{year}-02-28", 'color': '#f59e0b', 'priority': 'High'},
+                        {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'startDate': f"{year}-05-01", 'endDate': f"{year}-06-30", 'color': '#6366f1', 'priority': 'Medium'},
                     ][:max(0, 3 - len(gantt_tasks))])
             else:
                 gantt_tasks = [
-                    {'name': 'Commercial Hub Structure', 'startMonth': 0, 'duration': 3, 'color': '#f59e0b', 'priority': 'High'},
-                    {'name': 'Industrial Warehouse Exp', 'startMonth': 3, 'duration': 4, 'color': '#6366f1', 'priority': 'Medium'},
-                    {'name': 'Residential Tower B', 'startMonth': 7, 'duration': 3, 'color': '#10b981', 'priority': 'High'},
+                    {'name': 'Commercial Hub Structure', 'startMonth': 0, 'duration': 3, 'startDate': f"{year}-01-01", 'endDate': f"{year}-03-31", 'color': '#f59e0b', 'priority': 'High'},
+                    {'name': 'Industrial Warehouse Exp', 'startMonth': 3, 'duration': 4, 'startDate': f"{year}-04-01", 'endDate': f"{year}-07-31", 'color': '#6366f1', 'priority': 'Medium'},
+                    {'name': 'Residential Tower B', 'startMonth': 7, 'duration': 3, 'startDate': f"{year}-08-01", 'endDate': f"{year}-10-31", 'color': '#10b981', 'priority': 'High'},
                 ]
 
         # 3. Inventory Status (Using Project statuses)
