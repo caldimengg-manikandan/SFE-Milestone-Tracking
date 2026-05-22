@@ -292,14 +292,16 @@ export default function Dashboard() {
                                   style={{
                                     left: `${(barPosition.startCol - Math.floor(barPosition.startCol)) * 100}%`,
                                     width: `calc(${barPosition.endCol - barPosition.startCol} * 100% + ${Math.floor(barPosition.endCol) - Math.floor(barPosition.startCol)}px)`,
-                                    backgroundColor: task.color + '20',
+                                    backgroundColor: task.color,
                                     borderLeft: `4px solid ${task.color}`,
                                     borderRight: `4px solid ${task.color}`,
                                     color: task.color,
                                     fontWeight: 800
                                   }}
                                 >
-                                  {task.name}
+                                  <span className="gantt-bar-details">
+                                    {task.name} ({formatDate(task.startDate || new Date(parseInt(selectedYear), task.startMonth, 1))} - {formatDate(task.endDate || new Date(parseInt(selectedYear), task.startMonth + task.duration, 0))})
+                                  </span>
                                 </div>
                               )}
                             </div>
@@ -348,7 +350,7 @@ export default function Dashboard() {
                                       style={{
                                         left: `${(subBarPosition.startCol - Math.floor(subBarPosition.startCol)) * 100}%`,
                                         width: `calc(${subBarPosition.endCol - subBarPosition.startCol} * 100% + ${Math.floor(subBarPosition.endCol) - Math.floor(subBarPosition.startCol)}px)`,
-                                        backgroundColor: task.color + '15',
+                                        backgroundColor: task.color,
                                         borderLeft: `3px solid ${task.color}`,
                                         borderRight: `3px solid ${task.color}`,
                                         color: task.color,
@@ -356,7 +358,12 @@ export default function Dashboard() {
                                         fontWeight: 800
                                       }}
                                     >
-                                      {item.job_number}
+                                      <span className="gantt-bar-details">
+                                        {item.start_date && item.end_date && item.shop_lead_time_weeks
+                                          ? `${item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
+                                          : `${item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
+                                        }
+                                      </span>
                                     </div>
                                   )}
                                 </div>
