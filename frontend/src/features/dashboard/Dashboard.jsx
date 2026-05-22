@@ -279,7 +279,11 @@ export default function Dashboard() {
                           const isFirstVisibleWeek = barPosition && colIdx === Math.floor(barPosition.startCol);
 
                           return (
-                            <div key={colIdx} className="gantt-cell">
+                            <div
+                              key={colIdx}
+                              className="gantt-cell"
+                              style={isFirstVisibleWeek && barPosition ? { zIndex: 12 } : undefined}
+                            >
                               {/* Task Bar */}
                               {isFirstVisibleWeek && barPosition && (
                                 <div
@@ -290,6 +294,7 @@ export default function Dashboard() {
                                     width: `calc(${barPosition.endCol - barPosition.startCol} * 100% + ${Math.floor(barPosition.endCol) - Math.floor(barPosition.startCol)}px)`,
                                     backgroundColor: task.color + '20',
                                     borderLeft: `4px solid ${task.color}`,
+                                    borderRight: `4px solid ${task.color}`,
                                     color: task.color,
                                     fontWeight: 800
                                   }}
@@ -327,7 +332,11 @@ export default function Dashboard() {
                               const isFirstVisibleWeek = subBarPosition && colIdx === Math.floor(subBarPosition.startCol);
 
                               return (
-                                <div key={`sub-cell-${colIdx}`} className="gantt-cell bg-slate-50/50 border-dashed border-slate-200">
+                                <div
+                                  key={`sub-cell-${colIdx}`}
+                                  className="gantt-cell bg-slate-50/50 border-dashed border-slate-200"
+                                  style={isFirstVisibleWeek && subBarPosition ? { zIndex: 12 } : undefined}
+                                >
                                   {/* Sub-task Bar */}
                                   {isFirstVisibleWeek && subBarPosition && (
                                     <div
@@ -341,6 +350,7 @@ export default function Dashboard() {
                                         width: `calc(${subBarPosition.endCol - subBarPosition.startCol} * 100% + ${Math.floor(subBarPosition.endCol) - Math.floor(subBarPosition.startCol)}px)`,
                                         backgroundColor: task.color + '15',
                                         borderLeft: `3px solid ${task.color}`,
+                                        borderRight: `3px solid ${task.color}`,
                                         color: task.color,
                                         fontSize: '0.65rem',
                                         fontWeight: 800
