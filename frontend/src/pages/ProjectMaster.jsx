@@ -16,6 +16,16 @@ export default function ProjectMaster() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState('view');
+// Utility to format dates as MM-DD-YYYY
+const formatDate = (dateStr) => {
+  if (!dateStr) return '-';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '-';
+  const day = d.getDate().toString().padStart(2, '0');
+  const month = (d.getMonth() + 1).toString().padStart(2, '0');
+  const year = d.getFullYear();
+  return `${month}-${day}-${year}`;
+};
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -36,13 +46,8 @@ export default function ProjectMaster() {
     }).toLowerCase();
   };
 
-  const formatDateLong = (date) => {
-    return date.toLocaleDateString('en-GB', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+  const formatDateLong = (dateStr) => {
+    return dateStr || 'N/A';
   };
 
   const [form, setForm] = useState({
@@ -101,7 +106,7 @@ export default function ProjectMaster() {
 
   const createDefaultRow = (projectData) => {
     const initialErectionDate = projectData.erection_date || '';
-    const calculated = initialErectionDate ? calculateDates(initialErectionDate) : {};
+    const calculated = initialErectionDate ? calculateDates(initialErectionDate, projectData.schedule_field_measure_required) : {};
     return {
       id: Date.now(),
       is_new: true,
@@ -124,7 +129,7 @@ export default function ProjectMaster() {
     };
   };
 
-  const calculateDates = (erectionDate) => {
+  const calculateDates = (erectionDate, isRequired) => {
     if (!erectionDate) return {};
     const base = new Date(erectionDate);
 
@@ -132,17 +137,7 @@ export default function ProjectMaster() {
     const rts = new Date(base);
     rts.setMonth(rts.getMonth() - 2);
 
-    // Field Measure: 2 weeks prior to RTS
-    const fm = new Date(rts);
-    fm.setDate(fm.getDate() - 14);
-
-    // BFA: 2 weeks prior to Field Measure
-    const bfa = new Date(fm);
-    bfa.setDate(bfa.getDate() - 14);
-
-    // OFA: 2 weeks prior to BFA
-    const ofa = new Date(bfa);
-    ofa.setDate(ofa.getDate() - 14);
+    const isFMRequired = (isRequired !== undefined ? isRequired : (form.schedule_field_measure_required || 'Yes')).trim().toLowerCase() !== 'no';
 
     const formatDate = (d) => {
       const year = d.getFullYear();
@@ -151,13 +146,55 @@ export default function ProjectMaster() {
       return `${year}-${month}-${day}`;
     };
 
-    return {
-      rts_date: formatDate(rts),
-      scheduled_field_measure_date: formatDate(fm),
-      scheduled_bfa_date: formatDate(bfa),
-      scheduled_ofa_date: formatDate(ofa)
-    };
+    if (isFMRequired) {
+      // Field Measure: 2 weeks prior to RTS
+      const fm = new Date(rts);
+      fm.setDate(fm.getDate() - 14);
+
+      // BFA: 2 weeks prior to Field Measure
+      const bfa = new Date(fm);
+      bfa.setDate(bfa.getDate() - 14);
+
+      // OFA: 2 weeks prior to BFA
+      const ofa = new Date(bfa);
+      ofa.setDate(ofa.getDate() - 14);
+
+      return {
+        rts_date: formatDate(rts),
+        scheduled_field_measure_date: formatDate(fm),
+        scheduled_bfa_date: formatDate(bfa),
+        scheduled_ofa_date: formatDate(ofa)
+      };
+    } else {
+      // Skip Field Measure, apply Field Measure constraints to BFA (rts - 14 days), and BFA constraints to OFA (bfa - 14 days)
+      const bfa = new Date(rts);
+      bfa.setDate(bfa.getDate() - 14);
+
+      const ofa = new Date(bfa);
+      ofa.setDate(ofa.getDate() - 14);
+
+      return {
+        rts_date: formatDate(rts),
+        scheduled_field_measure_date: '',
+        scheduled_bfa_date: formatDate(bfa),
+        scheduled_ofa_date: formatDate(ofa)
+      };
+    }
   };
+
+  // Recalculate scheduled dates when schedule_field_measure_required changes
+  useEffect(() => {
+    if (schedules.length > 0) {
+      setSchedules(prev => prev.map(row => {
+        if (!row.scheduled_erection_date) return row;
+        const newDates = calculateDates(row.scheduled_erection_date, form.schedule_field_measure_required);
+        return {
+          ...row,
+          ...newDates
+        };
+      }));
+    }
+  }, [form.schedule_field_measure_required]);
 
   const handleScheduleChange = (id, field, value) => {
     setSchedules(prev => prev.map(row => {
@@ -172,7 +209,7 @@ export default function ProjectMaster() {
       }
 
       if (field === 'scheduled_erection_date' && value) {
-        const calculated = calculateDates(value);
+        const calculated = calculateDates(value, form.schedule_field_measure_required);
         updated = { ...updated, ...calculated };
       }
       if (field === 'shop_lead_time_weeks') {
@@ -190,7 +227,7 @@ export default function ProjectMaster() {
     }, 0);
 
     const initialErectionDate = form.erection_date || '';
-    const calculated = initialErectionDate ? calculateDates(initialErectionDate) : {};
+    const calculated = initialErectionDate ? calculateDates(initialErectionDate, form.schedule_field_measure_required) : {};
 
     const newRow = {
       id: Date.now(),
@@ -315,13 +352,6 @@ export default function ProjectMaster() {
 
     const showFieldMeasure = project.schedule_field_measure_required !== 'No';
 
-    const headersList = ["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA"];
-    if (showFieldMeasure) {
-      headersList.push("Sch Field Meas");
-    }
-    headersList.push("RTS Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
-    const tableHeaders = [headersList];
-
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
       const bNum = parseFloat(b.seq_no);
@@ -335,18 +365,18 @@ export default function ProjectMaster() {
         s.tons,
         s.item_description,
         s.category || '',
-        s.scheduled_ofa_date,
-        s.actual_ofa_date || '-',
-        s.scheduled_bfa_date,
-        s.actual_bfa_date || '-'
+        formatDate(s.scheduled_ofa_date),
+        formatDate(s.actual_ofa_date),
+        formatDate(s.scheduled_bfa_date),
+        formatDate(s.actual_bfa_date)
       ];
       if (showFieldMeasure) {
-        row.push(s.scheduled_field_measure_date || '-');
+        row.push(formatDate(s.scheduled_field_measure_date));
       }
       row.push(
-        s.rts_date,
+        formatDate(s.rts_date),
         s.shop_lead_time_weeks,
-        s.scheduled_erection_date,
+        formatDate(s.scheduled_erection_date),
         s.budget_shop_hours,
         s.budget_field_hours,
         s.actual_shop_hours,
@@ -363,18 +393,18 @@ export default function ProjectMaster() {
       { cellWidth: 9, halign: 'center' },  // Tons
       { cellWidth: 'auto' }, // Item Description
       { cellWidth: 14 },  // Category
-      { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
-      { cellWidth: 12, halign: 'center' },  // Actual OFA Date
-      { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
-      { cellWidth: 12, halign: 'center' }   // Actual BFA Date
+      { cellWidth: 15, halign: 'center' },  // Scheduled OFA Date
+      { cellWidth: 15, halign: 'center' },  // Actual OFA Date
+      { cellWidth: 15, halign: 'center' },  // Scheduled BFA Date
+      { cellWidth: 15, halign: 'center' }   // Actual BFA Date
     ];
     if (showFieldMeasure) {
-      stylesMap.push({ cellWidth: 14, halign: 'center' }); // Scheduled Field Measure Date
+      stylesMap.push({ cellWidth: 18, halign: 'center' }); // Scheduled Field Measure Date
     }
     stylesMap.push(
       { cellWidth: 12, halign: 'center' },  // RTS Date
       { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
-      { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
+      { cellWidth: 15, halign: 'center' }, // Scheduled Start of Erection
       { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
       { cellWidth: 11, halign: 'center' }, // Budget Field Hours
       { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
@@ -383,6 +413,20 @@ export default function ProjectMaster() {
       { cellWidth: 12 }, // Dwg Status
       { cellWidth: 14 }  // Notes
     );
+    // Define PDF table headers matching row data structure
+    const baseHeaders = [
+      'Seq #', 'Tons', 'Item Description', 'Category',
+      'Schedule OFA', 'Actual OFA', 'Schedule BFA', 'Actual BFA'
+    ];
+    const conditionalHeaders = showFieldMeasure ? ['Schedule Field Measure'] : [];
+    const trailingHeaders = [
+      'RTS', 'Shop Lead Time (WEEKS)', 'Schedule Erection',
+      'Budget Shop Hours', 'Budget Field Hours', 'Shop Hours Actual',
+      'Field Hours Actual', 'Detailer / Vendor', 'DWG Status', 'Notes'
+    ];
+    const tableHeaders = [
+      [...baseHeaders, ...conditionalHeaders, ...trailingHeaders]
+    ];
 
     const columnStyles = {};
     stylesMap.forEach((style, idx) => {
@@ -531,7 +575,7 @@ export default function ProjectMaster() {
         doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
 
         doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? formatDate(project.erection_date) : 'N/A', 238, currentY + 5);
 
         // Divider Line
         doc.setDrawColor(203, 213, 225); // Slate 300
@@ -584,7 +628,7 @@ export default function ProjectMaster() {
         doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
 
         doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
+        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? formatDate(project.erection_date) : 'N/A', 238, currentY + 5);
 
         // Divider Line
         doc.setDrawColor(203, 213, 225); // Slate 300
@@ -771,10 +815,10 @@ export default function ProjectMaster() {
         doc.text("MILESTONE DOTS:", 115, yLegend);
 
         const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 140 },
-          { name: "OFA Act", color: [236, 72, 153], x: 168 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 192 },
-          { name: "BFA Act", color: [20, 184, 166], x: 216 }
+          { name: "Schedule OFA", color: [168, 85, 247], x: 140 },
+          { name: "Actual OFA", color: [236, 72, 153], x: 172 },
+          { name: "Schedule BFA", color: [6, 182, 212], x: 202 },
+          { name: "Actual BFA", color: [20, 184, 166], x: 232 }
         ];
 
         dotLegend1.forEach(st => {
@@ -787,12 +831,15 @@ export default function ProjectMaster() {
 
         // Line 2 for Milestone dots
         const yLegend2 = pageHeight - 14;
-        const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 140 },
-          { name: "RTS", color: [30, 41, 59], x: 168 },
-          { name: "Ship", color: [220, 38, 38], x: 192 },
-          { name: "Erection Sch", color: [132, 204, 22], x: 216 }
-        ];
+        const dotLegend2 = [];
+        if (showFieldMeasure) {
+          dotLegend2.push({ name: "Schedule Field Measure", color: [249, 115, 22], x: 140 });
+        }
+        dotLegend2.push(
+          { name: "RTS", color: [30, 41, 59], x: showFieldMeasure ? 190 : 140 },
+          { name: "Ship", color: [220, 38, 38], x: showFieldMeasure ? 210 : 160 },
+          { name: "Schedule Erection", color: [132, 204, 22], x: showFieldMeasure ? 230 : 180 }
+        );
 
         dotLegend2.forEach(st => {
           doc.setFillColor(st.color[0], st.color[1], st.color[2]);
@@ -1125,7 +1172,7 @@ export default function ProjectMaster() {
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
-                      {p.erection_date ? new Date(p.erection_date).toLocaleDateString('en-GB') : 'N/A'}
+                      {p.erection_date ? formatDate(p.erection_date) : 'N/A'}
                     </td>
                     <td className="px-2 py-3 border-r border-slate-100 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
