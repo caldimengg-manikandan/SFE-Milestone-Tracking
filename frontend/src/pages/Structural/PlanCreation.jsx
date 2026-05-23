@@ -4,9 +4,13 @@ import autoTable from 'jspdf-autotable';
 import { Plus, Search, Edit2, Trash2, Eye, FileText, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../../services/api';
 import ProjectForm from '../../components/forms/ProjectForm';
+import GanttChart from '../../components/GanttChart';
 
 export default function PlanCreation() {
   const [projects, setProjects] = useState([]);
+  // State to hold the generated Gantt PDF URL and the project being viewed
+  const [ganttUrl, setGanttUrl] = useState(null);
+  const [viewProjectId, setViewProjectId] = useState(null);
   const [schedules, setSchedules] = useState([]);
   const [allSchedules, setAllSchedules] = useState([]);
   const [search, setSearch] = useState('');
@@ -21,7 +25,8 @@ export default function PlanCreation() {
   const [form, setForm] = useState({
     name: '', code: '', customer_name: '', detailer_name: '',
     project_manager_name: '', total_ton: '', total_manhours: '',
-    erection_date: '', status: 'Planning', priority: 'Medium'
+    erection_date: '', status: 'Planning', priority: 'Medium',
+    shop_name: '', schedule_field_measure_required: 'Yes'
   });
 
   useEffect(() => {
@@ -154,7 +159,8 @@ export default function PlanCreation() {
     setForm({
       name: '', code: '', customer_name: '', detailer_name: '',
       project_manager_name: '', total_ton: '', total_manhours: '',
-      erection_date: '', status: 'Planning', priority: 'Medium'
+      erection_date: '', status: 'Planning', priority: 'Medium',
+      shop_name: '', schedule_field_measure_required: 'Yes'
     });
     setSchedules([createDefaultRow({})]);
     setDeletedSchedules([]);
@@ -190,534 +196,83 @@ export default function PlanCreation() {
     }
   };
 
-  const downloadProjectPDF = (project) => {
-    const projectSchedules = allSchedules.filter(s => {
-      const sId = typeof s.project === 'object' ? s.project.id : s.project;
-      return String(sId) === String(project.id);
-    });
+const generateGanttPdf = (project) => {
+  const projectSchedules = allSchedules.filter(s => {
+    const sId = typeof s.project === 'object' ? s.project.id : s.project;
+    return String(sId) === String(project.id);
+  });
 
-    if (projectSchedules.length === 0) {
-      alert("No schedule data found for this project.");
-      return;
+  if (projectSchedules.length === 0) {
+    alert("No schedule data found for this project.");
+    return null;
+  }
+
+  const doc = new jsPDF('l', 'mm', 'a4');
+
+  const parseDate = dStr => {
+    const d = new Date(dStr);
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  const sortedSchedules = [...projectSchedules].sort((a, b) => {
+    const aNum = parseFloat(a.seq_no);
+    const bNum = parseFloat(b.seq_no);
+    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+    return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+  });
+
+  // Determine timeline range
+  let minDate = sortedSchedules.reduce((min, s) => {
+    const d = parseDate(s.scheduled_ofa_date);
+    return d && (!min || d < min) ? d : min;
+  }, null) || new Date();
+  const maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+  const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+  const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+  const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
+  const timelineStart = 74;
+  const timelineWidth = 209;
+  const getX = date => timelineStart + ((date.getTime() - startMonth.getTime()) / (endMonth.getTime() - startMonth.getTime())) * timelineWidth;
+
+  const getSequenceRange = s => {
+    const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
+    const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
+    return { start, end };
+  };
+
+  const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
+    if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] };
+    const now = new Date();
+    const rtsDate = new Date(rtsDateStr);
+    const completion = new Date(rtsDate.getTime() + (parseFloat(leadWeeks) || 0) * 7 * 24 * 60 * 60 * 1000);
+    if (rtsDate > new Date(Date.now() + 2 * 86400000)) return { label: 'Yet to Start', color: [59, 130, 246] };
+    if (now >= completion) return { label: 'Completed', color: [34, 197, 94] };
+    return { label: 'InProgress', color: [245, 158, 11] };
+  };
+
+  let currentY = 20;
+  sortedSchedules.forEach(s => {
+    if (currentY > 180) { doc.addPage(); currentY = 20; }
+    const { start, end } = getSequenceRange(s);
+    if (start && end) {
+      const xStart = Math.max(timelineStart, getX(start));
+      const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
+      const color = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks).color;
+      doc.setFillColor(...color);
+      doc.rect(xStart, currentY, xEnd - xStart, 4, 'F');
     }
+    currentY += 6;
+  });
 
-    const doc = new jsPDF('l', 'mm', 'a4');
+  return doc.output('bloburl');
+};
 
-    // Title & Branding
-    doc.setFontSize(22);
-    doc.setTextColor(15, 23, 42); // Slate 900
-    doc.setFont(undefined, 'bold');
-    doc.text("STRUCTURAL SCHEDULE", 14, 20);
-
-    // Horizontal Divider
-    doc.setDrawColor(203, 213, 225); // Slate 300
-    doc.setLineWidth(0.5);
-    doc.line(14, 24, 283, 24);
-
-    // Meta Grid - Column 1
-    doc.setFontSize(9);
-    doc.setTextColor(71, 85, 105); // Slate 600
-    doc.setFont(undefined, 'bold'); doc.text("PROJECT NAME:", 14, 32);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 45, 32);
-
-    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("CUSTOMER:", 14, 38);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.customer_name || 'N/A', 45, 38);
-
-    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("DETAILER:", 14, 44);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.detailer_name || 'N/A', 45, 44);
-
-    // Meta Grid - Column 2
-    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 150, 32);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 180, 32);
-
-    doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
-
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
-
-    const sortedSchedules = [...projectSchedules].sort((a, b) => {
-      const aNum = parseFloat(a.seq_no);
-      const bNum = parseFloat(b.seq_no);
-      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-      return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
-    });
-
-    const tableData = sortedSchedules.map(s => [
-      s.seq_no,
-      s.tons,
-      s.item_description,
-      s.category || '',
-      s.scheduled_ofa_date,
-      s.actual_ofa_date || '-',
-      s.scheduled_bfa_date,
-      s.actual_bfa_date || '-',
-      s.scheduled_field_measure_date || '-',
-      s.rts_date,
-
-      s.shop_lead_time_weeks,
-      s.scheduled_erection_date,
-      s.budget_shop_hours,
-      s.budget_field_hours,
-      s.actual_shop_hours,
-      s.actual_field_hours,
-      s.detailer_vendor,
-      s.dwg_status,
-      s.notes
-    ]);
-
-    autoTable(doc, {
-      startY: 50,
-      head: tableHeaders,
-      body: tableData,
-      theme: 'grid',
-      headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
-      bodyStyles: { fontSize: 6.0, valign: 'middle' },
-      styles: { cellPadding: 1, overflow: 'linebreak' },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },   // SEQ #
-        1: { cellWidth: 9, halign: 'center' },  // Tons
-        2: { cellWidth: 'auto' }, // Item Description
-        3: { cellWidth: 14 },  // Category
-        4: { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
-        5: { cellWidth: 12, halign: 'center' },  // Actual OFA Date
-        6: { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
-        7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
-        8: { cellWidth: 14, halign: 'center' },  // Scheduled Field Measure Date
-        9: { cellWidth: 12, halign: 'center' },  // RTS Date
-        10: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
-        11: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-        12: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
-        13: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-        14: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
-        15: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
-        16: { cellWidth: 13 }, // Detailer / Vendor
-        17: { cellWidth: 12 }, // Dwg Status
-        18: { cellWidth: 14 }  // Notes
-      }
-    });
-
-    // --- GANTT CHART IN PDF ---
-    // Helper to safely parse dates
-    const parseDate = (dStr) => {
-      if (!dStr) return null;
-      const d = new Date(dStr);
-      return isNaN(d.getTime()) ? null : d;
-    };
-
-    // Helper to determine active range for a sequence
-    const getSequenceRange = (s) => {
-      let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      let end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
-
-      if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
-      if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
-
-      return { start, end };
-    };
-
-    // Calculate sequence status color
-    const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
-      if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] }; // Slate 400
-      const now = new Date();
-      const rtsDate = new Date(rtsDateStr);
-      const weeks = parseFloat(leadWeeks) || 0;
-      const completionDate = new Date(rtsDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
-      const twoDaysFromNow = new Date();
-      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
-
-      if (rtsDate > twoDaysFromNow) {
-        return { label: 'Yet to Start', color: [59, 130, 246] }; // Blue 500
-      } else if (now >= completionDate) {
-        return { label: 'Completed', color: [34, 197, 94] }; // Emerald 500
-      } else {
-        return { label: 'InProgress', color: [245, 158, 11] }; // Amber 500
-      }
-    };
-
-    // Collect all valid dates to compute the project boundaries
-    let minDate = null;
-    let maxDate = null;
-
-    sortedSchedules.forEach(s => {
-      const dates = [
-        parseDate(s.scheduled_ofa_date),
-        parseDate(s.actual_ofa_date),
-        parseDate(s.scheduled_bfa_date),
-        parseDate(s.actual_bfa_date),
-        parseDate(s.scheduled_field_measure_date),
-        parseDate(s.rts_date),
-        parseDate(s.ship_date),
-        parseDate(s.scheduled_erection_date)
-      ].filter(Boolean);
-
-      dates.forEach(d => {
-        if (!minDate || d < minDate) minDate = d;
-        if (!maxDate || d > maxDate) maxDate = d;
-      });
-    });
-
-    if (!minDate) {
-      minDate = parseDate(project.erection_date) || new Date();
+  const handleViewGantt = (project) => {
+    const url = generateGanttPdf(project);
+    if (url) {
+      setGanttUrl(url);
+      setViewProjectId(project.id);
     }
-    if (!maxDate) {
-      maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000); // 3 months later
-    }
-
-    // Align to month starts/ends
-    const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
-
-    const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-
-    // Page dimensions and layout config
-    const timelineStart = 14 + 60; // 74mm
-    const timelineWidth = 209; // 209mm (A4 Landscape = 297mm width, 14mm margins -> 269mm total width)
-    const monthWidth = timelineWidth / totalMonths;
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-    const getX = (date) => {
-      if (!date) return null;
-      const timeDiff = date.getTime() - startMonth.getTime();
-      const totalTime = endMonth.getTime() - startMonth.getTime();
-      if (totalTime <= 0) return timelineStart;
-      return timelineStart + (timeDiff / totalTime) * timelineWidth;
-    };
-
-    const rowHeight = 10;
-    const totalSequences = sortedSchedules.length;
-
-    // Determine where to start Gantt
-    let currentY = doc.lastAutoTable.finalY || 50;
-    const pageHeight = doc.internal.pageSize.height || doc.internal.pageSize.getHeight();
-
-    // Min height required to start Gantt chart on current page:
-    // Header (Title, metadata, divider, month header bar) = 30mm
-    // Minimum 1 sequence row = 10mm
-    // So minimum space required = 55mm (including 25mm gap).
-    const spaceRemaining = pageHeight - currentY - 15;
-
-    let seqIdx = 0;
-    let isFirstGanttPage = true;
-
-    if (spaceRemaining < 55) {
-      doc.addPage();
-      currentY = 15; // Start at top of new page
-      isFirstGanttPage = false;
-    } else {
-      // Start directly below the table with a 25mm gap!
-      currentY = currentY + 25;
-    }
-
-    while (seqIdx < totalSequences) {
-      let rowStartY = 0;
-
-      if (isFirstGanttPage) {
-        // 1. Draw Gantt Header (on page 1, below the table)
-        doc.setFontSize(14); // slightly smaller title to look extremely clean when on the same page
-        doc.setTextColor(15, 23, 42); // Slate 900
-        doc.setFont(undefined, 'bold');
-        doc.text("STRUCTURAL GANTT CHART", 14, currentY);
-
-        doc.setFontSize(8);
-        doc.setTextColor(71, 85, 105); // Slate 600
-        doc.text("PROJECT NAME:", 14, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 40, currentY + 5);
-
-        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 140, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
-
-        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
-
-        // Divider Line
-        doc.setDrawColor(203, 213, 225); // Slate 300
-        doc.setLineWidth(0.5);
-        doc.line(14, currentY + 8, 283, currentY + 8);
-
-        // 2. Draw Monthly Header Bar
-        const monthHeaderY = currentY + 12;
-        doc.setFillColor(248, 250, 252); // Slate 50
-        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'F');
-        doc.setDrawColor(226, 232, 240); // Slate 200
-        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'S');
-
-        doc.setFontSize(7.5);
-        doc.setTextColor(71, 85, 105);
-        doc.setFont(undefined, 'bold');
-
-        for (let i = 0; i < totalMonths; i++) {
-          const mDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
-          const mLabel = `${monthNames[mDate.getMonth()]} ${mDate.getFullYear().toString().slice(-2)}`;
-          const xLeft = timelineStart + i * monthWidth;
-          doc.text(mLabel, xLeft + monthWidth / 2, monthHeaderY + 5.5, { align: 'center' });
-          if (i > 0) {
-            doc.setDrawColor(226, 232, 240);
-            doc.line(xLeft, monthHeaderY, xLeft, monthHeaderY + 8);
-          }
-        }
-
-        // Label Header on Left
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(71, 85, 105);
-        doc.text("SEQUENCE DESCRIPTION", 14, monthHeaderY + 5.5);
-
-        rowStartY = currentY + 20;
-        isFirstGanttPage = false; // Next page loops will start fresh
-      } else {
-        // Draw Gantt Header (on subsequent pages)
-        doc.setFontSize(14);
-        doc.setTextColor(15, 23, 42); // Slate 900
-        doc.setFont(undefined, 'bold');
-        doc.text("STRUCTURAL GANTT CHART (Contd.)", 14, currentY);
-
-        doc.setFontSize(8);
-        doc.setTextColor(71, 85, 105); // Slate 600
-        doc.text("PROJECT NAME:", 14, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 40, currentY + 5);
-
-        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("PROJECT CODE:", 140, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.code || 'N/A', 167, currentY + 5);
-
-        doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("ERECTION DATE:", 210, currentY + 5);
-        doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.erection_date ? new Date(project.erection_date).toLocaleDateString('en-GB') : 'N/A', 238, currentY + 5);
-
-        // Divider Line
-        doc.setDrawColor(203, 213, 225); // Slate 300
-        doc.setLineWidth(0.5);
-        doc.line(14, currentY + 8, 283, currentY + 8);
-
-        // 2. Draw Monthly Header Bar
-        const monthHeaderY = currentY + 12;
-        doc.setFillColor(248, 250, 252); // Slate 50
-        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'F');
-        doc.setDrawColor(226, 232, 240); // Slate 200
-        doc.rect(timelineStart, monthHeaderY, timelineWidth, 8, 'S');
-
-        doc.setFontSize(7.5);
-        doc.setTextColor(71, 85, 105);
-        doc.setFont(undefined, 'bold');
-
-        for (let i = 0; i < totalMonths; i++) {
-          const mDate = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
-          const mLabel = `${monthNames[mDate.getMonth()]} ${mDate.getFullYear().toString().slice(-2)}`;
-          const xLeft = timelineStart + i * monthWidth;
-          doc.text(mLabel, xLeft + monthWidth / 2, monthHeaderY + 5.5, { align: 'center' });
-          if (i > 0) {
-            doc.setDrawColor(226, 232, 240);
-            doc.line(xLeft, monthHeaderY, xLeft, monthHeaderY + 8);
-          }
-        }
-
-        // Label Header on Left
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(71, 85, 105);
-        doc.text("SEQUENCE DESCRIPTION", 14, monthHeaderY + 5.5);
-
-        rowStartY = currentY + 20;
-      }
-
-      // Determine page capacity
-      const rem = totalSequences - seqIdx;
-      // If remaining sequences all fit on this page WITH legend
-      const fitsWithLegend = (rowStartY + rem * rowHeight <= pageHeight - 20); // 20mm for legend + margins
-
-      let numRowsOnPage = 0;
-      let drawLegendOnThisPage = false;
-
-      if (fitsWithLegend) {
-        numRowsOnPage = rem;
-        drawLegendOnThisPage = true;
-      } else {
-        // Find how many fit on this page without legend
-        const maxLimit = pageHeight - 15; // 15mm bottom margin
-        numRowsOnPage = Math.floor((maxLimit - rowStartY) / rowHeight);
-        if (numRowsOnPage < 1) {
-          // If we can't even fit 1 row, force add page and loop again
-          doc.addPage();
-          currentY = 15;
-          continue;
-        }
-      }
-
-      // Draw Grid vertical lines down the chart
-      const gridBottomY = rowStartY + numRowsOnPage * rowHeight;
-      doc.setDrawColor(241, 245, 249); // Slate 100
-      doc.setLineWidth(0.3);
-      for (let i = 0; i <= totalMonths; i++) {
-        const xCol = timelineStart + i * monthWidth;
-        doc.line(xCol, rowStartY - 8, xCol, gridBottomY);
-      }
-
-      // Draw sequence rows
-      for (let rIdx = 0; rIdx < numRowsOnPage; rIdx++) {
-        const s = sortedSchedules[seqIdx + rIdx];
-        const yRow = rowStartY + rIdx * rowHeight;
-
-        // Row Divider line
-        doc.setDrawColor(241, 245, 249);
-        doc.setLineWidth(0.5);
-        doc.line(14, yRow + rowHeight, 283, yRow + rowHeight);
-
-        // Sequence label
-        doc.setFontSize(8);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(15, 23, 42); // Slate 900
-        const labelText = `Seq ${s.seq_no}: ${s.item_description || 'N/A'}`;
-        const truncatedLabel = doc.splitTextToSize(labelText, 55)[0];
-        doc.text(truncatedLabel, 14, yRow + 5.5);
-
-        // Meta info below label
-        doc.setFontSize(6.5);
-        doc.setFont(undefined, 'normal');
-        doc.setTextColor(100, 116, 139); // Slate 500
-        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons | ${s.category || 'N/A'}`, 14, yRow + 8.5);
-
-        // Draw Gantt Bar
-        const { start, end } = getSequenceRange(s);
-        if (start && end) {
-          const xStart = Math.max(timelineStart, getX(start));
-          const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-
-          if (xEnd > xStart) {
-            const barWidth = xEnd - xStart;
-            const barY = yRow + 2.5;
-            const barHeight = 4.5;
-            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks);
-            const [r, g, b] = seqStatus.color;
-
-            // Draw schedule bar
-            doc.setFillColor(r, g, b);
-            doc.rect(xStart, barY, barWidth, barHeight, 'F');
-
-            // Draw Milestone markers
-            const milestones = [
-              { date: s.scheduled_ofa_date, color: [168, 85, 247] },
-              { date: s.actual_ofa_date, color: [236, 72, 153] },
-              { date: s.scheduled_bfa_date, color: [6, 182, 212] },
-              { date: s.actual_bfa_date, color: [20, 184, 166] },
-              { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
-              { date: s.rts_date, color: [30, 41, 59] },
-              { date: s.ship_date, color: [220, 38, 38] },
-              { date: s.scheduled_erection_date, color: [132, 204, 22] }
-            ];
-
-            milestones.forEach(ms => {
-              const d = parseDate(ms.date);
-              if (d) {
-                const xMs = getX(d);
-                if (xMs >= timelineStart && xMs <= timelineStart + timelineWidth) {
-                  // White halo
-                  doc.setFillColor(255, 255, 255);
-                  doc.circle(xMs, barY + barHeight / 2, 1.4, 'F');
-                  // Colored dot
-                  doc.setFillColor(ms.color[0], ms.color[1], ms.color[2]);
-                  doc.circle(xMs, barY + barHeight / 2, 1.0, 'F');
-                }
-              }
-            });
-
-            // Text overlay if space permits
-            if (barWidth > 20) {
-              doc.setFontSize(5.5);
-              doc.setFont(undefined, 'bold');
-              doc.setTextColor(255, 255, 255);
-              const fmtLabel = `${start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${end.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
-              doc.text(fmtLabel, xStart + barWidth / 2, barY + 3.2, { align: 'center' });
-            }
-          }
-        } else {
-          doc.setFontSize(7.5);
-          doc.setFont(undefined, 'italic');
-          doc.setTextColor(148, 163, 184);
-          doc.text("Timeline TBD (Dates missing)", timelineStart + 5, yRow + 6);
-        }
-      }
-
-      // Draw Legend if needed
-      if (drawLegendOnThisPage) {
-        const yLegend = pageHeight - 18;
-
-        // --- Bar Colors Legend ---
-        doc.setFontSize(7);
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(71, 85, 105);
-        doc.text("BAR COLORS:", 14, yLegend);
-
-        let xOffset = 35;
-        const barLegend = [
-          { name: "Yet to Start", color: [59, 130, 246] },
-          { name: "In Progress", color: [245, 158, 11] },
-          { name: "Completed", color: [34, 197, 94] }
-        ];
-
-        barLegend.forEach(st => {
-          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
-          doc.rect(xOffset, yLegend - 2.2, 5, 2.5, 'F');
-          doc.setFont(undefined, 'normal');
-          doc.setTextColor(100, 116, 139);
-          doc.text(st.name, xOffset + 6, yLegend);
-          xOffset += 25;
-        });
-
-        // --- Milestone Dots Legend ---
-        doc.setFont(undefined, 'bold');
-        doc.setTextColor(71, 85, 105);
-        doc.text("MILESTONE DOTS:", 115, yLegend);
-
-        const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 140 },
-          { name: "OFA Act", color: [236, 72, 153], x: 168 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 192 },
-          { name: "BFA Act", color: [20, 184, 166], x: 216 }
-        ];
-
-        dotLegend1.forEach(st => {
-          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
-          doc.circle(st.x, yLegend - 1, 1.2, 'F');
-          doc.setFont(undefined, 'normal');
-          doc.setTextColor(100, 116, 139);
-          doc.text(st.name, st.x + 2.5, yLegend);
-        });
-
-        // Line 2 for Milestone dots
-        const yLegend2 = pageHeight - 14;
-        const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 140 },
-          { name: "RTS", color: [30, 41, 59], x: 168 },
-          { name: "Ship", color: [220, 38, 38], x: 192 },
-          { name: "Erection Sch", color: [132, 204, 22], x: 216 }
-        ];
-
-        dotLegend2.forEach(st => {
-          doc.setFillColor(st.color[0], st.color[1], st.color[2]);
-          doc.circle(st.x, yLegend2 - 1, 1.2, 'F');
-          doc.setFont(undefined, 'normal');
-          doc.setTextColor(100, 116, 139);
-          doc.text(st.name, st.x + 2.5, yLegend2);
-        });
-      }
-
-      seqIdx += numRowsOnPage;
-
-      if (seqIdx < totalSequences) {
-        doc.addPage();
-        currentY = 15;
-      }
-    }
-
-    // --- UNIVERSAL FOOTER ON ALL PAGES ---
-    const totalPagesCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= totalPagesCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184); // Slate 400
-      doc.text(`Page ${i} of ${totalPagesCount}`, 260, pageHeight - 8);
-      doc.text(`Generated: ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`, 14, pageHeight - 8);
-    }
-
-    doc.save(`Plan_${project.code}.pdf`);
   };
 
   const filtered = projects.filter(p =>
@@ -760,17 +315,17 @@ export default function PlanCreation() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {paginatedData.map(p => (
+              {paginatedData.flatMap(p => [
                 <tr key={p.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.name}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.code}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.customer_name || 'N/A'}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-0.5">
-                      <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
+                      <button onClick={() => generateGanttPdf(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
                         <FileText className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
+                      <button onClick={() => setViewProjectId(viewProjectId === p.id ? null : p.id)} className={`p-1 rounded ${viewProjectId === p.id ? 'bg-amber-100 text-amber-700' : 'text-amber-500 hover:bg-amber-50'}`} title="Toggle Gantt">
                         <Eye className="w-3.5 h-3.5" />
                       </button>
                       <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
@@ -781,8 +336,15 @@ export default function PlanCreation() {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))}
+                </tr>,
+                viewProjectId === p.id && (
+                  <tr key={`gantt-${p.id}`} className="bg-slate-50">
+                    <td colSpan={4} className="p-4">
+                      <GanttChart project={p} allSchedules={allSchedules} />
+                    </td>
+                  </tr>
+                )
+              ].filter(Boolean))}
             </tbody>
           </table>
         </div>
@@ -807,7 +369,9 @@ export default function PlanCreation() {
               total_manhours: selected.total_manhours,
               erection_date: selected.erection_date,
               status: selected.status,
-              priority: selected.priority
+              priority: selected.priority,
+              shop_name: selected.shop_name || '',
+              schedule_field_measure_required: selected.schedule_field_measure_required || 'No',
             });
             setDeletedSchedules([]);
             // Fetch and set existing schedules for this project
