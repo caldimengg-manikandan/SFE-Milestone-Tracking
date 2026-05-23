@@ -553,7 +553,17 @@ function MachineView({ data, refresh }) {
               <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.shop} onChange={e => setForm({...form, shop: e.target.value})} placeholder="Main Shop" />
+                  <select 
+                    required 
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" 
+                    value={form.shop} 
+                    onChange={e => setForm({...form, shop: e.target.value})}
+                  >
+                    <option value="">Select Shop</option>
+                    <option value="shop1">shop1</option>
+                    <option value="shop2">shop2</option>
+                    <option value="shop3">shop3</option>
+                  </select>
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

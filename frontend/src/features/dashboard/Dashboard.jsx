@@ -5,7 +5,7 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
+  BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { dashboardAPI } from '../../services/api';
 
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [fromMonth, setFromMonth] = useState(0);
   const [toMonth, setToMonth] = useState(11);
   const [loading, setLoading] = useState(true);
+  const [capacityMonth, setCapacityMonth] = useState(new Date().getMonth() + 1);
+  const [capacityYear, setCapacityYear] = useState(new Date().getFullYear().toString());
   const [data, setData] = useState({
     stats: [],
     areaData: [],
@@ -116,7 +118,11 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await dashboardAPI.getStats({ year: selectedYear });
+        const response = await dashboardAPI.getStats({ 
+          year: selectedYear,
+          capacity_month: capacityMonth,
+          capacity_year: capacityYear
+        });
         setData(response.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -127,7 +133,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, [selectedYear]);
+  }, [selectedYear, capacityMonth, capacityYear]);
 
   if (loading) {
     return (
@@ -392,16 +398,43 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar Chart */}
         <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-1">Section Performance</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8">Completed vs Pending by Workcenter</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Capacity vs Shop</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={capacityMonth}
+                onChange={(e) => setCapacityMonth(parseInt(e.target.value))}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+              >
+                {['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={capacityYear}
+                onChange={(e) => setCapacityYear(e.target.value)}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.barData} barGap={4}>
+            <BarChart data={data.barData} barGap={6}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e2e8f0', fontSize: 10, fontWeight: 900 }} />
-              <Bar dataKey="completed" fill="#1e293b" radius={0} />
-              <Bar dataKey="pending" fill="#fbbf24" radius={0} />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+              <Bar dataKey="capacity" name="Total Capacity / Month" fill="#1e293b" radius={0} />
+              <Bar dataKey="allocated" name="Allocated Load" fill="#f59e0b" radius={0} />
+              <Bar dataKey="remaining" name="Remaining Capacity" fill="#10b981" radius={0} />
             </BarChart>
           </ResponsiveContainer>
         </div>
