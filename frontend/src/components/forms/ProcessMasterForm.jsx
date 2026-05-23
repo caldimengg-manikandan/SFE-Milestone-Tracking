@@ -283,7 +283,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '-';
-    return `${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}-${date.getFullYear()}`;
+    return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
   };
 
 
@@ -451,56 +451,43 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     });
   };
 
-  const handleSaveAll = async () => {
+  const handleSaveStep = async () => {
     if (!selectedSchedule) { alert('Please select a schedule'); return; }
+    const currentStep = STEPS[activeStep];
+    if (currentStep.id === 'BASIC') { setActiveStep(1); return; }
 
     try {
       setLoading(true);
-      for (const step of STEPS) {
-        if (step.id === 'BASIC') continue;
-        for (const proc of step.processes) {
-          const data = sectionData[proc];
-          const validRows = data.rows.filter(r => Object.values(r).some(v => v !== ''));
-          
+      for (const proc of currentStep.processes) {
+        const data = sectionData[proc];
+        const validRows = data.rows.filter(r => Object.values(r).some(v => v !== ''));
+        if (validRows.length > 0) {
+          const payload = {
+            schedule: selectedSchedule,
+            module_type: currentStep.id,
+            process_type: proc,
+            rate: data.rate || 0,
+            items_input: validRows.map(r => ({
+              job_number: r.job || null,
+              sequence_number: r.seq || null,
+              weight: r.weight || null,
+              rts_date: r.rtsDate || null,
+              actual_ofa: r.startRunDate || null,
+              complete_run_date: r.completeRunDate || null,
+              notes: r.notes || null,
+            })),
+          };
           const existing = existingRecords.find(r => r.process_type === proc);
-          
-          if (validRows.length > 0) {
-            const payload = {
-              schedule: selectedSchedule,
-              module_type: step.id,
-              process_type: proc,
-              rate: data.rate || 0,
-              items_input: validRows.map(r => ({
-                job_number: r.job || null,
-                sequence_number: r.seq || null,
-                weight: r.weight || null,
-                rts_date: r.rtsDate || null,
-                actual_ofa: r.startRunDate || null,
-                complete_run_date: r.completeRunDate || null,
-                notes: r.notes || null,
-              })),
-            };
-
-            if (existing) {
-              await priorityAPI.update(existing.id, payload);
-            } else {
-              await priorityAPI.create(payload);
-            }
-          } else {
-            if (existing) {
-              await priorityAPI.delete(existing.id);
-            }
-          }
+          if (existing) await priorityAPI.update(existing.id, payload);
+          else await priorityAPI.create(payload);
         }
       }
-      if (onSuccess) onSuccess();
-      onClose();
+      if (activeStep < STEPS.length - 1) setActiveStep(prev => prev + 1);
+      else { if (onSuccess) onSuccess(); onClose(); }
     } catch (err) {
-      console.error('Save error:', err);
+      console.error('Step save error:', err);
       alert('Failed to save data.');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
   const toggleProjectSelection = (projectId) => {
@@ -754,30 +741,14 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                     >
                       Back to Rates
                     </button>
-                    {activeStep > 1 && (
-                      <button 
-                        onClick={() => setActiveStep(prev => prev - 1)}
-                        className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/30 text-[8px] font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md"
-                      >
-                        Previous
-                      </button>
-                    )}
-                    {activeStep < STEPS.length - 1 ? (
-                      <button 
-                        onClick={() => setActiveStep(prev => prev + 1)}
-                        className="px-3 py-1.5 rounded-lg bg-white/10 border border-white/30 text-[8px] font-black uppercase tracking-widest hover:bg-white/20 transition-all backdrop-blur-md"
-                      >
-                        Next Step
-                      </button>
-                    ) : null}
                     <button 
-                      onClick={handleSaveAll}
+                      onClick={handleSaveStep}
                       disabled={loading}
-                      className="px-4 py-1.5 rounded-lg bg-white text-amber-600 text-[8px] font-black uppercase tracking-widest hover:bg-amber-50 shadow-md transition-all active:scale-95 disabled:opacity-50"
+                      className="px-4 py-1.5 rounded-lg bg-white text-amber-600 text-[8px] font-black uppercase tracking-widest hover:bg-amber-50 shadow-md transition-all active:scale-95"
                     >
-                      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : 'Finalize & Save'}
+                      {loading ? <Loader2 className="w-3 h-3 animate-spin" /> : (activeStep < STEPS.length - 1 ? 'Save & Next' : 'Finalize & Save')}
                     </button>
-                  </div>
+                 </div>
               </div>
 
               {STEPS[activeStep].processes.map(proc => (
@@ -870,45 +841,24 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
 
         {/* Footer Actions */}
         <div className="px-4 py-2 border-t border-slate-200 bg-white flex items-center justify-between">
-           <div className="flex items-center gap-2">
-             <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-all">Cancel</button>
-             {activeStep > 0 && (
-               <button 
-                 onClick={() => setActiveStep(prev => Math.max(0, prev - 1))}
-                 className="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-500 hover:text-slate-900 border border-slate-200 hover:bg-slate-50 transition-all"
-               >
-                 Previous
-               </button>
-             )}
-           </div>
+           <button 
+             onClick={() => setActiveStep(prev => Math.max(0, prev - 1))}
+             disabled={activeStep === 0}
+             className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all
+               ${activeStep === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'}`}
+           >
+             Previous Step
+           </button>
            
            <div className="flex items-center gap-2">
-              {activeStep < STEPS.length - 1 ? (
-                <button 
-                  onClick={() => {
-                    if (activeStep === 0 && !selectedSchedule) {
-                      alert('Please select a schedule');
-                      return;
-                    }
-                    setActiveStep(prev => prev + 1);
-                  }}
-                  className="flex items-center gap-1 px-4 py-1.5 rounded-lg bg-amber-500 text-white text-[8px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-md shadow-amber-500/10 transition-all"
-                >
-                  {activeStep === 0 ? 'Start Entry Wizard' : 'Next Step'}
-                  <ChevronRight className="w-3.5 h-3.5" />
-                </button>
-              ) : null}
-              
-              {selectedSchedule && (
-                <button 
-                  onClick={handleSaveAll}
-                  disabled={loading}
-                  className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest hover:bg-slate-800 shadow-md shadow-slate-900/10 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
-                  {loading ? 'Saving...' : 'Finalize & Save'}
-                </button>
-              )}
+              <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>
+              <button 
+                onClick={handleSaveStep}
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-md shadow-amber-500/10 transition-all active:scale-95"
+              >
+                {activeStep === 0 ? 'Start Entry Wizard' : (activeStep < STEPS.length - 1 ? 'Save & Next' : 'Finalize & Save')}
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
            </div>
         </div>
       </div>

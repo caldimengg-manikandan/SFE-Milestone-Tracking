@@ -56,12 +56,7 @@ export default function PlanTracking() {
 
   const formatDate = (d) => {
     if (!d) return '-';
-    const date = new Date(d);
-    if (isNaN(date.getTime())) return '-';
-    const dd = String(date.getDate()).padStart(2, '0');
-    const mm = String(date.getMonth() + 1).padStart(2, '0');
-    const yyyy = date.getFullYear();
-    return `${mm}-${dd}-${yyyy}`;
+    return new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
   const getExpectedCompletion = (rtsDateStr, leadWeeks) => {

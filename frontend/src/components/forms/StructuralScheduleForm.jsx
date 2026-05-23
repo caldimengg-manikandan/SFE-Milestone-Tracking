@@ -32,34 +32,8 @@ export default function StructuralScheduleForm({
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const y = date.getFullYear();
-    return `${m}-${d}-${y}`;
+    return `${d}-${m}-${y}`;
   };
-
-  // Convert stored date (MM-DD-YYYY or DD-MM-YYYY) to YYYY-MM-DD for <input type="date">
-  const toInputDate = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length !== 3) return '';
-    const [first, second, year] = parts;
-    // Determine format: if first > 12 assume DD-MM-YYYY, else MM-DD-YYYY
-    const month = parseInt(first, 10) > 12 ? second : first;
-    const day = parseInt(first, 10) > 12 ? first : second;
-    const mm = month.toString().padStart(2, '0');
-    const dd = day.toString().padStart(2, '0');
-    return `${year}-${mm}-${dd}`;
-  };
-
-  // Convert YYYY-MM-DD from input back to stored MM-DD-YYYY
-  const fromInputDate = (dateStr) => {
-    if (!dateStr) return '';
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const [y, m, d] = parts;
-      return `${m}-${d}-${y}`;
-    }
-    return '';
-  };
-
 
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-white">
@@ -108,7 +82,7 @@ export default function StructuralScheduleForm({
           <div className="grid grid-cols-1 md:grid-cols-4">
             <div className="flex border-r border-slate-200">
               <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Erection Date:</div>
-              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.erection_date && !isNaN(new Date(project.erection_date)) ? new Date(project.erection_date).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' }).replaceAll('/', '-') : 'TBD'}</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.erection_date ? formatDate(project.erection_date) : 'TBD'}</div>
             </div>
             <div className="flex border-r border-slate-200">
               <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Ton's =</div>
@@ -264,8 +238,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-bold text-slate-600 focus:border-amber-400 bg-transparent transition-all relative z-0" 
-                      value={toInputDate(row.scheduled_ofa_date)} 
-                      onChange={e => handleRowChange(row.id, 'scheduled_ofa_date', fromInputDate(e.target.value))} 
+                      value={row.scheduled_ofa_date} 
+                      onChange={e => handleRowChange(row.id, 'scheduled_ofa_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
@@ -273,8 +247,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-500 focus:border-amber-400 bg-transparent transition-all" 
-                      value={toInputDate(row.actual_ofa_date)} 
-                      onChange={e => handleRowChange(row.id, 'actual_ofa_date', fromInputDate(e.target.value))} 
+                      value={row.actual_ofa_date || ''} 
+                      onChange={e => handleRowChange(row.id, 'actual_ofa_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200">
@@ -282,8 +256,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-bold text-slate-600 focus:border-amber-400 bg-transparent transition-all relative z-0" 
-                      value={toInputDate(row.scheduled_bfa_date)} 
-                      onChange={e => handleRowChange(row.id, 'scheduled_bfa_date', fromInputDate(e.target.value))} 
+                      value={row.scheduled_bfa_date} 
+                      onChange={e => handleRowChange(row.id, 'scheduled_bfa_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">
@@ -291,8 +265,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-500 focus:border-amber-400 bg-transparent transition-all" 
-                      value={toInputDate(row.actual_bfa_date)} 
-                      onChange={e => handleRowChange(row.id, 'actual_bfa_date', fromInputDate(e.target.value))} 
+                      value={row.actual_bfa_date || ''} 
+                      onChange={e => handleRowChange(row.id, 'actual_bfa_date', e.target.value)} 
                     />
                   </td>
                   {project?.schedule_field_measure_required?.trim() !== 'No' && (
@@ -301,8 +275,8 @@ export default function StructuralScheduleForm({
                         type="date"
                         readOnly={isViewOnly}
                         className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-600 focus:border-amber-400 bg-transparent transition-all" 
-                        value={toInputDate(row.scheduled_field_measure_date)} 
-                        onChange={e => handleRowChange(row.id, 'scheduled_field_measure_date', fromInputDate(e.target.value))} 
+                        value={row.scheduled_field_measure_date || ''} 
+                        onChange={e => handleRowChange(row.id, 'scheduled_field_measure_date', e.target.value)} 
                       />
                     </td>
                   )}
@@ -311,8 +285,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all" 
-                      value={toInputDate(row.rts_date)} 
-                      onChange={e => handleRowChange(row.id, 'rts_date', fromInputDate(e.target.value))} 
+                      value={row.rts_date} 
+                      onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-amber-500/5">
@@ -329,8 +303,8 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-bold text-slate-600 focus:border-amber-400 bg-transparent transition-all relative z-0" 
-                      value={toInputDate(row.scheduled_erection_date)}
-                      onChange={e => handleRowChange(row.id, 'scheduled_erection_date', fromInputDate(e.target.value))} 
+                      value={row.scheduled_erection_date} 
+                      onChange={e => handleRowChange(row.id, 'scheduled_erection_date', e.target.value)} 
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200">
