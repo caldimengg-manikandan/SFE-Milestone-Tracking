@@ -388,8 +388,6 @@ export default function ProductionPrioritySchedule() {
                                       <div className="bg-slate-50 px-6 py-3 border border-t-0 border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-500 rounded-b-lg">
                                         <div className="flex items-center gap-6">
                                           <div className="flex items-center gap-2">
-                                            <div className="w-3 h-3 rounded bg-amber-500/20 border border-amber-500 border-l-4" />
-                                            <span>Project Timeline (RTS to Scheduled Start of Erection Date)</span>
                                           </div>
                                         </div>
                                         <div className="uppercase tracking-widest text-[9px] font-bold text-slate-400">

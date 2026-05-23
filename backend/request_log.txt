@@ -1,0 +1,112 @@
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":5,"title":"Leave","message":"leave","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T12:47:46.259402+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":5,"title":"Leave","message":"leave","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T12:47:46.259402+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":5,"title":"Leave","message":"leave","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T12:47:46.259402+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":5,"title":"Leave","message":"leave","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T12:47:46.259402+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/5/
+Method: DELETE
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 204
+Content: 
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: POST
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 201
+Content: {"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":1,"next":null,"previous":null,"results":[{"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: POST
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 201
+Content: {"id":7,"title":"Announcement 2","message":"asd","from_date":"2026-05-21","to_date":"2026-05-30","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:27:42.012329+05:30"}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzc5NjEyNTg2LCJpYXQiOjE3Nzk1MjYxODYsImp0aSI6ImQ3ZDRmZDMwNjZhODQyNTY4MGYyZmM1NmJiYWNkMmZhIiwidXNlcl9pZCI6IjEifQ.TK2i_-iEVnPMnD34WlnxaHtf_n2T2SEj9ZBIyu9XqlM
+=== RESPONSE ===
+Status: 200
+Content: {"count":2,"next":null,"previous":null,"results":[{"id":7,"title":"Announcement 2","message":"asd","from_date":"2026-05-21","to_date":"2026-05-30","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:27:42.012329+05:30"},{"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}]}
+

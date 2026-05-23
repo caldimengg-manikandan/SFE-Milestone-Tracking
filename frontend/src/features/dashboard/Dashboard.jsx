@@ -1,11 +1,11 @@
 import { useState, useEffect, Fragment } from 'react';
 import {
   Users, FolderKanban, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Clock, CheckCircle2, AlertTriangle, Box, Loader2
+  Clock, CheckCircle2, AlertTriangle, Box, Loader2, X, Calendar
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell
+  BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import { dashboardAPI } from '../../services/api';
 
@@ -28,6 +28,8 @@ export default function Dashboard() {
   const [fromMonth, setFromMonth] = useState(0);
   const [toMonth, setToMonth] = useState(11);
   const [loading, setLoading] = useState(true);
+  const [capacityMonth, setCapacityMonth] = useState(new Date().getMonth() + 1);
+  const [capacityYear, setCapacityYear] = useState(new Date().getFullYear().toString());
   const [data, setData] = useState({
     stats: [],
     areaData: [],
@@ -37,6 +39,7 @@ export default function Dashboard() {
   });
   const [error, setError] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState(null);
+  const [selectedNotice, setSelectedNotice] = useState(null);
 
   const toggleExpand = (id) => {
     setExpandedTaskId(expandedTaskId === id ? null : id);
@@ -115,7 +118,11 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await dashboardAPI.getStats({ year: selectedYear });
+        const response = await dashboardAPI.getStats({ 
+          year: selectedYear,
+          capacity_month: capacityMonth,
+          capacity_year: capacityYear
+        });
         setData(response.data);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
@@ -126,7 +133,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, [selectedYear]);
+  }, [selectedYear, capacityMonth, capacityYear]);
 
   if (loading) {
     return (
@@ -223,7 +230,7 @@ export default function Dashboard() {
               {/* Header Row: Months */}
               <div
                 className="gantt-header-cell gantt-pink-header flex flex-col justify-center font-bold text-slate-700"
-                style={{ gridRow: 'span 2', padding: '6px 8px' }}
+                style={{ padding: '6px 8px' }}
               >
                 <span>Schedule / Project</span>
               </div>
@@ -310,8 +317,8 @@ export default function Dashboard() {
                         const subBarPosition = item.start_date && item.end_date
                           ? getWeekPositions(item.start_date, item.end_date, 0, 1, selectedYear, fromMonth, toMonth)
                           : item.ofa_date && (item.erection_date || item.rts_date)
-                          ? getWeekPositions(item.ofa_date, item.erection_date || item.rts_date, 0, 1, selectedYear, fromMonth, toMonth)
-                          : null;
+                            ? getWeekPositions(item.ofa_date, item.erection_date || item.rts_date, 0, 1, selectedYear, fromMonth, toMonth)
+                            : null;
 
                         return (
                           <div key={`sub-${task.id}-${iIdx}`} className="gantt-row">
@@ -321,7 +328,7 @@ export default function Dashboard() {
                               {/* Horizontal connector */}
                               <div className="absolute left-4 top-1/2 w-3 h-px bg-slate-300"></div>
                               <div className="flex flex-col ml-8">
-                                <span className="truncate max-w-[100px] font-bold text-slate-600 text-[11px]">{item.job_number}</span>
+                                <span className="truncate max-w-[100px] font-bold text-slate-600 text-[11px]">{item.project_name || item.job_number}</span>
                                 <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">Seq: {item.sequence_number}</span>
                               </div>
                             </div>
@@ -340,8 +347,8 @@ export default function Dashboard() {
                                     <div
                                       className="gantt-bar shadow-sm"
                                       title={item.start_date && item.end_date && item.shop_lead_time_weeks
-                                        ? `${item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                        : `${item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
+                                        ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
+                                        : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                       }
                                       style={{
                                         left: `${(subBarPosition.startCol - Math.floor(subBarPosition.startCol)) * 100}%`,
@@ -356,8 +363,8 @@ export default function Dashboard() {
                                     >
                                       <span className="gantt-bar-details">
                                         {item.start_date && item.end_date && item.shop_lead_time_weeks
-                                          ? `${item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                          : `${item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
+                                          ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
+                                          : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                         }
                                       </span>
                                     </div>
@@ -391,16 +398,43 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Bar Chart */}
         <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
-          <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-1">Section Performance</h3>
-          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-8">Completed vs Pending by Workcenter</p>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div>
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Capacity vs Shop</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <select
+                value={capacityMonth}
+                onChange={(e) => setCapacityMonth(parseInt(e.target.value))}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+              >
+                {['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map((m, i) => (
+                  <option key={i} value={i + 1}>{m}</option>
+                ))}
+              </select>
+              <select
+                value={capacityYear}
+                onChange={(e) => setCapacityYear(e.target.value)}
+                className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+              >
+                {[...Array(5)].map((_, i) => {
+                  const year = new Date().getFullYear() - 2 + i;
+                  return <option key={year} value={year}>{year}</option>;
+                })}
+              </select>
+            </div>
+          </div>
           <ResponsiveContainer width="100%" height={260}>
-            <BarChart data={data.barData} barGap={4}>
+            <BarChart data={data.barData} barGap={6}>
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-              <Tooltip contentStyle={{ borderRadius: 0, border: '1px solid #e2e8f0', fontSize: 10, fontWeight: 900 }} />
-              <Bar dataKey="completed" fill="#1e293b" radius={0} />
-              <Bar dataKey="pending" fill="#fbbf24" radius={0} />
+              <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
+              <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+              <Bar dataKey="capacity" name="Total Capacity / Month" fill="#1e293b" radius={0} />
+              <Bar dataKey="allocated" name="Allocated Load" fill="#f59e0b" radius={0} />
+              <Bar dataKey="remaining" name="Remaining Capacity" fill="#10b981" radius={0} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -431,9 +465,14 @@ export default function Dashboard() {
           <div className="bg-white border border-slate-300 p-8">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
             <div className="space-y-4">
-              {announcements.map((a) => (
-                <div key={a.id} className="flex items-start gap-3">
-                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+              {(data.announcements && data.announcements.length > 0 ? data.announcements : announcements).map((a) => (
+                <div 
+                  key={a.id} 
+                  className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
+                  onClick={() => setSelectedNotice(a)}
+                  title="Click to view details"
+                >
+                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
                     }`} />
                   <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
                 </div>
@@ -442,6 +481,44 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Notice Detail Modal */}
+      {selectedNotice && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" 
+          onClick={() => setSelectedNotice(null)}
+        >
+          <div 
+            className="bg-white border border-slate-200 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl relative" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedNotice(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2.5 h-2.5 rounded-full ${selectedNotice.priority === 'high' ? 'bg-red-500' : selectedNotice.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal Notice</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 leading-snug">{selectedNotice.title}</h3>
+              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl font-medium border border-slate-100 whitespace-pre-line">
+                {selectedNotice.message || 'No additional details provided for this notice.'}
+              </p>
+              {(selectedNotice.from_date || selectedNotice.to_date) && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold pt-1">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span>
+                    Active: {selectedNotice.from_date ? formatDate(selectedNotice.from_date) : '-'} to {selectedNotice.to_date ? formatDate(selectedNotice.to_date) : '-'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

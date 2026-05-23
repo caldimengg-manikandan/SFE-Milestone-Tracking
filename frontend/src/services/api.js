@@ -146,3 +146,12 @@ export const detailerAPI = {
   update: (id, data) => api.put(`/projects/detailers/${id}/`, data),
   delete: (id) => api.delete(`/projects/detailers/${id}/`),
 };
+
+/* ── Announcement API ── */
+export const announcementAPI = {
+  getAll: () => api.get('/dashboard/announcements/'),
+  getById: (id) => api.get(`/dashboard/announcements/${id}/`),
+  create: (data) => api.post('/dashboard/announcements/', data),
+  update: (id, data) => api.put(`/dashboard/announcements/${id}/`, data),
+  delete: (id) => api.delete(`/dashboard/announcements/${id}/`),
+};
