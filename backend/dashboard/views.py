@@ -7,6 +7,7 @@ from projects.models import Project, StructuralScheduleItem
 from production.models import ProductionPriorityItem, ProductionItem, ProductionSchedule
 from django.utils import timezone
 from datetime import timedelta
+from .models import Announcement
 
 colors = {
     'Planning': '#fbbf24',
@@ -54,6 +55,13 @@ class DashboardStatsView(APIView):
                         start_date = None
                         end_date = None
                         shop_lead_time_weeks = 0
+                        project_name = item.job_number
+                        try:
+                            project = Project.objects.filter(code=item.job_number).first()
+                            if project:
+                                project_name = project.name
+                        except:
+                            pass
                         try:
                             # Link to StructuralScheduleItem via job_number (code) and sequence_number
                             struct_item = StructuralScheduleItem.objects.filter(
@@ -80,6 +88,7 @@ class DashboardStatsView(APIView):
 
                         items_data.append({
                             'job_number': item.job_number,
+                            'project_name': project_name,
                             'sequence_number': item.sequence_number,
                             'weight': str(item.weight) if item.weight else '0.00',
                             'quantity': item.quantity,
@@ -235,6 +244,26 @@ class DashboardStatsView(APIView):
         yet_to_complete = Project.objects.filter(status='Yet to Complete').count()
         completed = Project.objects.filter(status='Completed').count()
 
+        # Fetch active announcements
+        from django.utils.timezone import localdate
+        from .models import Announcement
+        today = localdate()
+        active_announcements = Announcement.objects.filter(
+            from_date__lte=today,
+            to_date__gte=today,
+            is_active=True
+        )
+        
+        announcements_list = []
+        for ann in active_announcements:
+            time_left = ann.to_date - today
+            priority = 'high' if time_left.days <= 1 else 'medium'
+            announcements_list.append({
+                'id': ann.id,
+                'title': ann.title,
+                'priority': priority
+            })
+
         return Response({
             'stats': [
                 {'label': 'Total Projects', 'value': str(total_projects), 'change': '+0', 'up': True},
@@ -248,5 +277,29 @@ class DashboardStatsView(APIView):
             },
             'pieData': pie_data,
             'barData': bar_data,
-            'recentActivities': recent_activities
+            'recentActivities': recent_activities,
+            'announcements': announcements_list
         })
+
+
+from rest_framework import viewsets, permissions
+from .serializers import AnnouncementSerializer
+
+class IsAdminOrManagerOrReadOnly(permissions.BasePermission):
+    """Allow GET/safe methods for all authenticated users, restrict write methods to admin/manager."""
+    def has_permission(self, request, view):
+        if request.method in permissions.SAFE_METHODS:
+            return request.user and request.user.is_authenticated
+        return (
+            request.user 
+            and request.user.is_authenticated 
+            and request.user.role in ['admin', 'manager']
+        )
+
+class AnnouncementViewSet(viewsets.ModelViewSet):
+    queryset = Announcement.objects.all()
+    serializer_class = AnnouncementSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)

@@ -1,7 +1,7 @@
 import { useState, useEffect, Fragment } from 'react';
 import {
   Users, FolderKanban, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight,
-  Clock, CheckCircle2, AlertTriangle, Box, Loader2
+  Clock, CheckCircle2, AlertTriangle, Box, Loader2, X, Calendar
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -37,6 +37,7 @@ export default function Dashboard() {
   });
   const [error, setError] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState(null);
+  const [selectedNotice, setSelectedNotice] = useState(null);
 
   const toggleExpand = (id) => {
     setExpandedTaskId(expandedTaskId === id ? null : id);
@@ -223,7 +224,7 @@ export default function Dashboard() {
               {/* Header Row: Months */}
               <div
                 className="gantt-header-cell gantt-pink-header flex flex-col justify-center font-bold text-slate-700"
-                style={{ gridRow: 'span 2', padding: '6px 8px' }}
+                style={{ padding: '6px 8px' }}
               >
                 <span>Schedule / Project</span>
               </div>
@@ -310,8 +311,8 @@ export default function Dashboard() {
                         const subBarPosition = item.start_date && item.end_date
                           ? getWeekPositions(item.start_date, item.end_date, 0, 1, selectedYear, fromMonth, toMonth)
                           : item.ofa_date && (item.erection_date || item.rts_date)
-                          ? getWeekPositions(item.ofa_date, item.erection_date || item.rts_date, 0, 1, selectedYear, fromMonth, toMonth)
-                          : null;
+                            ? getWeekPositions(item.ofa_date, item.erection_date || item.rts_date, 0, 1, selectedYear, fromMonth, toMonth)
+                            : null;
 
                         return (
                           <div key={`sub-${task.id}-${iIdx}`} className="gantt-row">
@@ -321,7 +322,7 @@ export default function Dashboard() {
                               {/* Horizontal connector */}
                               <div className="absolute left-4 top-1/2 w-3 h-px bg-slate-300"></div>
                               <div className="flex flex-col ml-8">
-                                <span className="truncate max-w-[100px] font-bold text-slate-600 text-[11px]">{item.job_number}</span>
+                                <span className="truncate max-w-[100px] font-bold text-slate-600 text-[11px]">{item.project_name || item.job_number}</span>
                                 <span className="text-[8px] uppercase tracking-tighter text-slate-400 mt-0.5">Seq: {item.sequence_number}</span>
                               </div>
                             </div>
@@ -340,8 +341,8 @@ export default function Dashboard() {
                                     <div
                                       className="gantt-bar shadow-sm"
                                       title={item.start_date && item.end_date && item.shop_lead_time_weeks
-                                        ? `${item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                        : `${item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
+                                        ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
+                                        : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                       }
                                       style={{
                                         left: `${(subBarPosition.startCol - Math.floor(subBarPosition.startCol)) * 100}%`,
@@ -356,8 +357,8 @@ export default function Dashboard() {
                                     >
                                       <span className="gantt-bar-details">
                                         {item.start_date && item.end_date && item.shop_lead_time_weeks
-                                          ? `${item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                          : `${item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
+                                          ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
+                                          : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                         }
                                       </span>
                                     </div>
@@ -431,9 +432,14 @@ export default function Dashboard() {
           <div className="bg-white border border-slate-300 p-8">
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
             <div className="space-y-4">
-              {announcements.map((a) => (
-                <div key={a.id} className="flex items-start gap-3">
-                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+              {(data.announcements && data.announcements.length > 0 ? data.announcements : announcements).map((a) => (
+                <div 
+                  key={a.id} 
+                  className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
+                  onClick={() => setSelectedNotice(a)}
+                  title="Click to view details"
+                >
+                  <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
                     }`} />
                   <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
                 </div>
@@ -442,6 +448,44 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
+
+      {/* Notice Detail Modal */}
+      {selectedNotice && (
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" 
+          onClick={() => setSelectedNotice(null)}
+        >
+          <div 
+            className="bg-white border border-slate-200 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl relative" 
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setSelectedNotice(null)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="space-y-4">
+              <div className="flex items-center gap-2">
+                <div className={`w-2.5 h-2.5 rounded-full ${selectedNotice.priority === 'high' ? 'bg-red-500' : selectedNotice.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'}`} />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Internal Notice</span>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 leading-snug">{selectedNotice.title}</h3>
+              <p className="text-sm text-slate-600 leading-relaxed bg-slate-50 p-4 rounded-xl font-medium border border-slate-100 whitespace-pre-line">
+                {selectedNotice.message || 'No additional details provided for this notice.'}
+              </p>
+              {(selectedNotice.from_date || selectedNotice.to_date) && (
+                <div className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold pt-1">
+                  <Calendar className="w-4 h-4 text-slate-400" />
+                  <span>
+                    Active: {selectedNotice.from_date ? formatDate(selectedNotice.from_date) : '-'} to {selectedNotice.to_date ? formatDate(selectedNotice.to_date) : '-'}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

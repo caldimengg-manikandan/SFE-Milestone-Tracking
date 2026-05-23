@@ -22,6 +22,7 @@ const pageTitles = {
   '/projects': 'Project Master',
   '/milestones': 'Milestone Management',
   '/settings': 'Settings',
+  '/announcements': 'Announcement',
   '/help': 'Help & Support',
   '/structural/plan-creation': 'Plan Creation',
   '/structural/plan-tracking': 'Plan Tracking',

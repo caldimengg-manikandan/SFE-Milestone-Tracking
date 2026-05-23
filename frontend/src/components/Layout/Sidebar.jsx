@@ -21,6 +21,7 @@ import {
   Settings2,
   Cpu,
   Users2,
+  Megaphone,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -72,6 +73,7 @@ const navSections = [
     label: 'SYSTEM',
     items: [
       { name: 'Settings', path: '/settings', icon: Settings },
+      { name: 'Announcement', path: '/announcements', icon: Megaphone },
     ],
   },
 ];
