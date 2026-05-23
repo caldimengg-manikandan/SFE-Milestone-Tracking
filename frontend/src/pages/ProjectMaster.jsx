@@ -55,7 +55,9 @@ export default function ProjectMaster() {
     total_manhours: '',
     erection_date: '',
     status: 'Yet to Complete',
-    priority: 'Medium'
+    priority: 'Medium',
+    shop_name: '',
+    schedule_field_measure_required: 'Yes'
   });
 
   useEffect(() => {
@@ -311,7 +313,14 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
+    const showFieldMeasure = project.schedule_field_measure_required !== 'No';
+
+    const headersList = ["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA"];
+    if (showFieldMeasure) {
+      headersList.push("Sch Field Meas");
+    }
+    headersList.push("RTS Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
+    const tableHeaders = [headersList];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -320,28 +329,65 @@ export default function ProjectMaster() {
       return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
     });
 
-    const tableData = sortedSchedules.map(s => [
-      s.seq_no,
-      s.tons,
-      s.item_description,
-      s.category || '',
-      s.scheduled_ofa_date,
-      s.actual_ofa_date || '-',
-      s.scheduled_bfa_date,
-      s.actual_bfa_date || '-',
-      s.scheduled_field_measure_date || '-',
-      s.rts_date,
-      s.ship_date || '-',
-      s.shop_lead_time_weeks,
-      s.scheduled_erection_date,
-      s.budget_shop_hours,
-      s.budget_field_hours,
-      s.actual_shop_hours,
-      s.actual_field_hours,
-      s.detailer_vendor,
-      s.dwg_status,
-      s.notes
-    ]);
+    const tableData = sortedSchedules.map(s => {
+      const row = [
+        s.seq_no,
+        s.tons,
+        s.item_description,
+        s.category || '',
+        s.scheduled_ofa_date,
+        s.actual_ofa_date || '-',
+        s.scheduled_bfa_date,
+        s.actual_bfa_date || '-'
+      ];
+      if (showFieldMeasure) {
+        row.push(s.scheduled_field_measure_date || '-');
+      }
+      row.push(
+        s.rts_date,
+        s.shop_lead_time_weeks,
+        s.scheduled_erection_date,
+        s.budget_shop_hours,
+        s.budget_field_hours,
+        s.actual_shop_hours,
+        s.actual_field_hours,
+        s.detailer_vendor,
+        s.dwg_status,
+        s.notes
+      );
+      return row;
+    });
+
+    const stylesMap = [
+      { cellWidth: 8, halign: 'center' },   // SEQ #
+      { cellWidth: 9, halign: 'center' },  // Tons
+      { cellWidth: 'auto' }, // Item Description
+      { cellWidth: 14 },  // Category
+      { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
+      { cellWidth: 12, halign: 'center' },  // Actual OFA Date
+      { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
+      { cellWidth: 12, halign: 'center' }   // Actual BFA Date
+    ];
+    if (showFieldMeasure) {
+      stylesMap.push({ cellWidth: 14, halign: 'center' }); // Scheduled Field Measure Date
+    }
+    stylesMap.push(
+      { cellWidth: 12, halign: 'center' },  // RTS Date
+      { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
+      { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
+      { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
+      { cellWidth: 11, halign: 'center' }, // Budget Field Hours
+      { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
+      { cellWidth: 11, halign: 'center' }, // Field Hours Actual
+      { cellWidth: 13 }, // Detailer / Vendor
+      { cellWidth: 12 }, // Dwg Status
+      { cellWidth: 14 }  // Notes
+    );
+
+    const columnStyles = {};
+    stylesMap.forEach((style, idx) => {
+      columnStyles[idx] = style;
+    });
 
     autoTable(doc, {
       startY: 50,
@@ -351,28 +397,7 @@ export default function ProjectMaster() {
       headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
       bodyStyles: { fontSize: 6.0, valign: 'middle' },
       styles: { cellPadding: 1, overflow: 'linebreak' },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },   // SEQ #
-        1: { cellWidth: 9, halign: 'center' },  // Tons
-        2: { cellWidth: 'auto' }, // Item Description
-        3: { cellWidth: 14 },  // Category
-        4: { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
-        5: { cellWidth: 12, halign: 'center' },  // Actual OFA Date
-        6: { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
-        7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
-        8: { cellWidth: 14, halign: 'center' },  // Scheduled Field Measure Date
-        9: { cellWidth: 12, halign: 'center' },  // RTS Date
-        10: { cellWidth: 12, halign: 'center' }, // Ship Date
-        11: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
-        12: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-        13: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
-        14: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-        15: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
-        16: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
-        17: { cellWidth: 13 }, // Detailer / Vendor
-        18: { cellWidth: 12 }, // Dwg Status
-        19: { cellWidth: 14 }  // Notes
-      }
+      columnStyles: columnStyles
     });
 
     // --- GANTT CHART IN PDF ---
@@ -940,7 +965,8 @@ export default function ProjectMaster() {
     setForm({
       name: '', code: '', customer_name: '', detailer_name: '',
       project_manager_name: '', total_ton: '', total_manhours: '',
-      erection_date: '', status: 'In Progress', priority: 'Medium'
+      erection_date: '', status: 'In Progress', priority: 'Medium',
+      shop_name: '', schedule_field_measure_required: 'Yes'
     });
     setIsEditing(false);
     setInitialTab("basic");

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Calendar, LayoutList, Eye } from 'lucide-react';
 import FabricationDetailModal from './FabricationDetailModal';
 
@@ -16,13 +16,28 @@ export default function StructuralScheduleForm({
 }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const isViewOnly = mode === 'view';
+
+  // Auto-populate dates when schedule field measure is not required
+  useEffect(() => {
+    if (project?.schedule_field_measure_required?.trim().toLowerCase() === 'no') {
+      schedules.forEach(row => {
+        // Populate actual BFA date from scheduled field measure date if not already set
+        if (row.scheduled_field_measure_date && !row.actual_bfa_date) {
+          handleRowChange(row.id, 'actual_bfa_date', row.scheduled_field_measure_date);
+        }
+        // Populate actual OFA date from actual BFA date if not already set
+        if (row.actual_bfa_date && !row.actual_ofa_date) {
+          handleRowChange(row.id, 'actual_ofa_date', row.actual_bfa_date);
+        }
+      });
+    }
+  }, [project?.schedule_field_measure_required, schedules]);
 
   const openFabricationModal = (item) => {
     setSelectedItem(item);
     setIsModalOpen(true);
   };
-
-  const isViewOnly = mode === 'view';
 
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
@@ -38,67 +53,67 @@ export default function StructuralScheduleForm({
     <div className="flex-1 overflow-hidden flex flex-col bg-white">
       {/* Spreadsheet Header Metrics */}
       {!hideMetrics && (
-      <div className="bg-white border-b border-slate-300">
-        {/* Project Selector - Only if not editing an existing plan or if explicitly requested */}
-        {projects.length > 0 && !project?.id && (
-          <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-center gap-4">
-            <label className="text-xs font-bold text-amber-800 uppercase tracking-wider">Select Project to Initialize Plan:</label>
-            <select 
-              className="px-4 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:ring-2 focus:ring-amber-500/20 transition-all min-w-[300px]"
-              onChange={(e) => {
-                const selected = projects.find(p => p.code === e.target.value);
-                if (selected && onProjectSelect) onProjectSelect(selected);
-              }}
-              value={project?.code || ''}
-            >
-              <option value="">-- Select Project Code --</option>
-              {projects.map(p => (
-                <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
-              ))}
-            </select>
-            <p className="text-[10px] text-amber-600 font-medium italic">Fetching data from Project Master...</p>
-          </div>
-        )}
+        <div className="bg-white border-b border-slate-300">
+          {/* Project Selector - Only if not editing an existing plan or if explicitly requested */}
+          {projects.length > 0 && !project?.id && (
+            <div className="p-4 bg-amber-50 border-b border-amber-100 flex items-center gap-4">
+              <label className="text-xs font-bold text-amber-800 uppercase tracking-wider">Select Project to Initialize Plan:</label>
+              <select
+                className="px-4 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:ring-2 focus:ring-amber-500/20 transition-all min-w-[300px]"
+                onChange={(e) => {
+                  const selected = projects.find(p => p.code === e.target.value);
+                  if (selected && onProjectSelect) onProjectSelect(selected);
+                }}
+                value={project?.code || ''}
+              >
+                <option value="">-- Select Project Code --</option>
+                {projects.map(p => (
+                  <option key={p.id} value={p.code}>{p.code} - {p.name}</option>
+                ))}
+              </select>
+              <p className="text-[10px] text-amber-600 font-medium italic">Fetching data from Project Master...</p>
+            </div>
+          )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 border-b border-slate-200">
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Customer:</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.customer_name || 'N/A'}</div>
+          <div className="grid grid-cols-1 md:grid-cols-4 border-b border-slate-200">
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Customer:</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.customer_name || 'N/A'}</div>
+            </div>
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Job #</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-mono font-bold text-slate-600">{project?.code || 'N/A'}</div>
+            </div>
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">PM</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.project_manager_name || 'N/A'}</div>
+            </div>
+            <div className="flex">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Detailer:</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.detailer_name || 'N/A'}</div>
+            </div>
           </div>
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Job #</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-mono font-bold text-slate-600">{project?.code || 'N/A'}</div>
-          </div>
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">PM</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.project_manager_name || 'N/A'}</div>
-          </div>
-          <div className="flex">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Detailer:</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.detailer_name || 'N/A'}</div>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-4">
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Erection Date:</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.erection_date || 'TBD'}</div>
-          </div>
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Ton's =</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-amber-600">{project?.total_ton || '0.00'}</div>
-          </div>
-          <div className="flex border-r border-slate-200">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">MH's =</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.total_manhours || '0'}</div>
-          </div>
-          <div className="flex">
-            <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">MH / Ton =</div>
-            <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">
-              {project?.total_ton > 0 ? (project?.total_manhours / project?.total_ton).toFixed(2) : '0.00'}
+          <div className="grid grid-cols-1 md:grid-cols-4">
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Erection Date:</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.erection_date || 'TBD'}</div>
+            </div>
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">Ton's =</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-amber-600">{project?.total_ton || '0.00'}</div>
+            </div>
+            <div className="flex border-r border-slate-200">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">MH's =</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">{project?.total_manhours || '0'}</div>
+            </div>
+            <div className="flex">
+              <div className="w-32 bg-slate-900 px-4 py-2 text-[10px] font-bold tracking-widest text-white uppercase flex items-center border-r border-slate-800 shadow-inner">MH / Ton =</div>
+              <div className="flex-1 px-4 py-2 text-[10px] font-bold text-slate-800">
+                {project?.total_ton > 0 ? (project?.total_manhours / project?.total_ton).toFixed(2) : '0.00'}
+              </div>
             </div>
           </div>
         </div>
-      </div>
       )}
 
       {/* Toolbar */}
@@ -142,7 +157,9 @@ export default function StructuralScheduleForm({
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual OFA Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Scheduled BFA Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-700 sticky top-0 z-20">Actual BFA Date</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
+                {project?.schedule_field_measure_required?.trim() !== 'No' && (
+                  <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
+                )}
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Shop Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
@@ -244,7 +261,7 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-500 focus:border-amber-400 bg-transparent transition-all" 
-                      value={row.actual_ofa_date} 
+                      value={row.actual_ofa_date || ''} 
                       onChange={e => handleRowChange(row.id, 'actual_ofa_date', e.target.value)} 
                     />
                   </td>
@@ -262,19 +279,21 @@ export default function StructuralScheduleForm({
                       type="date"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-500 focus:border-amber-400 bg-transparent transition-all" 
-                      value={row.actual_bfa_date} 
+                      value={row.actual_bfa_date || ''} 
                       onChange={e => handleRowChange(row.id, 'actual_bfa_date', e.target.value)} 
                     />
                   </td>
-                  <td className="px-1 py-1 border-r border-b border-slate-200">
-                    <input 
-                      type="date"
-                      readOnly={isViewOnly}
-                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-600 focus:border-amber-400 bg-transparent transition-all" 
-                      value={row.scheduled_field_measure_date} 
-                      onChange={e => handleRowChange(row.id, 'scheduled_field_measure_date', e.target.value)} 
-                    />
-                  </td>
+                  {project?.schedule_field_measure_required?.trim() !== 'No' && (
+                    <td className="px-1 py-1 border-r border-b border-slate-200">
+                      <input 
+                        type="date"
+                        readOnly={isViewOnly}
+                        className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] text-slate-600 focus:border-amber-400 bg-transparent transition-all" 
+                        value={row.scheduled_field_measure_date || ''} 
+                        onChange={e => handleRowChange(row.id, 'scheduled_field_measure_date', e.target.value)} 
+                      />
+                    </td>
+                  )}
                   <td className="px-1 py-1 border-r border-b border-slate-200">
                     <input 
                       type="date"

@@ -1,0 +1,79 @@
+/* GanttChart component styling */
+.gantt-container {
+  border: 1px solid #e5e7eb; /* slate-200 */
+  border-radius: 0.5rem; /* rounded */
+  background-color: #ffffff;
+  padding: 1rem;
+  overflow-x: auto;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.gantt-month-ruler {
+  display: flex;
+  font-size: 0.75rem; /* text-xs */
+  color: #6b7280; /* gray-600 */
+  border-bottom: 1px solid #e5e7eb;
+  margin-bottom: 0.5rem;
+}
+
+.gantt-month-ruler > div {
+  text-align: center;
+}
+
+.gantt-sequence-row {
+  position: relative;
+  margin-bottom: 0.75rem; /* space between rows */
+  display: flex;
+  flex-direction: column;
+}
+
+.gantt-bar {
+  position: absolute;
+  height: 100%;
+  border-radius: 0.25rem;
+}
+
+.gantt-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #ffffff;
+  pointer-events: none;
+}
+
+/* Left and right labels for sequence name and item description */
+.gantt-left {
+  width: 8rem; /* 32 * 0.25rem */
+  flex-shrink: 0;
+  text-align: left;
+  font-weight: 500;
+  color: #1f2937; /* gray-800 */
+}
+
+.gantt-right {
+  width: 8rem;
+  flex-shrink: 0;
+  text-align: right;
+  color: #4b5563; /* gray-600 */
+}
+
+/* Details under each row */
+.gantt-details {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280; /* gray-500 */
+  text-align: center;
+}
+
+/* Keep old .gantt-info class for backward compatibility */
+.gantt-info {
+  margin-top: 0.25rem;
+  font-size: 0.75rem;
+  color: #6b7280; /* gray-500 */
+  display: flex;
+  justify-content: space-between;
+}

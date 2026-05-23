@@ -133,18 +133,7 @@ export default function ProjectForm({
         5: { cellWidth: 12, halign: 'center' },  // Actual OFA Date
         6: { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
         7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
-        8: { cellWidth: 14, halign: 'center' },  // Scheduled Field Measure Date
-        9: { cellWidth: 12, halign: 'center' },  // RTS Date
-        10: { cellWidth: 12, halign: 'center' }, // Ship Date
-        11: { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
-        12: { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-        13: { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
-        14: { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-        15: { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
-        16: { cellWidth: 11, halign: 'center' }, // Field Hours Actual
-        17: { cellWidth: 13 }, // Detailer / Vendor
-        18: { cellWidth: 12 }, // Dwg Status
-        19: { cellWidth: 14 }  // Notes
+        ...(form.schedule_field_measure_required === 'Yes' ? { 8: { cellWidth: 14, halign: 'center' } } : {}),
       }
     });
 
@@ -762,6 +751,34 @@ export default function ProjectForm({
                       </div>
                     </div>
                   </div>
+                  <div className="lg:col-span-2 grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
+                     <div className="flex flex-col justify-between">
+                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Shop Name</label>
+                       <select
+                         value={form.shop_name || ''}
+                         disabled={mode === 'view'}
+                         onChange={e => setForm({ ...form, shop_name: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                       >
+                         <option value="">Select Shop</option>
+                         <option value="shop1">shop1</option>
+                         <option value="shop2">shop2</option>
+                         <option value="shop3">shop3</option>
+                       </select>
+                     </div>
+                     <div className="flex flex-col justify-between">
+                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Is Scheduled Field Measure Date Required?</label>
+                       <select
+                         value={form.schedule_field_measure_required || 'Yes'}
+                         disabled={mode === 'view'}
+                         onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
+                         className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                       >
+                         <option value="Yes">Yes</option>
+                         <option value="No">No</option>
+                       </select>
+                     </div>
+                   </div>
                 </div>
               </section>
             </div>

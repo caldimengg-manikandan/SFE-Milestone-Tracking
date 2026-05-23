@@ -18,6 +18,8 @@ class Project(models.Model):
     total_manhours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     manhour_ton = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     erection_date = models.DateField(null=True, blank=True)
+    shop_name = models.CharField(max_length=100, blank=True, null=True)
+    schedule_field_measure_required = models.CharField(max_length=10, default='Yes')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Yet to Complete')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
     created_at = models.DateTimeField(auto_now_add=True)
