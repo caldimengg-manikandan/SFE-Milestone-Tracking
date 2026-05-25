@@ -688,19 +688,19 @@ export default function ProjectForm({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
-                        {mode === 'view' ? (
-                          <p className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
-                            {form.erection_date && !isNaN(new Date(form.erection_date))
-                              ? new Date(form.erection_date).toLocaleDateString('en-GB').replaceAll('/', '-')
-                              : 'N/A'}
-                          </p>
-                        ) : (
+                    {mode === 'view' ? (
+                      <p className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
+                        {form.erection_date && !isNaN(new Date(form.erection_date))
+                          ? new Date(form.erection_date).toLocaleDateString('en-GB').replaceAll('/', '-')
+                          : 'N/A'}
+                      </p>
+                    ) : (
                       <input
-  type="date"
-  value={form.erection_date || ''}
-  onChange={e => setForm({ ...form, erection_date: e.target.value })}
-  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
-/>
+                        type="date"
+                        value={form.erection_date || ''}
+                        onChange={e => setForm({ ...form, erection_date: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      />
                     )}
                   </div>
                   <div>
@@ -759,33 +759,33 @@ export default function ProjectForm({
                     </div>
                   </div>
                   <div className="lg:col-span-2 grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
-                     <div className="flex flex-col justify-between">
-                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Shop Name</label>
-                       <select
-                         value={form.shop_name || ''}
-                         disabled={mode === 'view'}
-                         onChange={e => setForm({ ...form, shop_name: e.target.value })}
-                         className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
-                       >
-                         <option value="">Select Shop</option>
-                         <option value="shop1">shop1</option>
-                         <option value="shop2">shop2</option>
-                         <option value="shop3">shop3</option>
-                       </select>
-                     </div>
-                     <div className="flex flex-col justify-between">
-                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Is Scheduled Field Measure Date Required?</label>
-                       <select
-                         value={form.schedule_field_measure_required || 'Yes'}
-                         disabled={mode === 'view'}
-                         onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
-                         className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
-                       >
-                         <option value="Yes">Yes</option>
-                         <option value="No">No</option>
-                       </select>
-                     </div>
-                   </div>
+                    <div className="flex flex-col justify-between">
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Shop Name</label>
+                      <select
+                        value={form.shop_name || ''}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, shop_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                      >
+                        <option value="">Select Shop</option>
+                        <option value="shop1">shop1</option>
+                        <option value="shop2">shop2</option>
+                        <option value="shop3">shop3</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col justify-between">
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Is Scheduled Field Measure Date Required?</label>
+                      <select
+                        value={form.schedule_field_measure_required || 'Yes'}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                      >
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </section>
             </div>

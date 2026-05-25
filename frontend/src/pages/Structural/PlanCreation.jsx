@@ -95,7 +95,7 @@ export default function PlanCreation() {
 
       return {
         rts_date: formatDate(rts),
-        scheduled_field_measure_date: '',
+        scheduled_field_measure_date: null,
         scheduled_bfa_date: formatDate(bfa),
         scheduled_ofa_date: formatDate(ofa)
       };
@@ -170,7 +170,9 @@ export default function PlanCreation() {
 
       for (const row of schedules) {
         if (!row.item_description && !row.tons && row.is_new) continue;
+        const dateFields = ['scheduled_ofa_date','actual_ofa_date','scheduled_bfa_date','actual_bfa_date','scheduled_field_measure_date','rts_date','ship_date','scheduled_erection_date'];
         const schedPayload = { ...row, project: projectId, tons: parseFloat(row.tons) || 0 };
+        dateFields.forEach(f => { if (!schedPayload[f]) schedPayload[f] = null; });
         if (row.is_new) await scheduleAPI.create(schedPayload);
         else await scheduleAPI.update(row.id, schedPayload);
       }
@@ -225,76 +227,76 @@ export default function PlanCreation() {
     }
   };
 
-const generateGanttPdf = (project) => {
-  const projectSchedules = allSchedules.filter(s => {
-    const sId = typeof s.project === 'object' ? s.project.id : s.project;
-    return String(sId) === String(project.id);
-  });
+  const generateGanttPdf = (project) => {
+    const projectSchedules = allSchedules.filter(s => {
+      const sId = typeof s.project === 'object' ? s.project.id : s.project;
+      return String(sId) === String(project.id);
+    });
 
-  if (projectSchedules.length === 0) {
-    alert("No schedule data found for this project.");
-    return null;
-  }
-
-  const doc = new jsPDF('l', 'mm', 'a4');
-
-  const parseDate = dStr => {
-    const d = new Date(dStr);
-    return isNaN(d.getTime()) ? null : d;
-  };
-
-  const sortedSchedules = [...projectSchedules].sort((a, b) => {
-    const aNum = parseFloat(a.seq_no);
-    const bNum = parseFloat(b.seq_no);
-    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-    return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
-  });
-
-  // Determine timeline range
-  let minDate = sortedSchedules.reduce((min, s) => {
-    const d = parseDate(s.scheduled_ofa_date);
-    return d && (!min || d < min) ? d : min;
-  }, null) || new Date();
-  const maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
-  const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
-  const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-  const timelineStart = 74;
-  const timelineWidth = 209;
-  const getX = date => timelineStart + ((date.getTime() - startMonth.getTime()) / (endMonth.getTime() - startMonth.getTime())) * timelineWidth;
-
-  const getSequenceRange = s => {
-    const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-    const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
-    return { start, end };
-  };
-
-  const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
-    if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] };
-    const now = new Date();
-    const rtsDate = new Date(rtsDateStr);
-    const completion = new Date(rtsDate.getTime() + (parseFloat(leadWeeks) || 0) * 7 * 24 * 60 * 60 * 1000);
-    if (rtsDate > new Date(Date.now() + 2 * 86400000)) return { label: 'Yet to Start', color: [59, 130, 246] };
-    if (now >= completion) return { label: 'Completed', color: [34, 197, 94] };
-    return { label: 'InProgress', color: [245, 158, 11] };
-  };
-
-  let currentY = 20;
-  sortedSchedules.forEach(s => {
-    if (currentY > 180) { doc.addPage(); currentY = 20; }
-    const { start, end } = getSequenceRange(s);
-    if (start && end) {
-      const xStart = Math.max(timelineStart, getX(start));
-      const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-      const color = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks).color;
-      doc.setFillColor(...color);
-      doc.rect(xStart, currentY, xEnd - xStart, 4, 'F');
+    if (projectSchedules.length === 0) {
+      alert("No schedule data found for this project.");
+      return null;
     }
-    currentY += 6;
-  });
 
-  return doc.output('bloburl');
-};
+    const doc = new jsPDF('l', 'mm', 'a4');
+
+    const parseDate = dStr => {
+      const d = new Date(dStr);
+      return isNaN(d.getTime()) ? null : d;
+    };
+
+    const sortedSchedules = [...projectSchedules].sort((a, b) => {
+      const aNum = parseFloat(a.seq_no);
+      const bNum = parseFloat(b.seq_no);
+      if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
+      return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+    });
+
+    // Determine timeline range
+    let minDate = sortedSchedules.reduce((min, s) => {
+      const d = parseDate(s.scheduled_ofa_date);
+      return d && (!min || d < min) ? d : min;
+    }, null) || new Date();
+    const maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
+    const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
+    const timelineStart = 74;
+    const timelineWidth = 209;
+    const getX = date => timelineStart + ((date.getTime() - startMonth.getTime()) / (endMonth.getTime() - startMonth.getTime())) * timelineWidth;
+
+    const getSequenceRange = s => {
+      const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
+      const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
+      return { start, end };
+    };
+
+    const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
+      if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] };
+      const now = new Date();
+      const rtsDate = new Date(rtsDateStr);
+      const completion = new Date(rtsDate.getTime() + (parseFloat(leadWeeks) || 0) * 7 * 24 * 60 * 60 * 1000);
+      if (rtsDate > new Date(Date.now() + 2 * 86400000)) return { label: 'Yet to Start', color: [59, 130, 246] };
+      if (now >= completion) return { label: 'Completed', color: [34, 197, 94] };
+      return { label: 'InProgress', color: [245, 158, 11] };
+    };
+
+    let currentY = 20;
+    sortedSchedules.forEach(s => {
+      if (currentY > 180) { doc.addPage(); currentY = 20; }
+      const { start, end } = getSequenceRange(s);
+      if (start && end) {
+        const xStart = Math.max(timelineStart, getX(start));
+        const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
+        const color = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks).color;
+        doc.setFillColor(...color);
+        doc.rect(xStart, currentY, xEnd - xStart, 4, 'F');
+      }
+      currentY += 6;
+    });
+
+    return doc.output('bloburl');
+  };
 
   const handleViewGantt = (project) => {
     const url = generateGanttPdf(project);
@@ -325,7 +327,7 @@ const generateGanttPdf = (project) => {
           />
         </div>
         <button
-          onClick={() => { resetForm(); setShowModal(true); }}
+          onClick={() => { resetForm(); setViewMode('edit'); setShowModal(true); }}
           className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-amber-600 text-white text-sm font-bold shadow-lg hover:bg-amber-700 transition-all"
         >
           <Plus className="w-4 h-4" /> Create New Plan

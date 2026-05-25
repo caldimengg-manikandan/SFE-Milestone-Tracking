@@ -7,6 +7,8 @@ import ResetPassword from './features/auth/ResetPassword';
 import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
+import SteelBudgetInput from './pages/SteelBudgetInput';
+import SteelBudgetResult from './pages/SteelBudgetResult';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
 import ProcessMaster from './pages/Production/ProcessMaster';
 import CustomerMaster from './pages/CustomerMaster';
@@ -17,6 +19,8 @@ import CapacityMapping from './pages/CapacityMapping';
 import Settings from './pages/Settings';
 import Announcements from './pages/Announcements';
 import EstimationModel from './pages/EstimationModel';
+import BidEnquiry from './pages/Bids/BidEnquiry';
+import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 
 export default function App() {
   return (
@@ -39,10 +43,17 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="estimation" element={<EstimationModel />} />
+          
+          {/* Bid Management Routes */}
+          <Route path="bids/enquiry" element={<BidEnquiry />} />
+          <Route path="bids/schedule" element={<InternalBidSchedule />} />
+
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="customers" element={<CustomerMaster />} />
-          <Route path="management" element={<DetailerMaster />} />
+          <Route path="detailers" element={<DetailerMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
+          <Route path="steel-budget/input" element={<SteelBudgetInput />} />
+          <Route path="steel-budget/result" element={<SteelBudgetResult />} />
           
           {/* Structural Schedule Routes */}
           <Route path="structural/plan-creation" element={<PlanCreation />} />

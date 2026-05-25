@@ -12,7 +12,8 @@ def root_view(request):
             "/api/projects/",
             "/api/milestones/",
             "/api/production/",
-            "/api/dashboard/"
+            "/api/dashboard/",
+            "/api/bids/"
         ]
     })
 
@@ -25,6 +26,7 @@ urlpatterns = [
     path('api/milestones/', include('milestones.urls')),
     path('api/production/', include('production.urls')),
     path('api/dashboard/', include('dashboard.urls')),
+    path('api/bids/', include('bids.urls')),
 ]
 
 from django.conf import settings
