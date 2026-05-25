@@ -22,6 +22,7 @@ import {
   Cpu,
   Users2,
   Megaphone,
+  Calculator,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -30,6 +31,7 @@ const navSections = [
     label: 'OVERVIEW',
     items: [
       { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Estimation Model', path: '/estimation', icon: Calculator },
     ],
   },
   {

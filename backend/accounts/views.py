@@ -59,7 +59,7 @@ def forgot_password_view(request):
         return Response({'message': 'Email is required'}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        user = User.objects.get(email=email)
+        user = User.objects.get(email__iexact=email)
         otp = f"{random.randint(100000, 999999)}"
         user.otp = otp
         user.otp_expiry = timezone.now() + timedelta(minutes=10)
@@ -68,7 +68,13 @@ def forgot_password_view(request):
         subject = 'Password Reset OTP — Steel Fab Enterprises'
         message = f"Your password reset OTP is: {otp}\n\nThis code will expire in 10 minutes."
         
-        send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        try:
+            send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [email])
+        except Exception as mail_err:
+            return Response(
+                {'message': f'Failed to send OTP email: {str(mail_err)}'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
         
         return Response({'message': 'If an account exists, an OTP has been sent.'})
     except User.DoesNotExist:
@@ -86,7 +92,7 @@ def reset_password_view(request):
         return Response({'message': 'Missing required fields'}, status=status.HTTP_400_BAD_REQUEST)
     
     try:
-        user = User.objects.get(email=email)
+        user = User.objects.get(email__iexact=email)
         if user.otp == otp and user.otp_expiry > timezone.now():
             user.set_password(new_password)
             user.otp = None

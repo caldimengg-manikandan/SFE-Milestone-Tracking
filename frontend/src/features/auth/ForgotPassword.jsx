@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authAPI } from '../../services/api';
 import { Building2, ArrowLeft, Loader2, Mail } from 'lucide-react';
 
 export default function ForgotPassword() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -18,7 +19,7 @@ export default function ForgotPassword() {
       setSent(true);
       // Automatically redirect after 1.5s to the OTP entry page
       setTimeout(() => {
-        window.location.href = `/reset-password?email=${encodeURIComponent(email)}`;
+        navigate(`/reset-password?email=${encodeURIComponent(email)}`);
       }, 1500);
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to send reset link');

@@ -16,6 +16,7 @@ import PlanTracking from './pages/Structural/PlanTracking';
 import CapacityMapping from './pages/CapacityMapping';
 import Settings from './pages/Settings';
 import Announcements from './pages/Announcements';
+import EstimationModel from './pages/EstimationModel';
 
 export default function App() {
   return (
@@ -37,6 +38,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
+          <Route path="estimation" element={<EstimationModel />} />
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="customers" element={<CustomerMaster />} />
           <Route path="management" element={<DetailerMaster />} />
