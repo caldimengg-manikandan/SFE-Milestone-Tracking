@@ -33,14 +33,13 @@ const navSections = [
     label: 'OVERVIEW',
     items: [
       { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-      { name: 'Estimation Model', path: '/estimation', icon: Calculator },
-      { name: 'Dashboard', path: 'dashboard', icon: LayoutDashboard },
     ],
   },
   {
     label: 'BID MANAGEMENT',
     items: [
       { name: 'Bid Enquiry', path: '/bids/enquiry', icon: FolderInput },
+      { name: 'Estimation Model', path: '/estimation', icon: Calculator },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
     ],
   },
