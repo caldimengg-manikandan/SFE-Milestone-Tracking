@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList, ChevronDown, ArrowLeft, Edit2 } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../../services/api';
 
@@ -104,6 +105,7 @@ export default function PlanTracking() {
   };
 
   const [openDropdownId, setOpenDropdownId] = useState(null);
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
   const handleStatusUpdate = async (itemId, subStatus) => {
     try {
@@ -225,10 +227,18 @@ export default function PlanTracking() {
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.rts_date)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.ship_date)}</td>
-                                            <td className="px-2 py-2.5 border-r border-slate-100 relative">
+                                            <td className="px-2 py-2.5 border-r border-slate-100">
                                               <div className="flex flex-col items-center gap-1">
                                                 <button
-                                                  onClick={() => isUnderProgress && setOpenDropdownId(openDropdownId === item.id ? null : item.id)}
+                                                  onClick={(e) => {
+                                                    if (!isUnderProgress) return;
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    setDropdownPosition({
+                                                      top: rect.bottom,
+                                                      left: rect.left + rect.width / 2
+                                                    });
+                                                    setOpenDropdownId(openDropdownId === item.id ? null : item.id);
+                                                  }}
                                                   className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border ${status.bg} ${status.color} border-current/10 ${isUnderProgress ? 'hover:scale-105 active:scale-95' : 'cursor-default'}`}
                                                 >
                                                   <div className={`w-1 h-1 rounded-full ${status.dot} shadow-[0_0_4px_rgba(0,0,0,0.1)]`} />
@@ -244,10 +254,13 @@ export default function PlanTracking() {
                                                   </div>
                                                 )}
 
-                                                {openDropdownId === item.id && (
+                                                {openDropdownId === item.id && createPortal(
                                                   <>
                                                     <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
-                                                    <div className="absolute top-full left-1/2 -translate-x-1/2 z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[125px] mt-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                                                    <div
+                                                      className="fixed z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[125px] mt-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
+                                                      style={{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, transform: 'translateX(-50%)' }}
+                                                    >
                                                       <div className="px-3 py-1 border-b border-slate-100 mb-1">
                                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Select Status</span>
                                                       </div>
@@ -270,7 +283,8 @@ export default function PlanTracking() {
                                                         </button>
                                                       </div>
                                                     </div>
-                                                  </>
+                                                  </>,
+                                                  document.body
                                                 )}
                                               </div>
                                             </td>

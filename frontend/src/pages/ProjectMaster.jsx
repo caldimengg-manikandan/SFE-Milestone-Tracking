@@ -16,16 +16,16 @@ export default function ProjectMaster() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState('view');
-// Utility to format dates as DD-MM-YYYY
-const formatDate = (dateStr) => {
-  if (!dateStr) return '-';
-  const d = new Date(dateStr);
-  if (isNaN(d.getTime())) return '-';
-  const day = d.getDate().toString().padStart(2, '0');
-  const month = (d.getMonth() + 1).toString().padStart(2, '0');
-  const year = d.getFullYear();
-  return `${day}-${month}-${year}`;
-};
+  // Utility to format dates as DD-MM-YYYY
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '-';
+    const day = d.getDate().toString().padStart(2, '0');
+    const month = (d.getMonth() + 1).toString().padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [currentPage, setCurrentPage] = useState(1);
@@ -175,7 +175,7 @@ const formatDate = (dateStr) => {
 
       return {
         rts_date: formatDate(rts),
-        scheduled_field_measure_date: '',
+        scheduled_field_measure_date: null,
         scheduled_bfa_date: formatDate(bfa),
         scheduled_ofa_date: formatDate(ofa)
       };

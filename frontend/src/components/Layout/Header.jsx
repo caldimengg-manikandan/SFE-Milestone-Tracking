@@ -19,6 +19,8 @@ const pageTitles = {
   '/employees': 'Employee Master',
   '/customers': 'Customer Master',
   '/management': 'Detailer Master',
+  '/steel-budget/input': 'Design Inputs',
+  '/steel-budget/result': 'Estimation Result',
   '/projects': 'Project Master',
   '/milestones': 'Milestone Management',
   '/settings': 'Settings',

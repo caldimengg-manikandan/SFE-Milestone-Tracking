@@ -7,6 +7,8 @@ import ResetPassword from './features/auth/ResetPassword';
 import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
+import SteelBudgetInput from './pages/SteelBudgetInput';
+import SteelBudgetResult from './pages/SteelBudgetResult';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
 import ProcessMaster from './pages/Production/ProcessMaster';
 import CustomerMaster from './pages/CustomerMaster';
@@ -46,8 +48,10 @@ export default function App() {
 
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="customers" element={<CustomerMaster />} />
-          <Route path="management" element={<DetailerMaster />} />
+          <Route path="detailers" element={<DetailerMaster />} />
           <Route path="projects" element={<ProjectMaster />} />
+          <Route path="steel-budget/input" element={<SteelBudgetInput />} />
+          <Route path="steel-budget/result" element={<SteelBudgetResult />} />
           
           {/* Structural Schedule Routes */}
           <Route path="structural/plan-creation" element={<PlanCreation />} />
