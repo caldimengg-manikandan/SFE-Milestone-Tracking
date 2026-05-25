@@ -155,3 +155,12 @@ export const announcementAPI = {
   update: (id, data) => api.put(`/dashboard/announcements/${id}/`, data),
   delete: (id) => api.delete(`/dashboard/announcements/${id}/`),
 };
+
+/* ── Bid Enquiry API ── */
+export const bidEnquiryAPI = {
+  getAll: (params = {}) => api.get('/bids/enquiries/', { params }),
+  getById: (id) => api.get(`/bids/enquiries/${id}/`),
+  create: (data) => api.post('/bids/enquiries/', data),
+  update: (id, data) => api.put(`/bids/enquiries/${id}/`, data),
+  delete: (id) => api.delete(`/bids/enquiries/${id}/`),
+};

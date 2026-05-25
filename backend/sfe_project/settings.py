@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'milestones',
     'production',
     'dashboard',
+    'bids',
 ]
 
 MIDDLEWARE = [

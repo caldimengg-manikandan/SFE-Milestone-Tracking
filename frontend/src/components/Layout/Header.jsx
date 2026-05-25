@@ -24,6 +24,8 @@ const pageTitles = {
   '/settings': 'Settings',
   '/announcements': 'Announcement',
   '/help': 'Help & Support',
+  '/bids/enquiry': 'Bid Enquiry',
+  '/bids/schedule': 'Internal Bid Schedule',
   '/structural/plan-creation': 'Plan Creation',
   '/structural/plan-tracking': 'Plan Tracking',
   '/production/process-master': 'Process Master',
