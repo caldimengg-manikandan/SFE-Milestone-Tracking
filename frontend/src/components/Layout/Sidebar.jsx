@@ -29,21 +29,28 @@ const navSections = [
   {
     label: 'OVERVIEW',
     items: [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Dashboard', path: 'dashboard', icon: LayoutDashboard },
     ],
   },
   {
     label: 'MANAGEMENT',
     items: [
-      { name: 'Employee Master', path: '/employees', icon: Users },
-      { name: 'Customer Master', path: '/customers', icon: Building2 },
-      { name: 'Detailer Master', path: '/management', icon: Layers },
+      { name: 'Employee Master', path: 'employees', icon: Users },
+      { name: 'Customer Master', path: 'customers', icon: Building2 },
+      { name: 'Detailer Master', path: 'detailers', icon: Layers },
+    ],
+  },
+  {
+    label: 'BUDGET ESTIMATOR',
+    items: [
+      { name: 'Design Inputs', path: 'steel-budget/input', icon: FileSpreadsheet },
+      { name: 'Estimation Result', path: 'steel-budget/result', icon: BarChart3 },
     ],
   },
   {
     label: 'PROJECT MANAGEMENT',
     items: [
-      { name: 'Project Master', path: '/projects', icon: FolderKanban },
+      { name: 'Project Master', path: 'projects', icon: FolderKanban },
     ],
   },
   {
@@ -72,8 +79,8 @@ const navSections = [
   {
     label: 'SYSTEM',
     items: [
-      { name: 'Settings', path: '/settings', icon: Settings },
-      { name: 'Announcement', path: '/announcements', icon: Megaphone },
+      { name: 'Settings', path: 'settings', icon: Settings },
+      { name: 'Announcement', path: 'announcements', icon: Megaphone },
     ],
   },
 ];
@@ -187,57 +194,56 @@ export default function Sidebar({
               <div className="space-y-1">
                 {section.items.map((item) => {
                   const Icon = item.icon;
-                  const isActive = location.pathname === item.path;
-
                   return (
                     <NavLink
                       key={item.path}
                       to={item.path}
+                      end
                       onClick={onCloseMobile}
-                      className={`
-                        sidebar-nav-item group
-                        ${isActive ? 'active' : ''}
-                        ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}
-                      `}
+                      className={({ isActive }) => `sidebar-nav-item group ${isActive ? 'active' : ''} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
                     >
-                      <Icon
-                        className={`nav-icon w-[20px] h-[20px] shrink-0 ${
-                          isActive ? 'text-amber-400' : ''
-                        }`}
-                        strokeWidth={isActive ? 2 : 1.75}
-                      />
+                      {({ isActive }) => (
+                        <>
+                          <Icon
+                            className={`nav-icon w-[20px] h-[20px] shrink-0 ${
+                              isActive ? 'text-amber-400' : ''
+                            }`}
+                            strokeWidth={isActive ? 2 : 1.75}
+                          />
 
-                      {/* Label — hidden when collapsed on desktop */}
-                      <span
-                        className={`text-[13.5px] font-medium leading-[1.2] whitespace-normal break-words transition-all duration-300 ${
-                          isCollapsed ? 'lg:hidden' : ''
-                        }`}
-                      >
-                        {item.name}
-                      </span>
+                          {/* Label — hidden when collapsed on desktop */}
+                          <span
+                            className={`text-[13.5px] font-medium leading-[1.2] whitespace-normal break-words transition-all duration-300 ${
+                              isCollapsed ? 'lg:hidden' : ''
+                            }`}
+                          >
+                            {item.name}
+                          </span>
 
-                      {/* Badge */}
-                      {item.badge && !isCollapsed && (
-                        <span className="ml-auto shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500/90 text-[10px] font-bold text-white shadow-sm">
-                          {item.badge}
-                        </span>
-                      )}
-
-                      {/* Badge dot for collapsed */}
-                      {item.badge && isCollapsed && (
-                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 lg:block hidden" />
-                      )}
-
-                      {/* Tooltip — collapsed desktop only */}
-                      {isCollapsed && (
-                        <div className="sidebar-tooltip hidden lg:block">
-                          {item.name}
-                          {item.badge && (
-                            <span className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                          {/* Badge */}
+                          {item.badge && !isCollapsed && (
+                            <span className="ml-auto shrink-0 inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-amber-500/90 text-[10px] font-bold text-white shadow-sm">
                               {item.badge}
                             </span>
                           )}
-                        </div>
+
+                          {/* Badge dot for collapsed */}
+                          {item.badge && isCollapsed && (
+                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-400 lg:block hidden" />
+                          )}
+
+                          {/* Tooltip — collapsed desktop only */}
+                          {isCollapsed && (
+                            <div className="sidebar-tooltip hidden lg:block">
+                              {item.name}
+                              {item.badge && (
+                                <span className="ml-2 inline-flex items-center justify-center w-4 h-4 rounded-full bg-amber-500 text-[9px] font-bold text-white">
+                                  {item.badge}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </>
                       )}
                     </NavLink>
                   );
