@@ -405,7 +405,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('typ_floor_framing_lbs_sf', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="15.0"
+                    placeholder="e.g., 15.0"
                   />
                 </div>
                 <div>
@@ -415,7 +415,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('roof_framing_lbs_sf', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="12.0"
+                    placeholder="e.g., 12.0"
                   />
                 </div>
                 <div>
@@ -425,7 +425,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('misc_steel_lbs_sf', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="2.5"
+                    placeholder="e.g., 2.5"
                   />
                 </div>
                 <div>
@@ -435,7 +435,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('moment_frame_adder_pct', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="1.0"
+                    placeholder="e.g., 1.0"
                   />
                 </div>
                 <div>
@@ -445,7 +445,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('facade_support_premium_pct', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="3.0"
+                    placeholder="e.g., 3.0"
                   />
                 </div>
                 <div>
@@ -455,7 +455,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('rooftop_allowance_lb', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="15,000"
+                    placeholder="e.g., 15,000"
                   />
                 </div>
                 <div>
@@ -465,7 +465,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('canopy_allowance_lb', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="25,000"
+                    placeholder="e.g., 25,000"
                   />
                 </div>
                 <div>
@@ -475,7 +475,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('contingency_pct', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-medium text-slate-800"
-                    placeholder="1.0"
+                    placeholder="e.g., 5.0"
                   />
                 </div>
               </div>
@@ -501,7 +501,7 @@ export default function SteelBudgetForm({
                     disabled={mode === 'view'}
                     onChange={e => handleWorksheetChange('budget_ton_rate', e.target.value)}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 transition-all font-bold text-amber-700"
-                    placeholder="$5,500"
+                    placeholder="e.g., $5,500"
                   />
                 </div>
               </div>

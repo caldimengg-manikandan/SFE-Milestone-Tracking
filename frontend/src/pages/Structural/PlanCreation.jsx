@@ -7,6 +7,25 @@ import ProjectForm from '../../components/forms/ProjectForm';
 import GanttChart from '../../components/GanttChart';
 
 export default function PlanCreation() {
+  const formatDateToMMDDYYYY = (dStr) => {
+    if (!dStr) return 'N/A';
+    const parts = dStr.split('-');
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[1]}-${parts[2]}-${parts[0]}`;
+      }
+      if (parts[2].length === 4) {
+        return `${parts[1]}-${parts[0]}-${parts[2]}`;
+      }
+    }
+    const d = new Date(dStr);
+    if (isNaN(d.getTime())) return 'N/A';
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yyyy = d.getFullYear();
+    return `${mm}-${dd}-${yyyy}`;
+  };
+
   const [projects, setProjects] = useState([]);
   // State to hold the generated Gantt PDF URL and the project being viewed
   const [ganttUrl, setGanttUrl] = useState(null);
@@ -170,7 +189,7 @@ export default function PlanCreation() {
 
       for (const row of schedules) {
         if (!row.item_description && !row.tons && row.is_new) continue;
-        const dateFields = ['scheduled_ofa_date','actual_ofa_date','scheduled_bfa_date','actual_bfa_date','scheduled_field_measure_date','rts_date','ship_date','scheduled_erection_date'];
+        const dateFields = ['scheduled_ofa_date', 'actual_ofa_date', 'scheduled_bfa_date', 'actual_bfa_date', 'scheduled_field_measure_date', 'rts_date', 'ship_date', 'scheduled_erection_date'];
         const schedPayload = { ...row, project: projectId, tons: parseFloat(row.tons) || 0 };
         dateFields.forEach(f => { if (!schedPayload[f]) schedPayload[f] = null; });
         if (row.is_new) await scheduleAPI.create(schedPayload);
@@ -235,14 +254,29 @@ export default function PlanCreation() {
 
     if (projectSchedules.length === 0) {
       alert("No schedule data found for this project.");
-      return null;
+      return;
     }
 
     const doc = new jsPDF('l', 'mm', 'a4');
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
 
     const parseDate = dStr => {
+      if (!dStr) return null;
       const d = new Date(dStr);
       return isNaN(d.getTime()) ? null : d;
+    };
+
+    const fmtDate = dStr => {
+      if (!dStr) return 'N/A';
+      const d = new Date(dStr);
+      if (isNaN(d.getTime())) return 'N/A';
+      return `${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}-${d.getFullYear()}`;
+    };
+
+    const fmtShort = d => {
+      if (!d) return '';
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     };
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
@@ -252,50 +286,365 @@ export default function PlanCreation() {
       return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
     });
 
-    // Determine timeline range
-    let minDate = sortedSchedules.reduce((min, s) => {
-      const d = parseDate(s.scheduled_ofa_date);
-      return d && (!min || d < min) ? d : min;
-    }, null) || new Date();
-    const maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
-    const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-    const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
-    const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
-    const timelineStart = 74;
-    const timelineWidth = 209;
-    const getX = date => timelineStart + ((date.getTime() - startMonth.getTime()) / (endMonth.getTime() - startMonth.getTime())) * timelineWidth;
+    const darkBlue = [30, 41, 59];
+    const medGray = [100, 116, 139];
 
-    const getSequenceRange = s => {
-      const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
-      return { start, end };
-    };
+    // ═══════════════════════════════════════════════════════════
+    // SECTION 1: STRUCTURAL SCHEDULE
+    // ═══════════════════════════════════════════════════════════
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(20);
+    doc.setTextColor(...darkBlue);
+    doc.text('STRUCTURAL SCHEDULE', 14, 20);
 
-    const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
-      if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] };
-      const now = new Date();
-      const rtsDate = new Date(rtsDateStr);
-      const completion = new Date(rtsDate.getTime() + (parseFloat(leadWeeks) || 0) * 7 * 24 * 60 * 60 * 1000);
-      if (rtsDate > new Date(Date.now() + 2 * 86400000)) return { label: 'Yet to Start', color: [59, 130, 246] };
-      if (now >= completion) return { label: 'Completed', color: [34, 197, 94] };
-      return { label: 'InProgress', color: [245, 158, 11] };
-    };
+    // Project info - left
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROJECT NAME:', 14, 32);
+    doc.setFont('helvetica', 'normal');
+    doc.text(project.name || 'N/A', 52, 32);
 
-    let currentY = 20;
-    sortedSchedules.forEach(s => {
-      if (currentY > 180) { doc.addPage(); currentY = 20; }
-      const { start, end } = getSequenceRange(s);
-      if (start && end) {
-        const xStart = Math.max(timelineStart, getX(start));
-        const xEnd = Math.min(timelineStart + timelineWidth, getX(end));
-        const color = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks).color;
-        doc.setFillColor(...color);
-        doc.rect(xStart, currentY, xEnd - xStart, 4, 'F');
-      }
-      currentY += 6;
+    doc.setFont('helvetica', 'bold');
+    doc.text('CUSTOMER:', 14, 38);
+    doc.setFont('helvetica', 'normal');
+    doc.text(project.customer_name || 'N/A', 40, 38);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('DETAILER:', 14, 44);
+    doc.setFont('helvetica', 'normal');
+    doc.text(project.detailer_name || 'N/A', 38, 44);
+
+    // Project info - right
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROJECT CODE:', 160, 32);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(project.code || 'N/A'), 198, 32);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('MANAGER:', 160, 38);
+    doc.setFont('helvetica', 'normal');
+    doc.text(project.project_manager_name || 'N/A', 186, 38);
+
+    // Schedule table
+    const tableHeaders = [
+      'Seq #', 'Tons', 'Item Description', 'Category',
+      'Schedule\nOFA', 'Actual\nOFA', 'Schedule\nBFA', 'Actual\nBFA',
+      'Schedule Field\nMeasure', 'RTS', 'Shop Lead\nTime\n(WEEKS)',
+      'Schedule\nErection', 'Budget\nShop\nHours', 'Budget\nField\nHours',
+      'Shop\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
+      'DWG\nStatus', 'Notes'
+    ];
+
+    const tableData = sortedSchedules.map(s => [
+      s.seq_no || '',
+      s.tons ? parseFloat(s.tons).toFixed(2) : '',
+      s.item_description || '',
+      s.category || '',
+      fmtDate(s.scheduled_ofa_date),
+      fmtDate(s.actual_ofa_date),
+      fmtDate(s.scheduled_bfa_date),
+      fmtDate(s.actual_bfa_date),
+      fmtDate(s.scheduled_field_measure_date),
+      fmtDate(s.rts_date),
+      s.shop_lead_time_weeks || '0',
+      fmtDate(s.scheduled_erection_date),
+      s.budget_shop_hours || '0.00',
+      s.budget_field_hours || '0.00',
+      s.actual_shop_hours || '0.00',
+      s.actual_field_hours || '0.00',
+      s.detailer_vendor || '',
+      s.dwg_status || '',
+      s.notes || ''
+    ]);
+
+    autoTable(doc, {
+      head: [tableHeaders],
+      body: tableData,
+      startY: 50,
+      margin: { left: 8, right: 8 },
+      styles: {
+        fontSize: 5.5, cellPadding: 1.5,
+        lineColor: [203, 213, 225], lineWidth: 0.3,
+        textColor: darkBlue, valign: 'middle', halign: 'center', overflow: 'linebreak',
+      },
+      headStyles: {
+        fillColor: darkBlue, textColor: [255, 255, 255],
+        fontSize: 5, fontStyle: 'bold', halign: 'center', valign: 'middle', cellPadding: 2,
+      },
+      columnStyles: {
+        0: { cellWidth: 10 }, 1: { cellWidth: 12 }, 2: { cellWidth: 28 }, 3: { cellWidth: 16 },
+        4: { cellWidth: 18 }, 5: { cellWidth: 14 }, 6: { cellWidth: 18 }, 7: { cellWidth: 14 },
+        8: { cellWidth: 18 }, 9: { cellWidth: 18 }, 10: { cellWidth: 12 }, 11: { cellWidth: 18 },
+        12: { cellWidth: 12 }, 13: { cellWidth: 12 }, 14: { cellWidth: 12 }, 15: { cellWidth: 12 },
+        16: { cellWidth: 16 }, 17: { cellWidth: 14 }, 18: { cellWidth: 16 },
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
     });
 
-    return doc.output('bloburl');
+    // ═══════════════════════════════════════════════════════════
+    // SECTION 2: STRUCTURAL GANTT CHART (new page)
+    // ═══════════════════════════════════════════════════════════
+    doc.addPage();
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(18);
+    doc.setTextColor(...darkBlue);
+    doc.text('STRUCTURAL GANTT CHART', 14, 18);
+
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROJECT NAME:', 14, 28);
+    doc.setFont('helvetica', 'normal');
+    doc.text(project.name || 'N/A', 52, 28);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('PROJECT CODE:', 120, 28);
+    doc.setFont('helvetica', 'normal');
+    doc.text(String(project.code || 'N/A'), 158, 28);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('ERECTION DATE:', 200, 28);
+    doc.setFont('helvetica', 'normal');
+    doc.text(fmtDate(project.erection_date), 238, 28);
+
+    // Timeline range
+    let earliest = null;
+    let latest = null;
+    sortedSchedules.forEach(s => {
+      const ofa = parseDate(s.scheduled_ofa_date);
+      const bfa = parseDate(s.scheduled_bfa_date);
+      const rts = parseDate(s.rts_date);
+      const erection = parseDate(s.scheduled_erection_date);
+      const barStart = ofa || bfa || rts;
+      const barEnd = erection || rts;
+      if (barStart && (!earliest || barStart < earliest)) earliest = barStart;
+      if (barEnd && (!latest || barEnd > latest)) latest = barEnd;
+    });
+    if (!earliest) earliest = new Date();
+    if (!latest || latest <= earliest) latest = new Date(earliest.getTime() + 90 * 86400000);
+
+    const tlStart = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+    const tlEnd = new Date(latest.getFullYear(), latest.getMonth() + 1, 1);
+    const tlMs = tlEnd.getTime() - tlStart.getTime();
+
+    const labelColX = 14;
+    const labelColW = 60;
+    const chartX = labelColX + labelColW;
+    const chartW = pageWidth - chartX - 14;
+    const getXPos = date => { if (!date) return chartX; return chartX + ((date.getTime() - tlStart.getTime()) / tlMs) * chartW; };
+
+    // Month columns
+    const months = [];
+    let cur = new Date(tlStart);
+    while (cur < tlEnd) {
+      const ms = new Date(cur.getFullYear(), cur.getMonth(), 1);
+      const nm = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      const ss = new Date(Math.max(ms.getTime(), tlStart.getTime()));
+      const se = new Date(Math.min(nm.getTime(), tlEnd.getTime()));
+      if (ss < se) {
+        months.push({
+          label: ms.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+          x: chartX + ((ss.getTime() - tlStart.getTime()) / tlMs) * chartW,
+          width: ((se.getTime() - ss.getTime()) / tlMs) * chartW,
+        });
+      }
+      cur = nm;
+    }
+
+    // Header row
+    let gy = 36;
+    const hH = 8;
+    doc.setFillColor(241, 245, 249);
+    doc.rect(labelColX, gy, labelColW, hH, 'F');
+    doc.setDrawColor(203, 213, 225);
+    doc.rect(labelColX, gy, labelColW, hH, 'S');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    doc.setTextColor(...darkBlue);
+    doc.text('SEQUENCE DESCRIPTION', labelColX + 2, gy + 5);
+
+    months.forEach(m => {
+      doc.setFillColor(241, 245, 249);
+      doc.rect(m.x, gy, m.width, hH, 'F');
+      doc.setDrawColor(203, 213, 225);
+      doc.rect(m.x, gy, m.width, hH, 'S');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(...darkBlue);
+      doc.text(m.label, m.x + m.width / 2, gy + 5, { align: 'center' });
+    });
+    gy += hH;
+
+    const getStatus = (start, end) => {
+      if (!start || !end) return { label: 'TBD', color: [156, 163, 175] };
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      if (end < today) return { label: 'Completed', color: [34, 197, 94] };
+      if (start > today) return { label: 'Yet to Start', color: [59, 130, 246] };
+      return { label: 'In Progress', color: [245, 158, 11] };
+    };
+
+    const milestoneColors = {
+      scheduled_ofa_date: [139, 92, 246], actual_ofa_date: [107, 114, 128],
+      scheduled_bfa_date: [6, 182, 212], actual_bfa_date: [20, 184, 166],
+      scheduled_field_measure_date: [249, 115, 22], rts_date: [30, 41, 59],
+      ship_date: [239, 68, 68], scheduled_erection_date: [79, 70, 229],
+    };
+
+    const rowH = 14;
+    sortedSchedules.forEach(s => {
+      if (gy + rowH > pageHeight - 30) { doc.addPage(); gy = 20; }
+
+      const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
+      const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
+      const status = getStatus(start, end);
+
+      // Label cell
+      doc.setFillColor(255, 255, 255);
+      doc.rect(labelColX, gy, labelColW, rowH, 'F');
+      doc.setDrawColor(226, 232, 240);
+      doc.rect(labelColX, gy, labelColW, rowH, 'S');
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6);
+      doc.setTextColor(...darkBlue);
+      doc.text(`Seq ${s.seq_no}: ${s.item_description || ''}`, labelColX + 2, gy + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5);
+      doc.setTextColor(...medGray);
+      doc.text(`${s.tons ? parseFloat(s.tons).toFixed(2) : '0.00'} Tons | ${s.category || 'N/A'}`, labelColX + 2, gy + 10);
+
+      // Timeline grid
+      months.forEach(m => { doc.setDrawColor(226, 232, 240); doc.rect(m.x, gy, m.width, rowH, 'S'); });
+
+      // Bar
+      if (start && end) {
+        const bx = getXPos(start);
+        const bex = getXPos(end);
+        const bw = Math.max(bex - bx, 2);
+        const by = gy + 3;
+        const bh = 5;
+        doc.setFillColor(...status.color);
+        doc.roundedRect(bx, by, bw, bh, 1, 1, 'F');
+
+        // Date range label
+        const rangeLabel = `${fmtShort(start)} - ${fmtShort(end)}`;
+        doc.setFontSize(4.5);
+        if (bw > 30) {
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(255, 255, 255);
+          doc.text(rangeLabel, bx + bw / 2, by + 3.5, { align: 'center' });
+        } else {
+          doc.setFont('helvetica', 'normal');
+          doc.setTextColor(...darkBlue);
+          doc.text(rangeLabel, bex + 2, by + 3.5);
+        }
+
+        // Milestone dots
+        const dotR = 1.0;
+        const haloR = 1.4;
+        const dotY = by + bh / 2;
+        Object.entries(milestoneColors).forEach(([field, color]) => {
+          const mDate = parseDate(s[field]);
+          if (mDate) {
+            const dx = getXPos(mDate);
+            if (dx >= chartX && dx <= chartX + chartW) {
+              // White halo
+              doc.setFillColor(255, 255, 255);
+              doc.circle(dx, dotY, haloR, 'F');
+              // Colored dot
+              doc.setFillColor(...color);
+              doc.circle(dx, dotY, dotR, 'F');
+            }
+          }
+        });
+      }
+      gy += rowH;
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // LEGEND
+    // ═══════════════════════════════════════════════════════════
+    const legY = pageHeight - 22;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(14, legY - 4, pageWidth - 14, legY - 4);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    doc.setTextColor(...darkBlue);
+    doc.text('BAR COLORS:', 14, legY);
+
+    let xOffset = 35;
+    const barLegend = [
+      { l: 'Yet to Start', c: [59, 130, 246] },
+      { l: 'In Progress', c: [245, 158, 11] },
+      { l: 'Completed', c: [34, 197, 94] }
+    ];
+
+    barLegend.forEach(st => {
+      doc.setFillColor(...st.c);
+      doc.rect(xOffset, legY - 2.5, 5, 2.5, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...medGray);
+      doc.text(st.l, xOffset + 6, legY);
+      xOffset += 25;
+    });
+
+    // --- Milestone Dots Legend ---
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6);
+    doc.setTextColor(...darkBlue);
+    doc.text('MILESTONE DOTS:', 115, legY);
+
+    const dotLegend1 = [
+      { name: "OFA Sch", color: [139, 92, 246], x: 142 },
+      { name: "OFA Act", color: [107, 114, 128], x: 177 },
+      { name: "BFA Sch", color: [6, 182, 212], x: 212 },
+      { name: "BFA Act", color: [20, 184, 166], x: 247 }
+    ];
+
+    dotLegend1.forEach(st => {
+      doc.setFillColor(...st.color);
+      doc.circle(st.x, legY - 1, 1.2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...medGray);
+      doc.text(st.name, st.x + 2.5, legY);
+    });
+
+    // Line 2 for Milestone dots
+    const legY2 = legY + 5;
+    const dotLegend2 = [
+      { name: "Field Measure", color: [249, 115, 22], x: 142 },
+      { name: "RTS", color: [30, 41, 59], x: 177 },
+      { name: "Ship", color: [239, 68, 68], x: 212 },
+      { name: "Erection Sch", color: [79, 70, 229], x: 247 }
+    ];
+
+    dotLegend2.forEach(st => {
+      doc.setFillColor(...st.color);
+      doc.circle(st.x, legY2 - 1, 1.2, 'F');
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(5.5);
+      doc.setTextColor(...medGray);
+      doc.text(st.name, st.x + 2.5, legY2);
+    });
+
+    // ═══════════════════════════════════════════════════════════
+    // FOOTER: Generated date + Page X of Y
+    // ═══════════════════════════════════════════════════════════
+    const totalPages = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      doc.setPage(i);
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(6);
+      doc.setTextColor(...medGray);
+      const now = new Date();
+      doc.text(`Generated: ${now.getMonth()+1}/${now.getDate()}/${now.getFullYear()} ${now.toLocaleTimeString()}`, 14, pageHeight - 6);
+      doc.text(`Page ${i} of ${totalPages}`, pageWidth - 14, pageHeight - 6, { align: 'right' });
+    }
+
+    doc.save(`StructuralPlan_${project.code}.pdf`);
   };
 
   const handleViewGantt = (project) => {
@@ -352,7 +701,7 @@ export default function PlanCreation() {
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.name}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.code}</td>
                   <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.customer_name || 'N/A'}</td>
-                  <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{p.erection_date ? new Date(p.erection_date).toLocaleDateString('en-GB').replaceAll('/', '-') : 'N/A'}</td>
+                  <td className="px-4 py-3 text-slate-900 text-sm font-medium border-r border-slate-100">{formatDateToMMDDYYYY(p.erection_date)}</td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-0.5">
                       <button onClick={() => generateGanttPdf(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">

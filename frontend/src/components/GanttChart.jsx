@@ -1,126 +1,244 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import './GanttChart.css';
-const parseDate = dStr => {
+
+/* ── helpers ────────────────────────────────────────────────── */
+
+const parseDate = (dStr) => {
   if (!dStr) return null;
-  // Try ISO format first
-  const iso = new Date(dStr);
-  if (!isNaN(iso.getTime())) return iso;
-  // Fallback to DD/MM/YYYY or D/M/YYYY
-  const parts = dStr.split('/');
-  if (parts.length === 3) {
-    const day = parseInt(parts[0], 10);
-    const month = parseInt(parts[1], 10) - 1; // zero‑based month
-    const year = parseInt(parts[2], 10);
-    const d = new Date(year, month, day);
-    return isNaN(d.getTime()) ? null : d;
+
+  // Try parsing yyyy-mm-dd
+  if (typeof dStr === 'string' && dStr.includes('-')) {
+    const parts = dStr.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      const d = new Date(
+        parseInt(parts[0], 10),
+        parseInt(parts[1], 10) - 1,
+        parseInt(parts[2], 10)
+      );
+      return isNaN(d.getTime()) ? null : d;
+    }
   }
+
+  // Try parsing dd/mm/yyyy
+  if (typeof dStr === 'string' && dStr.includes('/')) {
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      const d = new Date(
+        parseInt(parts[2], 10),
+        parseInt(parts[1], 10) - 1,
+        parseInt(parts[0], 10)
+      );
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+
+  const iso = new Date(dStr);
+  if (!isNaN(iso.getTime())) {
+    return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+  }
+
   return null;
 };
 
-// Determine status based on date range
+const fmt = (d) =>
+  d
+    ? d.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+      })
+    : 'N/A';
+
 const getStatus = (start, end) => {
-  if (!start) return { label: 'TBD', color: '#9ca3af' };
-  if (!end) return { label: 'TBD', color: '#9ca3af' };
+  if (!start || !end) return { label: 'TBD', color: '#9ca3af' };
   const now = new Date();
-  if (end < now) return { label: 'Completed', color: '#22c55e' };
-  if (start > now) return { label: 'Yet to Start', color: '#3b82f6' };
-  return { label: 'InProgress', color: '#f59e0b' };
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (end < today) return { label: 'Completed', color: '#22c55e' };
+  if (start > today) return { label: 'Yet to Start', color: '#3b82f6' };
+  return { label: 'In Progress', color: '#f59e0b' };
 };
 
-// GanttChart component renders a lightweight HTML version of the chart
+const ONE_DAY = 86400000;
+
+/* ── component ──────────────────────────────────────────────── */
+
 export default function GanttChart({ project, allSchedules }) {
-  // Filter schedules for this project
-  const projectSchedules = allSchedules.filter(s => {
-    const sId = typeof s.project === 'object' ? s.project.id : s.project;
-    return String(sId) === String(project.id);
-  });
+  /* filter + sort schedules for this project */
+  const sorted = useMemo(() => {
+    const rows = allSchedules.filter((s) => {
+      const sId = typeof s.project === 'object' ? s.project.id : s.project;
+      return String(sId) === String(project.id);
+    });
+    return rows.sort((a, b) => {
+      const an = parseFloat(a.seq_no);
+      const bn = parseFloat(b.seq_no);
+      if (!isNaN(an) && !isNaN(bn)) return an - bn;
+      return String(a.seq_no).localeCompare(String(b.seq_no), undefined, {
+        numeric: true,
+      });
+    });
+  }, [allSchedules, project.id]);
 
-  if (projectSchedules.length === 0) {
-    return <div className="p-4 text-sm text-gray-500">No schedule data found.</div>;
+  if (sorted.length === 0) {
+    return (
+      <div className="p-4 text-sm text-gray-500">
+        No schedule data found.
+      </div>
+    );
   }
 
-  // Sort sequences
-  const sorted = [...projectSchedules].sort((a, b) => {
-    const aNum = parseFloat(a.seq_no);
-    const bNum = parseFloat(b.seq_no);
-    if (!isNaN(aNum) && !isNaN(bNum)) return aNum - bNum;
-    return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
+  /* ── timeline range ─────────────────────────────────────── */
+  // Use exact earliest milestone start date to latest milestone erection date
+  let earliest = null;
+  let latest = null;
+
+  sorted.forEach((s) => {
+    const ofa = parseDate(s.scheduled_ofa_date);
+    const bfa = parseDate(s.scheduled_bfa_date);
+    const rts = parseDate(s.rts_date);
+    const erection = parseDate(s.scheduled_erection_date);
+
+    const barStart = ofa || bfa || rts;
+    const barEnd = erection || rts;
+
+    if (barStart && (!earliest || barStart < earliest)) earliest = barStart;
+    if (barEnd && (!latest || barEnd > latest)) latest = barEnd;
   });
 
-  // Determine timeline range based on actual data
-  const minDate = sorted.reduce((min, s) => {
-    const d = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date) || (s.date_range ? parseDate(s.date_range.split('-')[0].trim()) : null);
-    return d && (!min || d < min) ? d : min;
-  }, null) || new Date();
-  const maxDate = sorted.reduce((max, s) => {
-    const d = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date) || (s.date_range ? parseDate(s.date_range.split('-')[1].trim()) : null);
-    return d && (!max || d > max) ? d : max;
-  }, null) || new Date(minDate);
-  const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
-  const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
-  const totalMonths = (endMonth.getFullYear() - startMonth.getFullYear()) * 12 + (endMonth.getMonth() - startMonth.getMonth()) + 1;
+  if (!earliest) earliest = new Date();
+  if (!latest || latest <= earliest) latest = new Date(earliest.getTime() + 90 * ONE_DAY);
 
-  // Helper to get month index from a date
-  const monthIdx = date => {
-    const d = new Date(date);
-    return (d.getFullYear() - startMonth.getFullYear()) * 12 + (d.getMonth() - startMonth.getMonth());
-  };
+  // Set timelineStart to the 1st day of the earliest milestone's month
+  const timelineStart = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
+  // Set timelineEnd to the 1st day of the month AFTER the latest milestone's month, to fully include the entire latest month
+  const timelineEnd = new Date(latest.getFullYear(), latest.getMonth() + 1, 1);
 
-  // Header with month labels
-  const monthLabels = [];
-  for (let i = 0; i < totalMonths; i++) {
-    const d = new Date(startMonth.getFullYear(), startMonth.getMonth() + i, 1);
-    monthLabels.push(d.toLocaleString('default', { month: 'short', year: 'numeric' }));
+  const timelineMs = timelineEnd.getTime() - timelineStart.getTime();
+
+  /* ── month columns ──────────────────────────────────────── */
+  const months = [];
+  {
+    // Start cursor at the 1st of the month containing timelineStart
+    let cursor = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
+    while (cursor < timelineEnd) {
+      const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
+      const nextMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
+
+      // Compute visible intersection of this calendar month with [timelineStart, timelineEnd]
+      const segmentStart = new Date(Math.max(monthStart.getTime(), timelineStart.getTime()));
+      const segmentEnd = new Date(Math.min(nextMonth.getTime(), timelineEnd.getTime()));
+
+      if (segmentStart < segmentEnd) {
+        const leftPct = ((segmentStart.getTime() - timelineStart.getTime()) / timelineMs) * 100;
+        const widthPct = ((segmentEnd.getTime() - segmentStart.getTime()) / timelineMs) * 100;
+
+        months.push({
+          label: monthStart.toLocaleString('default', {
+            month: 'short',
+            year: 'numeric',
+          }),
+          leftPct,
+          widthPct,
+        });
+      }
+      cursor = nextMonth;
+    }
   }
 
+  /* ── bar data ───────────────────────────────────────────── */
+  const bars = sorted.map((sched) => {
+    const start =
+      parseDate(sched.scheduled_ofa_date) ||
+      parseDate(sched.scheduled_bfa_date) ||
+      parseDate(sched.rts_date);
+    const end =
+      parseDate(sched.scheduled_erection_date) ||
+      parseDate(sched.rts_date);
+    if (!start) return null;
+
+    // Use end date if provided, otherwise default to start date + 1 day
+    const barEnd = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1) : new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+
+    const leftPct = ((start - timelineStart) / timelineMs) * 100;
+    const widthPct = ((barEnd - start) / timelineMs) * 100;
+    const { label, color } = getStatus(start, end || start);
+
+    return { sched, start, end: end || start, leftPct, widthPct, label, color };
+  });
+
+  /* ── render ─────────────────────────────────────────────── */
   return (
-    <div className="border rounded bg-white p-2 overflow-x-auto">
-      {/* Month ruler */}
-      <div className="flex text-xs text-gray-600 border-b mb-2">
-        {monthLabels.map((m, i) => (
-          <div
-            key={i}
-            className="flex-1 text-center"
-            style={{ minWidth: `${100 / totalMonths}%` }}
-          >
-            {m}
-          </div>
-        ))}
+    <div className="gantt-wrapper">
+      {/* ── header row: label gutter + month columns + status gutter ── */}
+      <div className="gantt-header">
+        <div className="gantt-label-col" />
+        <div className="gantt-timeline-col">
+          {months.map((m, i) => (
+            <div
+              key={i}
+              className="gantt-month-header"
+              style={{ left: `${m.leftPct}%`, width: `${m.widthPct}%` }}
+            >
+              {m.label}
+            </div>
+          ))}
+        </div>
+        <div className="gantt-status-col" style={{ background: '#f9fafb' }}>
+          <span className="gantt-badge" style={{ color: '#374151', textTransform: 'uppercase', fontSize: '0.65rem' }}>Status</span>
+        </div>
       </div>
 
-      {/* Sequence rows */}
-      <div className="space-y-2">
-          {sorted.map((sched, idx) => {
-            const start = parseDate(sched.scheduled_ofa_date) || parseDate(sched.scheduled_bfa_date) || parseDate(sched.rts_date) || (sched.date_range ? parseDate(sched.date_range.split('-')[0].trim()) : null);
-            const end = parseDate(sched.scheduled_erection_date) || parseDate(sched.rts_date) || (sched.date_range ? parseDate(sched.date_range.split('-')[1].trim()) : null);
-            if (!start) return null;
-            const startIdx = monthIdx(start);
-            const endIdx = end ? monthIdx(end) : startIdx;
-            const leftPct = (startIdx / totalMonths) * 100;
-            const widthPct = ((endIdx - startIdx + 1) / totalMonths) * 100;
-            const { label, color } = getStatus(start, end);
-            return (
-              <div key={sched.id || idx} className="gantt-sequence-row mb-2">
-                <div className="flex items-center">
-                  <div className="gantt-left w-48 text-sm">
-                    <div className="font-medium">{sched.seq_no}{sched.seq_name ? ` - ${sched.seq_name}` : ''}</div>
-                    {sched.item_description && <div className="text-gray-500">{sched.item_description}</div>}
-                  </div>
-                  <div className="relative h-6 bg-gray-100 rounded flex-1 mx-2">
-                    <div
-                      className="gantt-bar absolute h-full rounded"
-                      style={{ left: `${leftPct}%`, width: `${widthPct}%`, backgroundColor: color }}
-                      title={`Seq: ${sched.seq_no}${sched.seq_name ? ' - ' + sched.seq_name : ''}\nStart: ${start?.toLocaleDateString()}\nEnd: ${end?.toLocaleDateString() || 'N/A'}\nStatus: ${label}`}
-                    />
-                  </div>
-                </div>
-                <div className="gantt-details text-[10px] text-gray-500 mt-1 text-center w-full">
-                  {start?.toLocaleDateString()} - {end?.toLocaleDateString() || 'N/A'} ({label})
-                </div>
+      {/* ── body rows ── */}
+      {bars.map((bar, idx) => {
+        if (!bar) return null;
+        const { sched, start, end, leftPct, widthPct, label, color } = bar;
+        return (
+          <div key={sched.id || idx} className="gantt-row">
+            {/* left label */}
+            <div className="gantt-label-col gantt-row-label">
+              <span className="font-medium">
+                {sched.seq_no}
+                {sched.seq_name ? ` – ${sched.seq_name}` : ''}
+              </span>
+              {sched.item_description && (
+                <span className="gantt-item-desc">{sched.item_description}</span>
+              )}
+            </div>
+
+            {/* timeline area */}
+            <div className="gantt-timeline-col gantt-track">
+              {/* month grid lines */}
+              {months.map((m, i) => (
+                <div
+                  key={i}
+                  className="gantt-grid-line"
+                  style={{ left: `${m.leftPct + m.widthPct}%` }}
+                />
+              ))}
+
+              {/* the bar */}
+              <div
+                className="gantt-bar-fill"
+                style={{
+                  left: `${leftPct}%`,
+                  width: `${Math.max(widthPct, 0.5)}%`,
+                  backgroundColor: color,
+                }}
+                title={`Seq ${sched.seq_no}${sched.seq_name ? ' – ' + sched.seq_name : ''}\nOFA: ${fmt(start)}\nErection: ${fmt(end)}\nStatus: ${label}`}
+              >
+                <span className="gantt-bar-text">
+                  {fmt(start)} → {fmt(end)}
+                </span>
               </div>
-            );
-          })}
-        </div>
+            </div>
+
+            {/* status badge */}
+            <div className="gantt-status-col">
+              <span className="gantt-badge" style={{ color }}>{label}</span>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

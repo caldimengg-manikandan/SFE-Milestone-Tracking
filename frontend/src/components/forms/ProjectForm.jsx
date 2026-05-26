@@ -441,7 +441,7 @@ export default function ProjectForm({
               { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
               { date: s.rts_date, color: [30, 41, 59] },
               { date: s.ship_date, color: [220, 38, 38] },
-              { date: s.scheduled_erection_date, color: [132, 204, 22] }
+              { date: s.scheduled_erection_date, color: [79, 70, 229] }
             ];
 
             milestones.forEach(ms => {
@@ -508,10 +508,10 @@ export default function ProjectForm({
         doc.text("MILESTONE DOTS:", 115, yLegend);
 
         const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 140 },
-          { name: "OFA Act", color: [236, 72, 153], x: 168 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 192 },
-          { name: "BFA Act", color: [20, 184, 166], x: 216 }
+          { name: "OFA Sch", color: [168, 85, 247], x: 142 },
+          { name: "OFA Act", color: [236, 72, 153], x: 177 },
+          { name: "BFA Sch", color: [6, 182, 212], x: 212 },
+          { name: "BFA Act", color: [20, 184, 166], x: 247 }
         ];
 
         dotLegend1.forEach(st => {
@@ -525,10 +525,10 @@ export default function ProjectForm({
         // Line 2 for Milestone dots
         const yLegend2 = pageHeight - 14;
         const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 140 },
-          { name: "RTS", color: [30, 41, 59], x: 168 },
-          { name: "Ship", color: [220, 38, 38], x: 192 },
-          { name: "Erection Sch", color: [132, 204, 22], x: 216 }
+          { name: "Field Measure", color: [249, 115, 22], x: 142 },
+          { name: "RTS", color: [30, 41, 59], x: 177 },
+          { name: "Ship", color: [220, 38, 38], x: 212 },
+          { name: "Erection Sch", color: [79, 70, 229], x: 247 }
         ];
 
         dotLegend2.forEach(st => {
@@ -690,9 +690,15 @@ export default function ProjectForm({
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
                     {mode === 'view' ? (
                       <p className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
-                        {form.erection_date && !isNaN(new Date(form.erection_date))
-                          ? new Date(form.erection_date).toLocaleDateString('en-GB').replaceAll('/', '-')
-                          : 'N/A'}
+                        {(() => {
+                          if (!form.erection_date) return 'N/A';
+                          const date = new Date(form.erection_date);
+                          if (isNaN(date.getTime())) return 'N/A';
+                          const d = date.getDate().toString().padStart(2, '0');
+                          const m = (date.getMonth() + 1).toString().padStart(2, '0');
+                          const y = date.getFullYear();
+                          return `${m}-${d}-${y}`;
+                        })()}
                       </p>
                     ) : (
                       <input

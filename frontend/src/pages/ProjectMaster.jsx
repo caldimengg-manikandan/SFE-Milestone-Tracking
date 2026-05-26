@@ -16,7 +16,7 @@ export default function ProjectMaster() {
   const [loading, setLoading] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [viewMode, setViewMode] = useState('view');
-  // Utility to format dates as DD-MM-YYYY
+  // Utility to format dates as MM-DD-YYYY
   const formatDate = (dateStr) => {
     if (!dateStr) return '-';
     const d = new Date(dateStr);
@@ -24,7 +24,7 @@ export default function ProjectMaster() {
     const day = d.getDate().toString().padStart(2, '0');
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
     const year = d.getFullYear();
-    return `${day}-${month}-${year}`;
+    return `${month}-${day}-${year}`;
   };
   const [error, setError] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -741,7 +741,7 @@ export default function ProjectMaster() {
               { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
               { date: s.rts_date, color: [30, 41, 59] },
               { date: s.ship_date, color: [220, 38, 38] },
-              { date: s.scheduled_erection_date, color: [132, 204, 22] }
+              { date: s.scheduled_erection_date, color: [79, 70, 229] }
             ];
 
             milestones.forEach(ms => {
@@ -808,10 +808,10 @@ export default function ProjectMaster() {
         doc.text("MILESTONE DOTS:", 115, yLegend);
 
         const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 140 },
-          { name: "OFA Act", color: [236, 72, 153], x: 168 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 192 },
-          { name: "BFA Act", color: [20, 184, 166], x: 216 }
+          { name: "OFA Sch", color: [168, 85, 247], x: 142 },
+          { name: "OFA Act", color: [236, 72, 153], x: 177 },
+          { name: "BFA Sch", color: [6, 182, 212], x: 212 },
+          { name: "BFA Act", color: [20, 184, 166], x: 247 }
         ];
 
         dotLegend1.forEach(st => {
@@ -825,10 +825,10 @@ export default function ProjectMaster() {
         // Line 2 for Milestone dots
         const yLegend2 = pageHeight - 14;
         const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 140 },
-          { name: "RTS", color: [30, 41, 59], x: 168 },
-          { name: "Ship", color: [220, 38, 38], x: 192 },
-          { name: "Erection Sch", color: [132, 204, 22], x: 216 }
+          { name: "Field Measure", color: [249, 115, 22], x: 142 },
+          { name: "RTS", color: [30, 41, 59], x: 177 },
+          { name: "Ship", color: [220, 38, 38], x: 212 },
+          { name: "Erection Sch", color: [79, 70, 229], x: 247 }
         ];
 
         dotLegend2.forEach(st => {
@@ -1162,7 +1162,7 @@ export default function ProjectMaster() {
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
-                      {p.erection_date || 'N/A'}
+                      {p.erection_date ? formatDate(p.erection_date) : 'N/A'}
                     </td>
                     <td className="px-2 py-3 border-r border-slate-100 text-center">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
