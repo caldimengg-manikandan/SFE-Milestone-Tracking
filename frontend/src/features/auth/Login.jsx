@@ -89,12 +89,8 @@ export default function Login() {
       {/* Left — Branding Panel & Slideshow */}
       <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-slate-950 flex-col justify-between shadow-[20px_0_40px_-15px_rgba(0,0,0,0.35)] z-10">
         
-        {/* Top Header Row (Logo in top-left) */}
-        <div className="relative z-20 flex items-center p-8 pointer-events-none">
-          <div className="w-16 h-13 bg-white rounded-lg flex items-center justify-center shadow-md p-1 border border-white/10 shrink-0 pointer-events-auto">
-            <img src="/SFE/steelfab_logo.png" alt="Logo" className="w-full h-full object-contain" />
-          </div>
-        </div>
+        {/* Top Header Row (Spacer to balance layout) */}
+        <div className="h-16" />
 
         {/* Slideshow Container (Background layer) */}
         <div className="absolute inset-0 z-0">
@@ -177,153 +173,169 @@ export default function Login() {
       </div>
 
       {/* Right — Login Form & Branding */}
-      <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-slate-100">
-        <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
-          {/* Mobile-only Branding Logo & Text (Hidden on desktop) */}
-          <div className="lg:hidden flex flex-col items-center mb-8">
-            <div className="w-20 h-16 bg-white rounded-xl flex items-center justify-center shadow-lg mb-4 p-1 border border-slate-100">
+      <div className="w-full lg:w-1/2 flex flex-col justify-between items-center p-4 sm:p-6 bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen lg:min-h-0">
+        
+        {/* Spacer to align top spacing */}
+        <div className="h-4" />
+
+        <div className="w-full flex flex-col items-center">
+          {/* Branding Logo centered above the login card */}
+          <div className="flex flex-col items-center mb-6">
+            <div className="w-28 h-20 bg-white rounded-2xl flex items-center justify-center shadow-lg p-2 border border-slate-200 hover:scale-105 transition-transform duration-300">
               <img src="/SFE/steelfab_logo.png" alt="Logo" className="w-full h-full object-contain" />
             </div>
-
-            <h1 className="text-3xl font-extrabold text-slate-900 text-center leading-tight">
-              Steel Fab <span className="text-amber-500">ENTERPRISES</span>
-            </h1>
-            <p className="text-slate-500 text-center mt-1 text-sm font-medium">
-              Milestone Management System
-            </p>
           </div>
 
-          {/* Form Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:mt-0 mt-6 border-t lg:border-t-0 border-slate-100 pt-6 lg:pt-0">
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                {mode === 'signup' ? 'Create your account' : 'Welcome back'}
-              </h2>
-              <p className="text-slate-500 mt-1 text-xs">
-                {mode === 'signup'
-                  ? 'Sign up to access the Milestone Management System'
-                  : 'Sign in to your account to continue'}
+          <div className="w-full max-w-md bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
+            {/* Mobile-only Branding Text (Hidden on desktop since logo & text are displayed) */}
+            <div className="lg:hidden flex flex-col items-center mb-6">
+              <h1 className="text-3xl font-extrabold text-slate-900 text-center leading-tight">
+                Steel Fab <span className="text-amber-500">ENTERPRISES</span>
+              </h1>
+              <p className="text-slate-500 text-center mt-1 text-sm font-medium">
+                Milestone Management System
               </p>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setMode(mode === 'signup' ? 'login' : 'signup');
-                setError('');
-              }}
-              className="text-amber-600 hover:text-amber-700 text-xs font-semibold transition-colors text-left"
-            >
-              {mode === 'signup' ? 'Already have an account? Sign in' : 'New user? Create account'}
-            </button>
-          </div>
 
-          <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-            {mode === 'signup' && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
-                  <input
-                    type="text"
-                    value={form.first_name}
-                    onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                    placeholder="John"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
-                  <input
-                    type="text"
-                    value={form.last_name}
-                    onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                    placeholder="Doe"
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
-              <input
-                id="login-email"
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm({ ...form, email: e.target.value })}
-                className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                placeholder="you@steelfab.com"
-              />
-            </div>
-
-            {/* Password */}
-            <div>
-              <label className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
-              <div className="relative">
-                <input
-                  id="login-password"
-                  type={showPw ? 'text' : 'password'}
-                  value={form.password}
-                  onChange={(e) => setForm({ ...form, password: e.target.value })}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all pr-11"
-                  placeholder="Enter your password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPw(!showPw)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                >
-                  {showPw ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
-                </button>
-              </div>
-            </div>
-
-            {mode === 'signup' && (
+            {/* Form Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:mt-0 mt-6 border-t lg:border-t-0 border-slate-100 pt-6 lg:pt-0">
               <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm Password</label>
+                <h2 className="text-xl font-bold text-slate-900">
+                  {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+                </h2>
+                <p className="text-slate-500 mt-1 text-xs">
+                  {mode === 'signup'
+                    ? 'Sign up to access the Milestone Management System'
+                    : 'Sign in to your account to continue'}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setMode(mode === 'signup' ? 'login' : 'signup');
+                  setError('');
+                }}
+                className="text-amber-600 hover:text-amber-700 text-xs font-semibold transition-colors text-left"
+              >
+                {mode === 'signup' ? 'Already have an account? Sign in' : 'New user? Create account'}
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmit} className="mt-6 space-y-4">
+              {mode === 'signup' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
+                    <input
+                      type="text"
+                      value={form.first_name}
+                      onChange={(e) => setForm({ ...form, first_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                      placeholder="John"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
+                    <input
+                      type="text"
+                      value={form.last_name}
+                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                      placeholder="Doe"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Email */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
+                <input
+                  id="login-email"
+                  type="email"
+                  value={form.email}
+                  onChange={(e) => setForm({ ...form, email: e.target.value })}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
+                  placeholder="you@steelfab.com"
+                />
+              </div>
+
+              {/* Password */}
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1.5">Password</label>
                 <div className="relative">
                   <input
+                    id="login-password"
                     type={showPw ? 'text' : 'password'}
-                    value={form.confirmPassword}
-                    onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                    value={form.password}
+                    onChange={(e) => setForm({ ...form, password: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all pr-11"
-                    placeholder="Re-enter your password"
+                    placeholder="Enter your password"
                   />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw(!showPw)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-650 transition-colors"
+                  >
+                    {showPw ? <EyeOff className="w-4.5 h-4.5" /> : <Eye className="w-4.5 h-4.5" />}
+                  </button>
                 </div>
               </div>
-            )}
 
-            {mode === 'login' && (
-              <div className="flex items-center justify-between text-sm">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
-                  <span className="text-slate-600">Remember me</span>
-                </label>
-                <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
-                  Forgot password?
-                </Link>
-              </div>
-            )}
-
-            {error && (
-              <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 font-medium animate-fade-in">
-                {error}
-              </div>
-            )}
-
-            <button
-              id="login-submit"
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.01]"
-            >
-              {loading ? (
-                <><Loader2 className="w-4 h-4 animate-spin" /> {mode === 'signup' ? 'Creating account...' : 'Signing in...'}</>
-              ) : (
-                <>{mode === 'signup' ? 'Sign Up' : 'Sign In'} <ArrowRight className="w-4 h-4" /></>
+              {mode === 'signup' && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm Password</label>
+                  <div className="relative">
+                    <input
+                      type={showPw ? 'text' : 'password'}
+                      value={form.confirmPassword}
+                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all pr-11"
+                      placeholder="Re-enter your password"
+                    />
+                  </div>
+                </div>
               )}
-            </button>
-          </form>
+
+              {mode === 'login' && (
+                <div className="flex items-center justify-between text-sm">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
+                    <span className="text-slate-600">Remember me</span>
+                  </label>
+                  <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
+                    Forgot password?
+                  </Link>
+                </div>
+              )}
+
+              {error && (
+                <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 font-medium animate-fade-in">
+                  {error}
+                </div>
+              )}
+
+              <button
+                id="login-submit"
+                type="submit"
+                disabled={loading}
+                className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.01]"
+              >
+                {loading ? (
+                  <><Loader2 className="w-4 h-4 animate-spin" /> {mode === 'signup' ? 'Creating account...' : 'Signing in...'}</>
+                ) : (
+                  <>{mode === 'signup' ? 'Sign Up' : 'Sign In'} <ArrowRight className="w-4 h-4" /></>
+                )}
+              </button>
+            </form>
+          </div>
+        </div>
+
+        {/* Footer at the bottom of the right panel */}
+        <div className="w-full text-center py-4 mt-6">
+          <p className="text-xs text-slate-400 font-semibold tracking-wide">
+            Powered by @2026 CALDM Engineering Pvt. Ltd.
+          </p>
         </div>
       </div>
     </div>
