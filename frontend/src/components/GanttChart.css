@@ -1,79 +1,171 @@
-/* GanttChart component styling */
-.gantt-container {
-  border: 1px solid #e5e7eb; /* slate-200 */
-  border-radius: 0.5rem; /* rounded */
-  background-color: #ffffff;
-  padding: 1rem;
+/* ── GanttChart layout ──────────────────────────────────────── */
+
+.gantt-wrapper {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5rem;
+  background: #ffffff;
   overflow-x: auto;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  font-size: 0.8125rem;
 }
 
-.gantt-month-ruler {
+/* ── header row ─────────────────────────────────────────────── */
+
+.gantt-header {
   display: flex;
-  font-size: 0.75rem; /* text-xs */
-  color: #6b7280; /* gray-600 */
-  border-bottom: 1px solid #e5e7eb;
-  margin-bottom: 0.5rem;
+  flex-wrap: nowrap;
+  border-bottom: 2px solid #d1d5db;
+  background: #f9fafb;
 }
 
-.gantt-month-ruler > div {
-  text-align: center;
+.gantt-header .gantt-label-col {
+  background: #f9fafb;
+  border-right: 1px solid #e5e7eb;
 }
 
-.gantt-sequence-row {
-  position: relative;
-  margin-bottom: 0.75rem; /* space between rows */
-  display: flex;
-  flex-direction: column;
-}
-
-.gantt-bar {
+.gantt-month-header {
   position: absolute;
-  height: 100%;
-  border-radius: 0.25rem;
-}
-
-.gantt-label {
-  position: absolute;
-  inset: 0;
+  top: 0;
+  bottom: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #374151;
+  border-right: 1px solid #d1d5db;
+  text-transform: uppercase;
+  letter-spacing: 0.025em;
+}
+
+/* last month header has no right border */
+.gantt-month-header:last-child {
+  border-right: none;
+}
+
+/* ── shared column widths ───────────────────────────────────── */
+
+.gantt-label-col {
+  width: 160px;
+  min-width: 160px;
+  flex-shrink: 0;
+  padding: 6px 10px;
+  box-sizing: border-box;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+}
+
+.gantt-timeline-col {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  height: 32px;
+}
+
+.gantt-status-col {
+  width: 90px;
+  min-width: 90px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  border-left: 1px solid #e5e7eb;
+  box-sizing: border-box;
+}
+
+/* ── body rows ──────────────────────────────────────────────── */
+
+.gantt-row {
+  display: flex !important;
+  flex-wrap: nowrap !important;
+  align-items: stretch !important;
+  border-bottom: 1px solid #f3f4f6 !important;
+  min-height: 40px !important;
+}
+
+.gantt-row:hover {
+  background: #fafbfc;
+}
+
+.gantt-row-label {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
   font-size: 0.75rem;
-  font-weight: 500;
-  color: #ffffff;
+  color: #1f2937;
+  border-right: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.gantt-row:hover .gantt-row-label {
+  background: #fafbfc;
+}
+
+.gantt-item-desc {
+  color: #6b7280;
+  font-size: 0.65rem;
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── track (bar container) ──────────────────────────────────── */
+
+.gantt-track {
+  display: flex;
+  align-items: center;
+  background: #f9fafb;
+}
+
+/* vertical month grid lines inside the track only */
+.gantt-grid-line {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  border-left: 1px dashed #d1d5db;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* ── the actual bar ─────────────────────────────────────────── */
+
+.gantt-bar-fill {
+  position: absolute;
+  top: 6px;
+  bottom: 6px;
+  border-radius: 4px;
+  z-index: 2;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 4px;
+  transition: filter 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+}
+
+.gantt-bar-fill:hover {
+  filter: brightness(1.12);
+}
+
+.gantt-bar-text {
+  font-size: 0.6rem;
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 0 4px;
   pointer-events: none;
 }
 
-/* Left and right labels for sequence name and item description */
-.gantt-left {
-  width: 8rem; /* 32 * 0.25rem */
-  flex-shrink: 0;
-  text-align: left;
-  font-weight: 500;
-  color: #1f2937; /* gray-800 */
-}
+/* ── status badge ───────────────────────────────────────────── */
 
-.gantt-right {
-  width: 8rem;
-  flex-shrink: 0;
-  text-align: right;
-  color: #4b5563; /* gray-600 */
-}
-
-/* Details under each row */
-.gantt-details {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: #6b7280; /* gray-500 */
-  text-align: center;
-}
-
-/* Keep old .gantt-info class for backward compatibility */
-.gantt-info {
-  margin-top: 0.25rem;
-  font-size: 0.75rem;
-  color: #6b7280; /* gray-500 */
-  display: flex;
-  justify-content: space-between;
+.gantt-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  white-space: nowrap;
 }
