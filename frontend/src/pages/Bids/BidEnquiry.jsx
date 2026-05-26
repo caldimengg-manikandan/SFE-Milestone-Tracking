@@ -2,7 +2,8 @@ import { useState, useEffect } from 'react';
 import {
   FolderInput, Search, X, Plus, Calendar, Clock, Lock,
   ChevronDown, AlertTriangle, CheckCircle2, SlidersHorizontal,
-  ChevronRight, Calculator, FileSpreadsheet, Eye, Info, Sparkles, Loader2
+  ChevronRight, Calculator, FileSpreadsheet, Eye, Info, Sparkles, Loader2,
+  Pencil, Download
 } from 'lucide-react';
 import { bidEnquiryAPI, customerAPI, employeeAPI } from '../../services/api';
 
@@ -68,11 +69,17 @@ export default function BidEnquiry() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // Toast notification state
+  const [toast, setToast] = useState({ show: false, type: '', message: '' });
+
+  // Delete confirmation modal
+  const [deleteConfirm, setDeleteConfirm] = useState({ show: false, id: null });
   
   // UI Options
   const [showAllColumns, setShowAllColumns] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [activeFormTab, setActiveFormTab] = useState('bidding'); // 'bidding' or 'estimation'
+  const [activeFormTab, setActiveFormTab] = useState('bidding_pricing'); // 'bidding_pricing', 'fab_erect', or 'estimating_execution'
   const [editingId, setEditingId] = useState(null);
 
   // Search & Filter state
@@ -95,6 +102,7 @@ export default function BidEnquiry() {
     aisc_fab_req: 'No',
     aisc_erect_req: 'No',
     customer_name: '',
+    scope_of_work: '',
     decision_to_bid: 'TBD',
     primary_estimator: '',
     sent_to_jd: '',
@@ -254,7 +262,7 @@ export default function BidEnquiry() {
   const handleOpenAddModal = () => {
     setEditingId(null);
     setFormData(initialFormState);
-    setActiveFormTab('bidding');
+    setActiveFormTab('bidding_pricing');
     setIsModalOpen(true);
   };
 
@@ -268,20 +276,105 @@ export default function BidEnquiry() {
     });
 
     setFormData(editData);
-    setActiveFormTab('bidding');
+    setActiveFormTab('bidding_pricing');
     setIsModalOpen(true);
   };
 
-  const handleDeleteBid = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this bid enquiry?')) return;
+  const showToast = (type, message) => {
+    setToast({ show: true, type, message });
+    setTimeout(() => setToast({ show: false, type: '', message: '' }), 4000);
+  };
+
+  const handleDeleteBid = (id) => {
+    setDeleteConfirm({ show: true, id });
+  };
+
+  const confirmDelete = async () => {
+    const id = deleteConfirm.id;
+    setDeleteConfirm({ show: false, id: null });
     try {
       await bidEnquiryAPI.delete(id);
-      setSuccess('Bid enquiry deleted successfully.');
+      showToast('success', 'Bid enquiry deleted successfully.');
       fetchBids();
     } catch (err) {
       console.error(err);
-      setError('Failed to delete bid enquiry.');
+      showToast('error', 'Failed to delete bid enquiry. Please try again.');
     }
+  };
+
+  const handleExportCSV = (bid) => {
+    const headers = [
+      'Quote No', 'Project Name', 'Project Comments', 'Bid Due Date', 'Bid Due Time',
+      'Location', 'Distance', 'AISC Fab Y/N', 'AISC Erect Y/N', 'Customer Name',
+      'Decision to Bid', 'Primary Estimator', 'Sent to J&D', 'Sent to Detailing',
+      'Sent to Erection', 'Est Sq-Feet/Ton',
+      'Price Structure', 'Price Struc-Erection', 'Price Misc', 'Price Misc-Erection',
+      'Bid Amount', 'Quoted Profit', 'Ton Steel', 'Ton Joist', 'Total Tonnage',
+      '# Main Structural Pcs', 'Struct Pcs/Ton', 'Sq Ft Structural',
+      'Struct Tonnage/Sq Ft (No Joist)', 'Struct Tonnage/Sq Ft (With Joist)',
+      'Struct Cost/Ton', 'Struct Erect Cost/Ton', 'Struct Cost/Sq Ft', 'Struct Erect Cost/Sq Ft',
+      'Struct Fab Hours', 'Struct Fab Start Month', 'Struct Fab Duration (mo)',
+      'Struct Fab End Month', 'Avg Monthly Struct Fab Hours',
+      'Misc Fab Hours', 'Misc Fab Start Month', 'Misc Fab Duration (mo)',
+      'Misc Fab End Month', 'Avg Monthly Misc Fab Hours',
+      'Struct Erect Hours', 'Struct Erect Start Month', 'Struct Erect Duration (mo)',
+      'Struct Erect End Month', 'Avg Monthly Struct Erect Hours',
+      'Misc Erect Hours', 'Misc Erect Start Month', 'Misc Erect Duration (mo)',
+      'Misc Erect End Month', 'Avg Monthly Misc Erect Hours',
+      'Estimating Hours', 'Quote Date', 'Won/Lost', 'Follow Up Notes', 'Follow Up Date',
+      'Awarded Amount', 'SFE Job #', 'Awarded Job # Date', 'Contract Executed Date',
+      'Fab Start Date'
+    ];
+
+    const values = [
+      bid.quote_no || '', bid.project_name || '', bid.project_comments || '',
+      bid.bid_due_date || '', bid.bid_due_time || '', bid.location || '',
+      bid.distance || '', bid.aisc_fab_req || '', bid.aisc_erect_req || '',
+      bid.customer_name_str || '', bid.scope_of_work || '', bid.decision_to_bid || '',
+      bid.primary_estimator_name || '', bid.sent_to_jd || '',
+      bid.sent_to_detailing || '', bid.sent_to_erection || '',
+      bid.est_sqft_ton || 0,
+      bid.price_structure || 0, bid.price_struc_erection || 0,
+      bid.price_misc || 0, bid.price_misc_erection || 0,
+      bid.bid_amount || 0, bid.quoted_profit || 0,
+      bid.ton_steel || 0, bid.ton_joist || 0,
+      parseFloat(bid.ton_steel || 0) + parseFloat(bid.ton_joist || 0),
+      bid.main_structural_pcs || 0,
+      bid.struct_pcs_per_ton || 0, bid.sqft_structural || 0,
+      bid.struct_ton_per_sqft_no_joist || 0, bid.struct_ton_per_sqft_with_joist || 0,
+      bid.struct_cost_per_ton || 0, bid.struct_erect_cost_per_ton || 0,
+      bid.struct_cost_per_sqft || 0, bid.struct_erect_cost_per_sqft || 0,
+      bid.struct_fab_hours || 0, bid.struct_fab_start_month || '',
+      bid.struct_fab_duration || 0, bid.struct_fab_end_month || '',
+      bid.avg_monthly_struct_fab_hours || 0,
+      bid.misc_fab_hours || 0, bid.misc_fab_start_month || '',
+      bid.misc_fab_duration || 0, bid.misc_fab_end_month || '',
+      bid.avg_monthly_misc_fab_hours || 0,
+      bid.struct_erect_hours || 0, bid.struct_erect_start_month || '',
+      bid.struct_erect_duration || 0, bid.struct_erect_end_month || '',
+      bid.avg_monthly_struct_erect_hours || 0,
+      bid.misc_erect_hours || 0, bid.misc_erect_start_month || '',
+      bid.misc_erect_duration || 0, bid.misc_erect_end_month || '',
+      bid.avg_monthly_misc_erect_hours || 0,
+      bid.estimating_hours || 0, bid.quote_date || '', bid.won_lost || '',
+      bid.estimator_followup_notes || '', bid.estimator_followup_date || '',
+      bid.awarded_amount || 0, bid.sfe_job_no || '',
+      bid.awarded_job_no_date || '', bid.contract_executed_date || '',
+      bid.fab_start_date || ''
+    ];
+
+    const escape = (v) => `"${String(v).replace(/"/g, '""')}"`;
+    const csv = [headers.map(escape).join(','), values.map(escape).join(',')].join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `bid_${bid.quote_no || bid.id}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('success', `Exported bid "${bid.quote_no || bid.id}" as CSV.`);
   };
 
   const handleSubmit = async (e) => {
@@ -289,10 +382,6 @@ export default function BidEnquiry() {
     setError('');
     setSuccess('');
 
-    if (!formData.quote_no || !formData.project_name) {
-      setError('Quote No and Project Name are required.');
-      return;
-    }
 
     // Clean inputs: replace empty text fields for numbers to 0
     const submitData = { ...formData };
@@ -314,18 +403,32 @@ export default function BidEnquiry() {
     if (!submitData.bid_due_time) submitData.bid_due_time = null;
 
     try {
+      let response;
       if (editingId) {
-        await bidEnquiryAPI.update(editingId, submitData);
-        setSuccess('Bid enquiry updated successfully.');
+        response = await bidEnquiryAPI.update(editingId, submitData);
+        let msg = 'Bid enquiry updated successfully.';
+        if (response.data.email_sent) {
+          msg += ' Email sent.';
+        } else if (submitData.scope_of_work) {
+          msg += ' Email failed to send.';
+        }
+        showToast(response.data.email_sent || !submitData.scope_of_work ? 'success' : 'warning', msg);
       } else {
-        await bidEnquiryAPI.create(submitData);
-        setSuccess('Bid enquiry created successfully.');
+        response = await bidEnquiryAPI.create(submitData);
+        let msg = 'Bid enquiry created successfully.';
+        if (response.data.email_sent) {
+          msg += ' Email sent.';
+        } else if (submitData.scope_of_work) {
+          msg += ' Email failed to send.';
+        }
+        showToast(response.data.email_sent || !submitData.scope_of_work ? 'success' : 'warning', msg);
       }
       setIsModalOpen(false);
       fetchBids();
     } catch (err) {
       console.error(err);
-      setError(err.response?.data?.detail || 'Failed to save bid enquiry. Verify Quote No is unique.');
+      const msg = err.response?.data?.detail || err.response?.data?.quote_no?.[0] || 'Failed to save. Please check all fields and try again.';
+      showToast('error', msg);
     }
   };
 
@@ -337,6 +440,7 @@ export default function BidEnquiry() {
       bid.project_name?.toLowerCase().includes(terms) ||
       bid.location?.toLowerCase().includes(terms) ||
       bid.customer_name_str?.toLowerCase().includes(terms) ||
+      bid.scope_of_work?.toLowerCase().includes(terms) ||
       bid.primary_estimator_name?.toLowerCase().includes(terms)
     );
   });
@@ -360,6 +464,51 @@ export default function BidEnquiry() {
 
   return (
     <div className="h-[calc(100vh-72px)] -m-4 sm:-m-6 lg:-m-8 bg-slate-50/30 flex flex-col overflow-hidden">
+
+      {/* Toast Notification */}
+      {toast.show && (
+        <div className={`fixed top-5 right-5 z-[200] flex items-center gap-3 px-5 py-4 rounded-2xl shadow-2xl text-sm font-bold animate-fade-in border max-w-sm ${
+          toast.type === 'success'
+            ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+            : 'bg-rose-50 border-rose-200 text-rose-700'
+        }`}>
+          {toast.type === 'success'
+            ? <CheckCircle2 className="w-5 h-5 shrink-0 text-emerald-500" />
+            : <AlertTriangle className="w-5 h-5 shrink-0 text-rose-500" />}
+          <span>{toast.message}</span>
+          <button onClick={() => setToast({ show: false, type: '', message: '' })} className="ml-2 text-slate-400 hover:text-slate-600">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteConfirm.show && (
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-sm w-full p-8 flex flex-col items-center gap-4 border border-rose-100">
+            <div className="w-14 h-14 rounded-full bg-rose-50 flex items-center justify-center">
+              <AlertTriangle className="w-7 h-7 text-rose-500" />
+            </div>
+            <h3 className="text-base font-bold text-slate-900 text-center">Confirm Deletion</h3>
+            <p className="text-sm text-slate-500 text-center">Do you want to delete this bid enquiry? This action cannot be undone.</p>
+            <div className="flex gap-3 w-full mt-2">
+              <button
+                onClick={() => setDeleteConfirm({ show: false, id: null })}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-rose-500 text-white text-xs font-bold hover:bg-rose-600 transition-all shadow-sm"
+              >
+                Yes, Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Combined Header & Filter Bar */}
       <div className="flex-none bg-white border-b border-slate-200 shadow-sm z-30 p-3 lg:px-6 space-y-3 animate-fade-in">
         {/* Search & Actions Row */}
@@ -454,19 +603,6 @@ export default function BidEnquiry() {
 
       {/* Main Content Body Area */}
       <div className="flex-1 overflow-hidden flex flex-col p-4 bg-slate-50/50 min-h-0">
-        {/* Alert Notices */}
-        {error && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-100 rounded-xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake flex-none">
-            <AlertTriangle className="w-5 h-5 shrink-0" />
-            {error}
-          </div>
-        )}
-        {success && (
-          <div className="mb-4 p-4 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 text-emerald-600 text-sm font-bold animate-fade-in flex-none">
-            <CheckCircle2 className="w-5 h-5 shrink-0" />
-            {success}
-          </div>
-        )}
 
         {/* Datagrid Section */}
         <div className="bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col min-h-0 overflow-hidden animate-fade-in flex-1">
@@ -475,97 +611,86 @@ export default function BidEnquiry() {
               {/* Multi-Section Headers */}
               <thead className="sticky top-0 z-20 shadow-sm">
                 {showAllColumns ? (
-                  <>
-                    <tr className="border-b border-slate-200 select-none text-[10px] tracking-wider font-extrabold uppercase text-center">
-                      <th colSpan="19" className="bg-pink-50 text-pink-600 border-r border-slate-200 py-2">
-                        General & Bidding Details (Pink Section — 19 Fields)
-                      </th>
-                      <th colSpan="29" className="bg-violet-50 text-violet-600 border-r border-slate-200 py-2">
-                        Estimation Inputs (Estimator Section — 29 Fields)
-                      </th>
-                      <th colSpan="16" className="bg-cyan-50 text-cyan-600 border-r border-slate-200 py-2">
-                        Calculated Estimations (No Fill Section — 16 Fields)
-                      </th>
-                      <th colSpan="1" className="bg-amber-50 text-amber-600 py-2">
-                        Action Parameters
-                      </th>
-                    </tr>
-                    
                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white uppercase text-[10px] font-black tracking-wider select-none">
-                      <th className="px-3 py-3 border-r border-white/10 w-[110px]">Quote No</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[160px]">Project Name</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[120px]">Customer</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[120px]">Primary Estimator</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Bid Due Date</th>
 
-                      {/* Pink Section Columns (6-19) */}
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Bid Due Time</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[140px]">Location</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[90px]">Distance</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Fab Req</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Erect Req</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[90px]">Decision</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent to JD</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent Detailing</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent Erection</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Est SqFt/Ton</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">SFE Job No</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Awarded Date</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Contract Exec</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[200px]">Project Comments</th>
+                      {/* 1-16 (MB) */}
+                      <th className="px-3 py-3 border-r border-white/10 w-[110px]">Quote No (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[160px]">Project Name (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[200px]">Project Comments (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Bid Due Date (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Bid Due Time (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[140px]">Location (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[130px]">Distance (Earlier Time Travelled) (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">AISC Fab Y/N (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">AISC Erect Y/N (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[120px]">Customer Name (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Decision to Bid (Y/N) (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[150px]">Primary Estimator (First, Middle & Last Name Initial) (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent to J&D (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent to Detailing (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Sent to Erection (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Est Sq-Feet/Ton (MB)</th>
 
-                      {/* Purple/Blue Section Columns (20-48) */}
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Structure</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Erect</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Misc</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Misc Erect</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Bid Amount</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Quoted Profit</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Ton Steel</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Ton Joist</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Struct Pieces</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">SqFt Structural</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Struct Fab Hrs</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Struct Fab Start</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Struct Fab Dur</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Misc Fab Hrs</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Misc Fab Start</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Misc Fab Dur</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Struct Erect Hrs</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Struct Erect Start</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Struct Erect Dur</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Misc Erect Hrs</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Misc Erect Start</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Misc Erect Dur</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Estimating Hrs</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Quote Date</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Won/Lost</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Follow Up Date</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Awarded Amount</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Fab Start Date</th>
-                      <th className="px-3 py-3 border-r border-white/10 min-w-[200px]">Follow Up Notes</th>
+                      {/* 17-34 (Pricing, Tonnages & Ratios) */}
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Structure (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Struc- Erection (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Misc (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Price Misc. - Erection (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Bid Amount (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Quoted Profit (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Ton Steel (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Ton Joist (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Total Tonnage (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]"># of Main Structural Pcs. (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Structural Pieces / Ton (Without Jst) (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Sq. Ft. Structural (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[130px]">Structural Tonnage / Sq. ft (Without Jst) (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[130px]">Structural Tonnage / Sq. ft. (With Joist) (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Structural Cost / Structural Ton (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Structural Erection Cost / Ton (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Structural Cost / Sq. ft. (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Structural Erection Cost / Sq. ft. (No Fill)</th>
 
-                      {/* No Fill Section Columns (49-64) */}
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Total Tonnage</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[90px]">Pcs/Ton</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Ton/SqFt (No Jst)</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Ton/SqFt (Jst)</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Cost/Ton</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Erect Cost/Ton</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Cost/SqFt</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Erect Cost/SqFt</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Struct Fab End</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Avg Fab Hrs/Mo</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Misc Fab End</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Avg Misc Hrs/Mo</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Struct Erect End</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Avg Erect Hrs/Mo</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Misc Erect End</th>
-                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Avg Misc Er Hrs/Mo</th>
+                      {/* 35-54 (Fabrication & Erection Schedules) */}
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Structural Fabrication Hours at Time of Bid (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Anticipated Structural Fabrication Start Month (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Anticipated Structural Fabrication Duration in Months (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Anticipated Structural Fabrication End Month (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Average Monthly Structural Fabrication Hours (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Misc Fabrication Hours at Time of Bid (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Anticipated Misc. Fabrication Start Month (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Anticipated Misc. Fabrication Duration in Months (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Anticipated Misc. Fabrication End Month (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Average Monthly Misc. Fabrication Hours (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Structural Erection Hours at Time of Bid (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Anticipated Structural Erection Start Month (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Anticipated Structural Erection Duration in Months (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Anticipated Structural Erection End Month (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Average Monthly Structural Erection Hours (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Misc. Erection Hours at Time of Bid (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[120px]">Anticipated Misc. Erection Start Month (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[80px]">Anticipated Misc. Erection Duration in Months (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">Anticipated Misc. Erection End Month (No Fill)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[120px]">Average Monthly Misc. Erection Hours (No Fill)</th>
+
+                      {/* 55-60 (Estimating & Follow-up) */}
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Estimating Hours (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Quote Date (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Won / Lost (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 min-w-[200px]">Estimator Follow Up Notes (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Estimator Follow Up Date (Estimator)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-right w-[110px]">Awarded Amount (Estimator)</th>
+
+                      {/* 61-63 (Job Award & Execution) */}
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[110px]">SFE Job # (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Awarded Job # Date (MB)</th>
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Contract Executed Date (MB)</th>
+
+                      {/* 64 (Fabrication Start) */}
+                      <th className="px-3 py-3 border-r border-white/10 text-center w-[100px]">Fabrication Start Date (JF)</th>
                       
                       <th className="px-3 py-3 text-center w-[90px]">Actions</th>
                     </tr>
-                  </>
                 ) : (
                   <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white uppercase text-[10px] font-black tracking-wider select-none">
                     <th className="px-3 py-2.5 border-r border-white/10 w-[90px]">Quote No</th>
@@ -593,35 +718,31 @@ export default function BidEnquiry() {
                 ) : filteredBids.length > 0 ? (
                   filteredBids.map((bid) => (
                     <tr key={bid.id} className="transition-colors group text-[12px] border-b border-slate-100 hover:bg-slate-50/30">
-                      <td className="px-3 py-3 font-mono font-bold text-slate-900 border-r border-slate-100">{bid.quote_no}</td>
-                      <td className="px-3 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight" title={bid.project_name}>
-                        {bid.project_name}
-                      </td>
-                      <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.customer_name_str || '—'}</td>
-                      <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.primary_estimator_name || '—'}</td>
-                      <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-medium">{formatShortDate(bid.bid_due_date)}</td>
-
                       {showAllColumns ? (
                         <>
-                          {/* Pink Section Columns (6-19) */}
+                          {/* 1-16 (MB) */}
+                          <td className="px-3 py-3 font-mono font-bold text-slate-900 border-r border-slate-100">{bid.quote_no}</td>
+                          <td className="px-3 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight" title={bid.project_name}>
+                            {bid.project_name}
+                          </td>
+                          <td className="px-3 py-3 text-slate-500 border-r border-slate-100 max-w-[200px] truncate leading-normal" title={bid.project_comments}>
+                            {bid.project_comments || '—'}
+                          </td>
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-medium">{formatShortDate(bid.bid_due_date)}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{bid.bid_due_time || '—'}</td>
                           <td className="px-3 py-3 text-slate-600 border-r border-slate-100 break-words leading-tight">{bid.location || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{bid.distance || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{bid.aisc_fab_req || 'No'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{bid.aisc_erect_req || 'No'}</td>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.customer_name_str || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-semibold">{bid.decision_to_bid || 'TBD'}</td>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.primary_estimator_name || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.sent_to_jd)}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.sent_to_detailing)}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.sent_to_erection)}</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.est_sqft_ton || 0).toFixed(4)}</td>
-                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-medium">{bid.sfe_job_no || '—'}</td>
-                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.awarded_job_no_date)}</td>
-                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.contract_executed_date)}</td>
-                          <td className="px-3 py-3 text-slate-500 border-r border-slate-100 max-w-[200px] truncate leading-normal" title={bid.project_comments}>
-                            {bid.project_comments || '—'}
-                          </td>
 
-                          {/* Purple/Blue Section Columns (20-48) */}
+                          {/* 17-34 (Pricing, Tonnages & Ratios) */}
                           <td className="px-3 py-3 text-right font-bold text-slate-800 border-r border-slate-100">${parseFloat(bid.price_structure || 0).toLocaleString()}</td>
                           <td className="px-3 py-3 text-right font-bold text-slate-800 border-r border-slate-100">${parseFloat(bid.price_struc_erection || 0).toLocaleString()}</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.price_misc || 0).toLocaleString()}</td>
@@ -630,20 +751,40 @@ export default function BidEnquiry() {
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.quoted_profit || 0).toLocaleString()}</td>
                           <td className="px-3 py-3 text-right font-semibold text-slate-700 border-r border-slate-100">{parseFloat(bid.ton_steel || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.ton_joist || 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-right font-extrabold text-amber-600 border-r border-slate-100">{parseFloat(bid.total_tonnage || 0).toFixed(2)} Tons</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseInt(bid.main_structural_pcs || 0)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_pcs_per_ton || 0).toFixed(4)}</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.sqft_structural || 0).toLocaleString()}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_ton_per_sqft_no_joist || 0).toFixed(6)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_ton_per_sqft_with_joist || 0).toFixed(6)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_cost_per_ton || 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_erect_cost_per_ton || 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_cost_per_sqft || 0).toFixed(2)}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_erect_cost_per_sqft || 0).toFixed(2)}</td>
+
+                          {/* 35-54 (Fabrication & Erection Schedules) */}
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_fab_hours || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100 font-medium">{bid.struct_fab_start_month || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{parseInt(bid.struct_fab_duration || 0)} mo</td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.struct_fab_end_month || '—'}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_struct_fab_hours || 0).toFixed(2)} hr</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.misc_fab_hours || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100 font-medium">{bid.misc_fab_start_month || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{parseInt(bid.misc_fab_duration || 0)} mo</td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.misc_fab_end_month || '—'}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_misc_fab_hours || 0).toFixed(2)} hr</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_erect_hours || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100 font-medium">{bid.struct_erect_start_month || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{parseInt(bid.struct_erect_duration || 0)} mo</td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.struct_erect_end_month || '—'}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_struct_erect_hours || 0).toFixed(2)} hr</td>
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.misc_erect_hours || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100 font-medium">{bid.misc_erect_start_month || '—'}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{parseInt(bid.misc_erect_duration || 0)} mo</td>
+                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.misc_erect_end_month || '—'}</td>
+                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_misc_erect_hours || 0).toFixed(2)} hr</td>
+
+                          {/* 55-60 (Estimating & Follow-up) */}
                           <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.estimating_hours || 0).toFixed(2)}</td>
                           <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.quote_date)}</td>
                           <td className="px-3 py-3 text-center font-bold border-r border-slate-100">
@@ -656,33 +797,29 @@ export default function BidEnquiry() {
                               {bid.won_lost || 'Pending'}
                             </span>
                           </td>
-                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.estimator_followup_date)}</td>
-                          <td className="px-3 py-3 text-right font-bold text-slate-800 border-r border-slate-100">${parseFloat(bid.awarded_amount || 0).toLocaleString()}</td>
-                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.fab_start_date)}</td>
                           <td className="px-3 py-3 text-slate-500 border-r border-slate-100 max-w-[200px] truncate leading-normal" title={bid.estimator_followup_notes}>
                             {bid.estimator_followup_notes || '—'}
                           </td>
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.estimator_followup_date)}</td>
+                          <td className="px-3 py-3 text-right font-bold text-slate-800 border-r border-slate-100">${parseFloat(bid.awarded_amount || 0).toLocaleString()}</td>
 
-                          {/* No Fill Section Columns (49-64) */}
-                          <td className="px-3 py-3 text-right font-extrabold text-amber-600 border-r border-slate-100">{parseFloat(bid.total_tonnage || 0).toFixed(2)} Tons</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_pcs_per_ton || 0).toFixed(4)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_ton_per_sqft_no_joist || 0).toFixed(6)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.struct_ton_per_sqft_with_joist || 0).toFixed(6)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_cost_per_ton || 0).toFixed(2)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_erect_cost_per_ton || 0).toFixed(2)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_cost_per_sqft || 0).toFixed(2)}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">${parseFloat(bid.struct_erect_cost_per_sqft || 0).toFixed(2)}</td>
-                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.struct_fab_end_month || '—'}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_struct_fab_hours || 0).toFixed(2)} hr</td>
-                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.misc_fab_end_month || '—'}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_misc_fab_hours || 0).toFixed(2)} hr</td>
-                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.struct_erect_end_month || '—'}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_struct_erect_hours || 0).toFixed(2)} hr</td>
-                          <td className="px-3 py-3 text-center text-slate-700 border-r border-slate-100">{bid.misc_erect_end_month || '—'}</td>
-                          <td className="px-3 py-3 text-right text-slate-600 border-r border-slate-100">{parseFloat(bid.avg_monthly_misc_erect_hours || 0).toFixed(2)} hr</td>
+                          {/* 61-63 (Job Award & Execution) */}
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-medium">{bid.sfe_job_no || '—'}</td>
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.awarded_job_no_date)}</td>
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.contract_executed_date)}</td>
+
+                          {/* 64 (Fabrication Start) */}
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100">{formatShortDate(bid.fab_start_date)}</td>
                         </>
                       ) : (
                         <>
+                          <td className="px-3 py-3 font-mono font-bold text-slate-900 border-r border-slate-100">{bid.quote_no}</td>
+                          <td className="px-3 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight" title={bid.project_name}>
+                            {bid.project_name}
+                          </td>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.customer_name_str || '—'}</td>
+                          <td className="px-3 py-3 text-slate-600 border-r border-slate-100 leading-tight">{bid.primary_estimator_name || '—'}</td>
+                          <td className="px-3 py-3 text-center text-slate-600 border-r border-slate-100 font-medium">{formatShortDate(bid.bid_due_date)}</td>
                           <td className="px-3 py-3 text-right font-extrabold text-amber-600 border-r border-slate-100">{parseFloat(bid.total_tonnage || 0).toFixed(2)} Tons</td>
                           <td className="px-3 py-3 text-right font-bold text-slate-800 border-r border-slate-100">${parseFloat(bid.bid_amount || 0).toLocaleString()}</td>
                           <td className="px-3 py-3 text-center border-r border-slate-100">
@@ -706,9 +843,16 @@ export default function BidEnquiry() {
                           <button
                             onClick={() => handleOpenEditModal(bid)}
                             className="p-1 rounded text-blue-500 hover:bg-blue-50"
-                            title="Edit"
+                            title="Edit Record"
                           >
-                            <FileSpreadsheet className="w-4 h-4" />
+                            <Pencil className="w-3.5 h-3.5" />
+                          </button>
+                          <button
+                            onClick={() => handleExportCSV(bid)}
+                            className="p-1 rounded text-emerald-600 hover:bg-emerald-50"
+                            title="Export as CSV"
+                          >
+                            <Download className="w-3.5 h-3.5" />
                           </button>
                           <button
                             onClick={() => handleDeleteBid(bid.id)}
@@ -761,7 +905,6 @@ export default function BidEnquiry() {
                   <h3 className="text-base font-bold text-slate-900 tracking-wide">
                     {editingId ? 'Edit Bid Details & Calculation' : 'Create New Bid Enquiry & Estimate'}
                   </h3>
-                  <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">64 Fields Enterprise Worksheet</p>
                 </div>
               </div>
               <button
@@ -776,45 +919,57 @@ export default function BidEnquiry() {
             <div className="flex bg-slate-50 p-1.5 shrink-0 border-b border-slate-100">
               <button
                 type="button"
-                onClick={() => setActiveFormTab('bidding')}
+                onClick={() => setActiveFormTab('bidding_pricing')}
                 className={`flex-1 text-center py-3 text-xs font-bold transition-all rounded-xl flex items-center justify-center gap-2 border ${
-                  activeFormTab === 'bidding'
+                  activeFormTab === 'bidding_pricing'
                     ? 'bg-pink-100/50 border-pink-200/50 text-pink-700 shadow-sm'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
                 <div className="w-2 h-2 rounded-full bg-pink-400"></div>
-                1. Bidding & Enquiry Details (Pink Section)
+                Bidding & Pricing
               </button>
               <button
                 type="button"
-                onClick={() => setActiveFormTab('estimation')}
+                onClick={() => setActiveFormTab('fab_erect')}
                 className={`flex-1 text-center py-3 text-xs font-bold transition-all rounded-xl flex items-center justify-center gap-2 border ${
-                  activeFormTab === 'estimation'
-                    ? 'bg-violet-100/50 border-violet-200/50 text-violet-700 shadow-sm'
+                  activeFormTab === 'fab_erect'
+                    ? 'bg-cyan-100/50 border-cyan-200/50 text-cyan-700 shadow-sm'
                     : 'border-transparent text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <div className="w-2 h-2 rounded-full bg-violet-400"></div>
-                2. Estimation & Pricing Details (Purple/Blue)
+                <div className="w-2 h-2 rounded-full bg-cyan-400"></div>
+                Fabrication & Erection
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveFormTab('estimating_execution')}
+                className={`flex-1 text-center py-3 text-xs font-bold transition-all rounded-xl flex items-center justify-center gap-2 border ${
+                  activeFormTab === 'estimating_execution'
+                    ? 'bg-indigo-100/50 border-indigo-200/50 text-indigo-700 shadow-sm'
+                    : 'border-transparent text-slate-500 hover:text-slate-700'
+                }`}
+              >
+                <div className="w-2 h-2 rounded-full bg-indigo-400"></div>
+                Estimating & Execution
               </button>
             </div>
 
             {/* Modal Body: Form */}
             <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-8 space-y-6">
               
-              {/* TAB 1: Bidding details */}
-              {activeFormTab === 'bidding' && (
+              {/* TAB 1: Bidding & Pricing */}
+              {activeFormTab === 'bidding_pricing' && (
                 <div className="space-y-6 animate-fade-in">
+                  {/* Section 1: General & Bidding Details (MB) */}
                   <div className="bg-pink-50/20 border border-pink-100 p-5 rounded-2xl">
                     <h4 className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-4 flex items-center gap-2">
-                      <Sparkles className="w-4 h-4 text-pink-500" /> Bidding Details (Pink Section)
+                      <Sparkles className="w-4 h-4 text-pink-500" /> General & Bidding Details (MB)
                     </h4>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                      
-                      {/* Quote No */}
+                      {/* 1: Quote No */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Quote No <span className="text-rose-500">*</span></label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">1. Quote No (MB)</label>
                         <input
                           type="text"
                           name="quote_no"
@@ -822,13 +977,12 @@ export default function BidEnquiry() {
                           onChange={handleInputChange}
                           placeholder="e.g. Q-9821"
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                          required
                         />
                       </div>
 
-                      {/* Project Name */}
+                      {/* 2: Project Name */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Project Name <span className="text-rose-500">*</span></label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">2. Project Name (MB)</label>
                         <input
                           type="text"
                           name="project_name"
@@ -836,45 +990,25 @@ export default function BidEnquiry() {
                           onChange={handleInputChange}
                           placeholder="e.g. Skyline Industrial Hub"
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                          required
                         />
                       </div>
 
-                      {/* Customer Dropdown */}
+                      {/* 3: Project Comments (Area) */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Customer Name</label>
-                        <select
-                          name="customer_name"
-                          value={formData.customer_name}
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">3. Comments (MB)</label>
+                        <input
+                          type="text"
+                          name="project_comments"
+                          value={formData.project_comments || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
-                        >
-                          <option value="">Select Customer</option>
-                          {customers.map(c => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
+                          placeholder="General comments..."
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
                       </div>
 
-                      {/* Estimator Dropdown */}
+                      {/* 4: Bid Due Date */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Primary Estimator</label>
-                        <select
-                          name="primary_estimator"
-                          value={formData.primary_estimator}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
-                        >
-                          <option value="">Select Estimator</option>
-                          {estimators.map(e => (
-                            <option key={e.id} value={e.id}>{e.name}</option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Due date */}
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Bid Due Date</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">4. Due Date (MB)</label>
                         <input
                           type="date"
                           name="bid_due_date"
@@ -884,9 +1018,9 @@ export default function BidEnquiry() {
                         />
                       </div>
 
-                      {/* Due Time */}
+                      {/* 5: Bid Due Time */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Bid Due Time</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">5. Due Time (MB)</label>
                         <input
                           type="time"
                           name="bid_due_time"
@@ -896,68 +1030,100 @@ export default function BidEnquiry() {
                         />
                       </div>
 
-                      {/* Location */}
+                      {/* 6: Location */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Location</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">6. Location (MB)</label>
                         <input
                           type="text"
                           name="location"
-                          value={formData.location}
+                          value={formData.location || ''}
                           onChange={handleInputChange}
                           placeholder="e.g. Houston, TX"
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
                         />
                       </div>
 
-                      {/* Distance */}
+                      {/* 7: Distance */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Distance (Earlier Travelled)</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">7. Distance (MB)</label>
                         <input
                           type="text"
                           name="distance"
-                          value={formData.distance}
+                          value={formData.distance || ''}
                           onChange={handleInputChange}
                           placeholder="e.g. 45 miles"
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
                         />
                       </div>
 
-                      {/* AISC Fab Required */}
+                      {/* 8: AISC Fab */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">AISC Fab Required</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">8. AISC Fab (MB)</label>
                         <select
                           name="aisc_fab_req"
                           value={formData.aisc_fab_req}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold"
                         >
                           <option value="No">No</option>
                           <option value="Yes">Yes</option>
                         </select>
                       </div>
 
-                      {/* AISC Erect Required */}
+                      {/* 9: AISC Erect */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">AISC Erect Required</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">9. AISC Erect (MB)</label>
                         <select
                           name="aisc_erect_req"
                           value={formData.aisc_erect_req}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold"
                         >
                           <option value="No">No</option>
                           <option value="Yes">Yes</option>
                         </select>
                       </div>
 
-                      {/* Decision to Bid */}
+                      {/* 10: Customer */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Decision to Bid</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">10. Customer (MB)</label>
+                        <select
+                          name="customer_name"
+                          value={formData.customer_name}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
+                        >
+                          <option value="">Select Customer</option>
+                          {customers.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* Scope of Work */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Scope of Work</label>
+                        <select
+                          name="scope_of_work"
+                          value={formData.scope_of_work}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
+                        >
+                          <option value="">Select Scope</option>
+                          <option value="Detailing">Detailing</option>
+                          <option value="Fabrication">Fabrication</option>
+                          <option value="Erection">Erection</option>
+                        </select>
+                      </div>
+
+                      {/* 11: Decision to Bid */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">11. Decision to Bid (MB)</label>
                         <select
                           name="decision_to_bid"
                           value={formData.decision_to_bid}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
                         >
                           <option value="TBD">TBD</option>
                           <option value="Yes">Yes (Bid)</option>
@@ -965,9 +1131,61 @@ export default function BidEnquiry() {
                         </select>
                       </div>
 
-                      {/* Est Sqft/Ton */}
+                      {/* 12: Primary Estimator */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Est Sq-Feet/Ton</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">12. Estimator (MB)</label>
+                        <select
+                          name="primary_estimator"
+                          value={formData.primary_estimator}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
+                        >
+                          <option value="">Select Estimator</option>
+                          {estimators.map(e => (
+                            <option key={e.id} value={e.id}>{e.name}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      {/* 13: Sent to J&D */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">13. Sent to J&D (MB)</label>
+                        <input
+                          type="date"
+                          name="sent_to_jd"
+                          value={formData.sent_to_jd || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 14: Sent to Detailing */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">14. Sent to Detailing (MB)</label>
+                        <input
+                          type="date"
+                          name="sent_to_detailing"
+                          value={formData.sent_to_detailing || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 15: Sent to Erection */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">15. Sent to Erection (MB)</label>
+                        <input
+                          type="date"
+                          name="sent_to_erection"
+                          value={formData.sent_to_erection || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 16: Est Sq-Ft/Ton */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">16. Est Sq-Ft/Ton (MB)</label>
                         <input
                           type="number"
                           step="0.0001"
@@ -980,166 +1198,15 @@ export default function BidEnquiry() {
                     </div>
                   </div>
 
-                  {/* Pink Section — SFE Job Tracking & Workflow Dates */}
-                  <div className="bg-pink-50/20 border border-pink-100 p-5 rounded-2xl">
-                    <h4 className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-4">SFE Job Tracking & Workflow Dates</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Sent to J&D</label>
-                        <input
-                          type="date"
-                          name="sent_to_jd"
-                          value={formData.sent_to_jd || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Sent to Detailing</label>
-                        <input
-                          type="date"
-                          name="sent_to_detailing"
-                          value={formData.sent_to_detailing || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Sent to Erection</label>
-                        <input
-                          type="date"
-                          name="sent_to_erection"
-                          value={formData.sent_to_erection || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">SFE Job #</label>
-                        <input
-                          type="text"
-                          name="sfe_job_no"
-                          value={formData.sfe_job_no}
-                          onChange={handleInputChange}
-                          placeholder="e.g. J-2026A"
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Awarded Job # Date</label>
-                        <input
-                          type="date"
-                          name="awarded_job_no_date"
-                          value={formData.awarded_job_no_date || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Contract Executed Date</label>
-                        <input
-                          type="date"
-                          name="contract_executed_date"
-                          value={formData.contract_executed_date || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Project Comments (MB)</label>
-                    <textarea
-                      name="project_comments"
-                      value={formData.project_comments}
-                      onChange={handleInputChange}
-                      placeholder="Enter other general comments regarding the quote request..."
-                      rows="3"
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800 resize-none"
-                    />
-                  </div>
-
-                  <div className="flex justify-end gap-3 pt-2">
-                    <button
-                      type="button"
-                      onClick={() => setActiveFormTab('estimation')}
-                      className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 flex items-center gap-1 transition-all"
-                    >
-                      Next: Estimation & Pricing
-                      <ChevronRight className="w-4 h-4 text-violet-500" />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {/* TAB 2: Estimation details */}
-              {activeFormTab === 'estimation' && (
-                <div className="space-y-6 animate-fade-in">
-                  
-                  {/* Estimator Inputs */}
-                  <div className="bg-violet-50/20 border border-violet-100 p-5 rounded-2xl space-y-5">
-                    <h4 className="text-xs font-bold text-violet-600 uppercase tracking-widest flex items-center gap-2">
-                      <Calculator className="w-4 h-4 text-violet-500" /> Quantities & Hours (Estimator Input)
+                  {/* Section 2: Pricing, Tonnages & Ratios */}
+                  <div className="bg-violet-50/20 border border-violet-100 p-5 rounded-2xl">
+                    <h4 className="text-xs font-bold text-violet-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-violet-500" /> Pricing, Tonnages & Ratios
                     </h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {/* 17: Price Structure */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Ton Steel</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          name="ton_steel"
-                          value={formData.ton_steel}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-                      
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Ton Joist</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          name="ton_joist"
-                          value={formData.ton_joist}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1"># of Main Pcs.</label>
-                        <input
-                          type="number"
-                          name="main_structural_pcs"
-                          value={formData.main_structural_pcs}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Sq. Ft. Structural</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          name="sqft_structural"
-                          value={formData.sqft_structural}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Price Structure</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">17. Price Structure (Est)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1150,8 +1217,9 @@ export default function BidEnquiry() {
                         />
                       </div>
 
+                      {/* 18: Price Struc- Erection */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Price Struc-Erect</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">18. Price Struct Erection (Est)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1162,8 +1230,9 @@ export default function BidEnquiry() {
                         />
                       </div>
 
+                      {/* 19: Price Misc */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Price Misc</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">19. Price Misc (Est)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1174,8 +1243,9 @@ export default function BidEnquiry() {
                         />
                       </div>
 
+                      {/* 20: Price Misc. - Erection */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Price Misc-Erect</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">20. Price Misc Erection (Est)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1185,23 +1255,23 @@ export default function BidEnquiry() {
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
                         />
                       </div>
-                    </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                      {/* 21: Bid Amount */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Bid Amount</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">21. Bid Amount (Est)</label>
                         <input
                           type="number"
                           step="0.01"
                           name="bid_amount"
                           value={formData.bid_amount}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800 font-bold text-amber-600 animate-pulse-subtle"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800 font-bold text-amber-600"
                         />
                       </div>
 
+                      {/* 22: Quoted Profit */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Quoted Profit</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">22. Quoted Profit (Est)</label>
                         <input
                           type="number"
                           step="0.01"
@@ -1212,299 +1282,540 @@ export default function BidEnquiry() {
                         />
                       </div>
 
+                      {/* 23: Ton Steel */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Estimating Hours</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">23. Steel Tonnage (Est)</label>
                         <input
                           type="number"
                           step="0.01"
-                          name="estimating_hours"
-                          value={formData.estimating_hours}
+                          name="ton_steel"
+                          value={formData.ton_steel}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800 font-semibold"
+                        />
+                      </div>
+
+                      {/* 24: Ton Joist */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">24. Joist Tonnage (Est)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          name="ton_joist"
+                          value={formData.ton_joist}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
                         />
                       </div>
 
+                      {/* 25: Total Tonnage (No Fill) - READ ONLY */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Quote Date</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">25. Total Tonnage (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.total_tonnage ? `${calculatedReadouts.total_tonnage} Tons` : '0.00 Tons'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 26: # of Main Structural Pcs. */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">26. Main Struct Pcs (Est)</label>
                         <input
-                          type="date"
-                          name="quote_date"
-                          value={formData.quote_date || ''}
+                          type="number"
+                          name="main_structural_pcs"
+                          value={formData.main_structural_pcs}
                           onChange={handleInputChange}
                           className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
                         />
+                      </div>
+
+                      {/* 27: Structural Pieces / Ton (Without Jst) (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">27. Struct Pcs/Ton (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_pcs_per_ton || '0.0000'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 28: Sq. Ft. Structural */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">28. Struct Sq Ft (Est)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          name="sqft_structural"
+                          value={formData.sqft_structural}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 29: Structural Tonnage / Sq. ft (Without Jst) (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">29. Struct Ton/Sq Ft (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_ton_per_sqft_no_joist || '0.000000'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 30: Structural Tonnage / Sq. ft. (With Joist) (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">30. Struct Ton/Sq Ft w/ Jst (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_ton_per_sqft_with_joist || '0.000000'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 31: Structural Cost / Structural Ton (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">31. Struct Cost/Ton (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_cost_per_ton ? `$${calculatedReadouts.struct_cost_per_ton}` : '$0.00'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 32: Structural Erection Cost / Ton (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">32. Struct Erect Cost/Ton (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_erect_cost_per_ton ? `$${calculatedReadouts.struct_erect_cost_per_ton}` : '$0.00'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 33: Structural Cost / Sq. ft. (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">33. Struct Cost/Sq Ft (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_cost_per_sqft ? `$${calculatedReadouts.struct_cost_per_sqft}` : '$0.00'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
+                      </div>
+
+                      {/* 34: Structural Erection Cost / Sq. ft. (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">34. Struct Erect Cost/Sq Ft (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_erect_cost_per_sqft ? `$${calculatedReadouts.struct_erect_cost_per_sqft}` : '$0.00'}
+                            readOnly
+                            className="w-full px-4 py-3 rounded-xl border border-cyan-200 bg-cyan-50/20 text-sm font-extrabold text-cyan-700 outline-none select-none pr-10"
+                          />
+                          <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-cyan-400" />
+                        </div>
                       </div>
                     </div>
                   </div>
 
-                  {/* Timeline Estimates */}
-                  <div className="bg-violet-50/20 border border-violet-100 p-5 rounded-2xl space-y-4">
-                    <h4 className="text-xs font-bold text-violet-600 uppercase tracking-widest">Workflow Timelines & Hours</h4>
+                  <div className="flex justify-between items-center pt-2">
+                    <div />
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all flex items-center gap-2"
+                      >
+                        {editingId ? 'Save Worksheet' : 'Publish Estimate'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFormTab('fab_erect')}
+                        className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 flex items-center gap-1 transition-all"
+                      >
+                        Next: Fab & Erection
+                        <ChevronRight className="w-4 h-4 text-cyan-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 2: Fabrication & Erection */}
+              {activeFormTab === 'fab_erect' && (
+                <div className="space-y-6 animate-fade-in">
+                  <div className="bg-cyan-50/20 border border-cyan-100 p-5 rounded-2xl space-y-4">
+                    <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-widest flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-cyan-500" /> Fabrication & Erection Schedules
+                    </h4>
                     
-                    {/* Fabrication Hours */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Structural Fabrication Block */}
+                    <h5 className="text-[11px] font-black text-cyan-600 uppercase tracking-widest ml-1 mb-2">Structural Fabrication Schedule (35-39)</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                      {/* 35: Structural Fabrication Hours at Time of Bid */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Structural Fab Hours</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">35. Struct Fab Hours (Est)</label>
                         <input
                           type="number"
                           step="0.1"
                           name="struct_fab_hours"
                           value={formData.struct_fab_hours}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 36: Anticipated Structural Fabrication Start Month */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Fab Start Month</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">36. Struct Fab Start Month (Est)</label>
                         <input
                           type="text"
                           name="struct_fab_start_month"
                           placeholder="e.g. May 2026"
                           value={formData.struct_fab_start_month || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 37: Anticipated Structural Fabrication Duration in Months */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Fab Duration (Months)</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">37. Struct Fab Duration (Est)</label>
                         <input
                           type="number"
                           name="struct_fab_duration"
                           value={formData.struct_fab_duration}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
+                      </div>
+                      {/* 38: Anticipated Structural Fabrication End Month (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">38. Struct Fab End Month (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_fab_end_month || '—'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
+                      </div>
+                      {/* 39: Average Monthly Structural Fabrication Hours (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">39. Avg Struct Fab Hours/Mo (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.avg_monthly_struct_fab_hours ? `${calculatedReadouts.avg_monthly_struct_fab_hours} hr` : '0.00 hr'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Misc Hours */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Misc Fabrication Block */}
+                    <h5 className="text-[11px] font-black text-cyan-600 uppercase tracking-widest ml-1 mb-2">Misc Fabrication Schedule (40-44)</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                      {/* 40: Misc Fabrication Hours at Time of Bid */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Fab Hours</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">40. Misc Fab Hours (Est)</label>
                         <input
                           type="number"
                           step="0.1"
                           name="misc_fab_hours"
                           value={formData.misc_fab_hours}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 41: Anticipated Misc. Fabrication Start Month */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Start Month</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">41. Misc Fab Start Month (Est)</label>
                         <input
                           type="text"
                           name="misc_fab_start_month"
                           placeholder="e.g. June 2026"
                           value={formData.misc_fab_start_month || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 42: Anticipated Misc. Fabrication Duration in Months */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Duration (Months)</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">42. Misc Fab Duration (Est)</label>
                         <input
                           type="number"
                           name="misc_fab_duration"
                           value={formData.misc_fab_duration}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
+                      </div>
+                      {/* 43: Anticipated Misc. Fabrication End Month (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">43. Misc Fab End Month (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.misc_fab_end_month || '—'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
+                      </div>
+                      {/* 44: Average Monthly Misc. Fabrication Hours (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">44. Avg Misc Fab Hours/Mo (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.avg_monthly_misc_fab_hours ? `${calculatedReadouts.avg_monthly_misc_fab_hours} hr` : '0.00 hr'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Structural Erection */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Structural Erection Block */}
+                    <h5 className="text-[11px] font-black text-cyan-600 uppercase tracking-widest ml-1 mb-2">Structural Erection Schedule (45-49)</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
+                      {/* 45: Structural Erection Hours at Time of Bid */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Structural Erection Hours</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">45. Struct Erect Hours (Est)</label>
                         <input
                           type="number"
                           step="0.1"
                           name="struct_erect_hours"
                           value={formData.struct_erect_hours}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 46: Anticipated Structural Erection Start Month */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Erect Start Month</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">46. Struct Erect Start Month (Est)</label>
                         <input
                           type="text"
                           name="struct_erect_start_month"
                           placeholder="e.g. August 2026"
                           value={formData.struct_erect_start_month || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 47: Anticipated Structural Erection Duration in Months */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Erect Duration (Months)</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">47. Struct Erect Duration (Est)</label>
                         <input
                           type="number"
                           name="struct_erect_duration"
                           value={formData.struct_erect_duration}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
+                      </div>
+                      {/* 48: Anticipated Structural Erection End Month (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">48. Struct Erect End Month (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.struct_erect_end_month || '—'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
+                      </div>
+                      {/* 49: Average Monthly Structural Erection Hours (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">49. Avg Struct Erect Hours/Mo (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.avg_monthly_struct_erect_hours ? `${calculatedReadouts.avg_monthly_struct_erect_hours} hr` : '0.00 hr'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
                       </div>
                     </div>
 
-                    {/* Misc Erection */}
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                    {/* Misc Erection Block */}
+                    <h5 className="text-[11px] font-black text-cyan-600 uppercase tracking-widest ml-1 mb-2">Misc Erection Schedule (50-54)</h5>
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                      {/* 50: Misc. Erection Hours at Time of Bid */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Erection Hours</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">50. Misc Erect Hours (Est)</label>
                         <input
                           type="number"
                           step="0.1"
                           name="misc_erect_hours"
                           value={formData.misc_erect_hours}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 51: Anticipated Misc. Erection Start Month */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Erect Start Month</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">51. Misc Erect Start Month (Est)</label>
                         <input
                           type="text"
                           name="misc_erect_start_month"
                           placeholder="e.g. September 2026"
                           value={formData.misc_erect_start_month || ''}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
+                      {/* 52: Anticipated Misc. Erection Duration in Months */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Misc Erect Duration</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">52. Misc Erect Duration (Est)</label>
                         <input
                           type="number"
                           name="misc_erect_duration"
                           value={formData.misc_erect_duration}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-3 py-2.5 rounded-xl border border-slate-200 bg-white text-xs outline-none focus:border-cyan-400 focus:ring-4 focus:ring-cyan-500/5 transition-all text-slate-800"
                         />
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Auto-Calculated Readouts (No Fill) */}
-                  <div className="bg-cyan-50/20 border border-cyan-100 p-6 rounded-3xl space-y-4">
-                    <h4 className="text-xs font-bold text-cyan-600 uppercase tracking-widest flex items-center gap-2 select-none">
-                      <Calculator className="w-4 h-4 text-cyan-500" />
-                      Calculated Estimations (No Fill Columns)
-                    </h4>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs font-bold">
-                      
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Total Tonnage</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.total_tonnage} Tons</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Pcs / Ton</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.struct_pcs_per_ton}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Ton / SqFt (No Jst)</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.struct_ton_per_sqft_no_joist}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Cost / Ton</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>${calculatedReadouts.struct_cost_per_ton}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Cost / SqFt</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>${calculatedReadouts.struct_cost_per_sqft}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Erect Cost / Ton</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>${calculatedReadouts.struct_erect_cost_per_ton}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Avg Fab Hrs/Month</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.avg_monthly_struct_fab_hours} hr</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Avg Erect Hrs/Month</span>
-                        <span className="text-sm text-cyan-700 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.avg_monthly_struct_erect_hours} hr</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Fab End Month</span>
-                        <span className="text-xs text-slate-800 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.struct_fab_end_month || '—'}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Misc End Month</span>
-                        <span className="text-xs text-slate-800 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.misc_fab_end_month || '—'}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Erect End Month</span>
-                        <span className="text-xs text-slate-800 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.struct_erect_end_month || '—'}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                      <div className="bg-white border border-cyan-100 p-3 rounded-xl shadow-sm flex flex-col justify-between min-h-[60px]">
-                        <span className="text-[9px] uppercase tracking-wider text-slate-400 block mb-1">Misc Erect End Month</span>
-                        <span className="text-xs text-slate-800 font-extrabold flex items-center justify-between">
-                          <span>{calculatedReadouts.misc_erect_end_month || '—'}</span>
-                          <Lock className="w-3.5 h-3.5 text-cyan-300" />
-                        </span>
-                      </div>
-
-                    </div>
-                  </div>
-
-                  {/* Award Status & Follow Up */}
-                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
-                    <h4 className="text-xs font-bold text-slate-800 uppercase tracking-widest">Award Status & Estimator Follow-up</h4>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-5">
+                      {/* 53: Anticipated Misc. Erection End Month (No Fill) - READ ONLY */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Won / Lost (Status)</label>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">53. Misc Erect End Month (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.misc_erect_end_month || '—'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
+                      </div>
+                      {/* 54: Average Monthly Misc. Erection Hours (No Fill) - READ ONLY */}
+                      <div>
+                        <label className="text-[10px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">54. Avg Misc Erect Hours/Mo (No Fill)</label>
+                        <div className="relative">
+                          <input
+                            type="text"
+                            value={calculatedReadouts.avg_monthly_misc_erect_hours ? `${calculatedReadouts.avg_monthly_misc_erect_hours} hr` : '0.00 hr'}
+                            readOnly
+                            className="w-full px-3 py-2.5 rounded-xl border border-cyan-200 bg-cyan-50/20 text-xs font-extrabold text-cyan-700 outline-none select-none pr-8"
+                          />
+                          <Lock className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-cyan-400" />
+                        </div>
+                      </div>
+                    </div>
+
+                  </div>
+
+                  <div className="flex justify-between items-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setActiveFormTab('bidding_pricing')}
+                      className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all"
+                    >
+                      Back to Bidding & Pricing
+                    </button>
+
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="submit"
+                        className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all flex items-center gap-2"
+                      >
+                        {editingId ? 'Save Worksheet' : 'Publish Estimate'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setActiveFormTab('estimating_execution')}
+                        className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 flex items-center gap-1 transition-all"
+                      >
+                        Next: Estimating & Execution
+                        <ChevronRight className="w-4 h-4 text-indigo-500" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* TAB 3: Estimating & Execution */}
+              {activeFormTab === 'estimating_execution' && (
+                <div className="space-y-6 animate-fade-in">
+                  
+                  {/* Section 4: Estimating & Follow-up (Estimator) */}
+                  <div className="bg-indigo-50/20 border border-indigo-100 p-5 rounded-2xl space-y-4">
+                    <h4 className="text-xs font-bold text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-indigo-500" /> Estimating & Follow-up (Estimator)
+                    </h4>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {/* 55: Estimating Hours */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">55. Estimating Hours (Est)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          name="estimating_hours"
+                          value={formData.estimating_hours}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 56: Quote Date */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">56. Quote Date (Est)</label>
+                        <input
+                          type="date"
+                          name="quote_date"
+                          value={formData.quote_date || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 57: Won / Lost */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">57. Won/Lost (Est)</label>
                         <select
                           name="won_lost"
                           value={formData.won_lost}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-600 appearance-none cursor-pointer font-semibold"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
                         >
                           <option value="Pending">Pending</option>
                           <option value="Won">Won</option>
@@ -1513,61 +1824,118 @@ export default function BidEnquiry() {
                         </select>
                       </div>
 
+                      {/* 59: Estimator Follow Up Date */}
                       <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Awarded Amount</label>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">59. Follow Up Date (Est)</label>
+                        <input
+                          type="date"
+                          name="estimator_followup_date"
+                          value={formData.estimator_followup_date || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 60: Awarded Amount */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">60. Awarded Amount (Est)</label>
                         <input
                           type="number"
                           step="0.01"
                           name="awarded_amount"
                           value={formData.awarded_amount}
                           onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Fabrication Start Date (JF)</label>
-                        <input
-                          type="date"
-                          name="fab_start_date"
-                          value={formData.fab_start_date || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Follow Up Date</label>
-                        <input
-                          type="date"
-                          name="estimator_followup_date"
-                          value={formData.estimator_followup_date || ''}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-800"
                         />
                       </div>
                     </div>
 
+                    {/* 58: Estimator Follow Up Notes */}
                     <div>
-                      <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Estimator Follow Up Notes</label>
+                      <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">58. Follow Up Notes (Est)</label>
                       <textarea
                         name="estimator_followup_notes"
                         value={formData.estimator_followup_notes}
                         onChange={handleInputChange}
                         placeholder="Add scheduling or follow up notes..."
                         rows="3"
-                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-violet-400 focus:ring-4 focus:ring-violet-500/5 transition-all text-slate-800 resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 transition-all text-slate-800 resize-none"
                       />
+                    </div>
+                  </div>
+
+                  {/* Section 5: Job Award & Execution (MB) */}
+                  <div className="bg-pink-50/20 border border-pink-100 p-5 rounded-2xl">
+                    <h4 className="text-xs font-bold text-pink-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-pink-500" /> Job Award & Execution (MB)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {/* 61: SFE Job # */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">61. SFE Job # (MB)</label>
+                        <input
+                          type="text"
+                          name="sfe_job_no"
+                          value={formData.sfe_job_no || ''}
+                          onChange={handleInputChange}
+                          placeholder="e.g. J-2026A"
+                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 62: Awarded Job # Date */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">62. Awarded Date (MB)</label>
+                        <input
+                          type="date"
+                          name="awarded_job_no_date"
+                          value={formData.awarded_job_no_date || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+
+                      {/* 63: Contract Executed Date */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">63. Contract Executed Date (MB)</label>
+                        <input
+                          type="date"
+                          name="contract_executed_date"
+                          value={formData.contract_executed_date || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 6: Fabrication Start (JF) */}
+                  <div className="bg-emerald-50/20 border border-emerald-100 p-5 rounded-2xl">
+                    <h4 className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-500" /> Fabrication Start (JF)
+                    </h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                      {/* 64: Fabrication Start Date */}
+                      <div>
+                        <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">64. Fab Start Date (JF)</label>
+                        <input
+                          type="date"
+                          name="fab_start_date"
+                          value={formData.fab_start_date || ''}
+                          onChange={handleInputChange}
+                          className="w-full px-4 py-3 rounded-xl border border-emerald-400 focus:ring-4 focus:ring-emerald-500/5 transition-all text-slate-800"
+                        />
+                      </div>
                     </div>
                   </div>
 
                   <div className="flex justify-between items-center pt-2">
                     <button
                       type="button"
-                      onClick={() => setActiveFormTab('bidding')}
+                      onClick={() => setActiveFormTab('fab_erect')}
                       className="px-5 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-600 text-xs font-bold hover:bg-slate-50 transition-all"
                     >
-                      Back to Pink Section
+                      Back to Fabrication & Erection
                     </button>
 
                     <button

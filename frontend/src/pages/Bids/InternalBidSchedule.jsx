@@ -461,9 +461,9 @@ export default function InternalBidSchedule() {
                 </div>
               </div>
             </div>            {/* Calendar Table Container */}
-            <div className="flex-1 overflow-auto bg-white min-h-0">
-              <table className="w-full border-collapse border border-slate-300 table-fixed">
-                <thead className="sticky top-0 bg-slate-50 z-10 border-b border-slate-300 select-none">
+            <div className="flex-1 overflow-hidden bg-white min-h-0 flex flex-col">
+              <table className="w-full h-full border-collapse border border-slate-300 table-fixed">
+                <thead className="bg-slate-50 border-b border-slate-300 select-none h-10">
                   <tr>
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
                       <th
@@ -489,7 +489,7 @@ export default function InternalBidSchedule() {
                           return (
                             <td
                               key={dateStr}
-                              className="p-1.5 border border-slate-300 bg-slate-50/10 align-top h-[90px]"
+                              className="p-1 border border-slate-300 bg-slate-50/10 align-top"
                             />
                           );
                         }
@@ -497,13 +497,13 @@ export default function InternalBidSchedule() {
                         return (
                           <td
                             key={dateStr}
-                            className={`p-1.5 border border-slate-300 align-top transition-all h-[90px] ${
+                            className={`p-1 border border-slate-300 align-top transition-all ${
                               isToday
                                 ? 'bg-amber-50/60 ring-2 ring-inset ring-amber-400'
                                 : 'bg-white hover:bg-slate-50/40'
                             }`}
                           >
-                            <div className="flex flex-col h-full min-h-[76px]">
+                            <div className="flex flex-col h-full overflow-hidden">
                               {/* Day Number — prominent, clean */}
                               <div className="flex items-center justify-end mb-1 select-none">
                                 <span
@@ -518,9 +518,9 @@ export default function InternalBidSchedule() {
                               </div>
 
                               {/* Content: Holiday + Bids */}
-                              <div className="flex-1 overflow-y-auto space-y-0.5 scrollbar-thin">
+                              <div className="flex-1 space-y-0.5 overflow-hidden">
                                 {holiday && (
-                                  <div className="rounded-md bg-slate-100 border border-slate-200 text-[9px] font-semibold text-slate-500 px-1.5 py-1 leading-tight truncate select-none" title={holiday}>
+                                  <div className="rounded bg-slate-100 border border-slate-200 text-[8px] font-semibold text-slate-500 px-1 py-0.5 leading-tight truncate select-none" title={holiday}>
                                     🎉 {holiday}
                                   </div>
                                 )}
@@ -532,19 +532,16 @@ export default function InternalBidSchedule() {
                                     <div
                                       key={bid.id}
                                       onClick={() => setSelectedBid(bid)}
-                                      className={`rounded-md border ${cfg.border} ${cfg.bg} ${cfg.text} text-[9px] font-bold px-1.5 py-1 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight`}
+                                      className={`rounded border ${cfg.border} ${cfg.bg} ${cfg.text} text-[8px] font-bold px-1 py-0.5 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight flex items-center gap-1`}
                                       title={`${bid.quote_no} — ${bid.project_name}`}
                                     >
-                                      <div className="flex items-center justify-between gap-1 mb-0.5">
-                                        <span className="font-mono opacity-60 text-[8px] shrink-0">{bid.quote_no}</span>
-                                        <div className="flex items-center gap-0.5 shrink-0">
-                                          {status === 'overdue' && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block" title="Overdue" />}
-                                          {status === 'due-today' && <span className="w-1.5 h-1.5 rounded-full bg-orange-400 inline-block" title="Due Today" />}
-                                          {bid.won_lost === 'Won' && <span className="text-[7px] bg-emerald-500 text-white px-0.5 rounded leading-none" title="Won">W</span>}
-                                          {bid.won_lost === 'Lost' && <span className="text-[7px] bg-rose-500 text-white px-0.5 rounded leading-none" title="Lost">L</span>}
-                                        </div>
-                                      </div>
-                                      <span className="block truncate">{bid.project_name}</span>
+                                      {status === 'overdue' && <span className="w-1 h-1 shrink-0 rounded-full bg-rose-500 inline-block" title="Overdue" />}
+                                      {status === 'due-today' && <span className="w-1 h-1 shrink-0 rounded-full bg-orange-400 inline-block" title="Due Today" />}
+                                      {bid.won_lost === 'Won' && <span className="text-[6px] shrink-0 bg-emerald-500 text-white px-0.5 rounded leading-none" title="Won">W</span>}
+                                      {bid.won_lost === 'Lost' && <span className="text-[6px] shrink-0 bg-rose-500 text-white px-0.5 rounded leading-none" title="Lost">L</span>}
+                                      
+                                      <span className="font-mono opacity-60 shrink-0">{bid.quote_no}</span>
+                                      <span className="truncate">{bid.project_name}</span>
                                     </div>
                                   );
                                 })}

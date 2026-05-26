@@ -72,6 +72,12 @@ class BidEnquiry(models.Model):
     aisc_fab_req = models.CharField(max_length=20, default='No')
     aisc_erect_req = models.CharField(max_length=20, default='No')
     customer_name = models.ForeignKey(Customer, on_delete=models.SET_NULL, null=True, blank=True, related_name='bid_enquiries')
+    SCOPE_CHOICES = [
+        ('Fabrication', 'Fabrication'),
+        ('Detailing', 'Detailing'),
+        ('Erection', 'Erection'),
+    ]
+    scope_of_work = models.CharField(max_length=50, blank=True, null=True, choices=SCOPE_CHOICES)
     decision_to_bid = models.CharField(max_length=20, default='TBD')
     primary_estimator = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True, related_name='bid_enquiries')
     sent_to_jd = models.DateField(null=True, blank=True)
