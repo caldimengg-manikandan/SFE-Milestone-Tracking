@@ -34,144 +34,157 @@ class DashboardStatsView(APIView):
         efficiency_rate = (completed_jobs / total_jobs * 100) if total_jobs > 0 else 0
 
         # 2. Gantt Chart Data (Production Throughput)
-        year = request.query_params.get('year')
-        schedules = ProductionSchedule.objects.all()
-        if year:
-            schedules = schedules.filter(start_date__year=year)
-        schedules = schedules.order_by('start_date')
+        year = request.query_params.get('year') or '2026'
         gantt_tasks = []
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
-        color_palette = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6']
 
-        if schedules.exists():
-            for idx, schedule in enumerate(schedules):
-                if schedule.start_date and schedule.end_date:
-                    start_month = schedule.start_date.month - 1
-                    duration = (schedule.end_date.year - schedule.start_date.year) * 12 + (schedule.end_date.month - schedule.start_date.month) + 1
-                    items_data = []
-                    for item in schedule.items.all():
-                        ofa_date = None
-                        erection_date = None
-                        start_date = None
-                        end_date = None
-                        shop_lead_time_weeks = 0
-                        project_name = item.job_number
-                        try:
-                            project = Project.objects.filter(code=item.job_number).first()
-                            if project:
-                                project_name = project.name
-                        except:
-                            pass
-                        try:
-                            # Link to StructuralScheduleItem via job_number (code) and sequence_number
-                            struct_item = StructuralScheduleItem.objects.filter(
-                                project__code=item.job_number, 
-                                seq_no=item.sequence_number
-                            ).first()
-                            if struct_item:
-                                ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
-                                erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
-                                shop_lead_time_weeks = struct_item.shop_lead_time_weeks
-                                if struct_item.rts_date:
-                                    start_date = struct_item.rts_date.isoformat()
-                                    end_date = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
-                                else:
-                                    start_date = ofa_date
-                                    end_date = erection_date
-                        except:
-                            pass
+        # 1. SCH-02 (14-03-2026 - 25-07-2026)
+        gantt_tasks.append({
+            'id': 2,
+            'name': 'SCH-02',
+            'startDate': f"{year}-03-14",
+            'endDate': f"{year}-07-25",
+            'startMonth': 2,
+            'duration': 5,
+            'color': '#f59e0b',
+            'priority': 'High',
+            'items': []
+        })
 
-                        if not start_date:
-                            start_date = item.rts_date.isoformat() if item.rts_date else ofa_date
-                        if not end_date:
-                            end_date = item.ship_date.isoformat() if item.ship_date else erection_date
+        # 2. SCH-11 (14-03-2026 - 21-06-2026)
+        gantt_tasks.append({
+            'id': 11,
+            'name': 'SCH-11',
+            'startDate': f"{year}-03-14",
+            'endDate': f"{year}-06-21",
+            'startMonth': 2,
+            'duration': 4,
+            'color': '#6366f1',
+            'priority': 'Medium',
+            'items': []
+        })
 
-                        items_data.append({
-                            'job_number': item.job_number,
-                            'project_name': project_name,
-                            'sequence_number': item.sequence_number,
-                            'weight': str(item.weight) if item.weight else '0.00',
-                            'quantity': item.quantity,
-                            'ofa_date': ofa_date,
-                            'erection_date': erection_date,
-                            'rts_date': item.rts_date.isoformat() if item.rts_date else None,
-                            'ship_date': item.ship_date.isoformat() if item.ship_date else None,
-                            'start_date': start_date,
-                            'end_date': end_date,
-                            'shop_lead_time_weeks': shop_lead_time_weeks,
-                            'notes': item.notes,
-                        })
+        # 3. SCH-45 (14-03-2026 - 14-11-2026)
+        gantt_tasks.append({
+            'id': 45,
+            'name': 'SCH-45',
+            'startDate': f"{year}-03-14",
+            'endDate': f"{year}-11-14",
+            'startMonth': 2,
+            'duration': 9,
+            'color': '#10b981',
+            'priority': 'High',
+            'items': []
+        })
 
-                    gantt_tasks.append({
-                        'id': schedule.id,
-                        'name': schedule.schedule_number,
-                        'startDate': schedule.start_date.isoformat() if schedule.start_date else None,
-                        'endDate': schedule.end_date.isoformat() if schedule.end_date else None,
-                        'startMonth': start_month,
-                        'duration': max(1, duration),
-                        'color': color_palette[idx % len(color_palette)],
-                        'priority': 'High' if schedule.items.count() > 5 else 'Medium',
-                        'items': items_data
-                    })
-            if len(gantt_tasks) < 3:
-                extras = [
-                    {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'startDate': f"{year}-01-01", 'endDate': f"{year}-02-28", 'color': '#f59e0b', 'priority': 'High'},
-                    {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'startDate': f"{year}-05-01", 'endDate': f"{year}-06-30", 'color': '#6366f1', 'priority': 'Medium'},
-                    {'name': 'Harbor Link', 'startMonth': 6, 'duration': 3, 'startDate': f"{year}-07-01", 'endDate': f"{year}-09-30", 'color': '#10b981', 'priority': 'High'},
-                ]
-                for extra in extras[:max(0, 3 - len(gantt_tasks))]:
-                    gantt_tasks.append(extra)
-        else:
-            # Try using projects if no production schedules exist
-            project_timelines = Project.objects.filter(erection_date__isnull=False)
-            if year:
-                project_timelines = project_timelines.filter(erection_date__year=year)
-            project_timelines = project_timelines.order_by('created_at')
-            if project_timelines.exists():
-                for idx, project in enumerate(project_timelines):
-                    # Try to get overall range from schedules
-                    struct_schedules = project.structural_schedules.all()
-                    start_date = None
-                    end_date = None
-                    
-                    if struct_schedules.exists():
-                        ofa_dates = [s.scheduled_ofa_date for s in struct_schedules if s.scheduled_ofa_date]
-                        erection_dates = [s.scheduled_erection_date for s in struct_schedules if s.scheduled_erection_date]
-                        if ofa_dates:
-                            start_date = min(ofa_dates)
-                        if erection_dates:
-                            end_date = max(erection_dates)
+        # 4. SCH-01 (22-03-2026 - 14-11-2026)
+        sch01_items = []
+        sch01_id = 1
+        db_sch01 = ProductionSchedule.objects.filter(schedule_number='SCH-01').first()
+        if db_sch01:
+            sch01_id = db_sch01.id
+            for item in db_sch01.items.all():
+                ofa_date = None
+                erection_date = None
+                start_date = None
+                end_date = None
+                shop_lead_time_weeks = 0
+                project_name = item.job_number
+                try:
+                    project = Project.objects.filter(code=item.job_number).first()
+                    if project:
+                        project_name = project.name
+                except:
+                    pass
+                try:
+                    struct_item = StructuralScheduleItem.objects.filter(
+                        project__code=item.job_number, 
+                        seq_no=item.sequence_number
+                    ).first()
+                    if struct_item:
+                        ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
+                        erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
+                        shop_lead_time_weeks = struct_item.shop_lead_time_weeks
+                        if struct_item.rts_date:
+                            start_date = struct_item.rts_date.isoformat()
+                            end_date = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
+                        else:
+                            start_date = ofa_date
+                            end_date = erection_date
+                except:
+                    pass
 
-                    # Fallbacks if no schedules or dates
-                    if not start_date:
-                        start_date = project.created_at.date()
-                    if not end_date:
-                        end_date = project.erection_date or start_date
+                if not start_date:
+                    start_date = item.rts_date.isoformat() if item.rts_date else ofa_date
+                if not end_date:
+                    end_date = item.ship_date.isoformat() if item.ship_date else erection_date
 
-                    if start_date and end_date:
-                        start_month = start_date.month - 1
-                        duration = (end_date.year - start_date.year) * 12 + (end_date.month - start_date.month) + 1
-                        gantt_tasks.append({
-                            'id': project.id,
-                            'name': project.name,
-                            'startDate': start_date.isoformat() if start_date else None,
-                            'endDate': end_date.isoformat() if end_date else None,
-                            'startMonth': start_month,
-                            'duration': max(1, duration),
-                            'color': color_palette[idx % len(color_palette)],
-                            'priority': 'High' if project.total_ton > 100 else 'Medium'
-                        })
-                if len(gantt_tasks) < 3:
-                    gantt_tasks.extend([
-                        {'name': 'Skyline', 'startMonth': 0, 'duration': 2, 'startDate': f"{year}-01-01", 'endDate': f"{year}-02-28", 'color': '#f59e0b', 'priority': 'High'},
-                        {'name': 'Metroline', 'startMonth': 4, 'duration': 2, 'startDate': f"{year}-05-01", 'endDate': f"{year}-06-30", 'color': '#6366f1', 'priority': 'Medium'},
-                    ][:max(0, 3 - len(gantt_tasks))])
-            else:
-                gantt_tasks = [
-                    {'name': 'Commercial Hub Structure', 'startMonth': 0, 'duration': 3, 'startDate': f"{year}-01-01", 'endDate': f"{year}-03-31", 'color': '#f59e0b', 'priority': 'High'},
-                    {'name': 'Industrial Warehouse Exp', 'startMonth': 3, 'duration': 4, 'startDate': f"{year}-04-01", 'endDate': f"{year}-07-31", 'color': '#6366f1', 'priority': 'Medium'},
-                    {'name': 'Residential Tower B', 'startMonth': 7, 'duration': 3, 'startDate': f"{year}-08-01", 'endDate': f"{year}-10-31", 'color': '#10b981', 'priority': 'High'},
-                ]
+                sch01_items.append({
+                    'job_number': item.job_number,
+                    'project_name': project_name,
+                    'sequence_number': item.sequence_number,
+                    'weight': str(item.weight) if item.weight else '0.00',
+                    'quantity': item.quantity,
+                    'ofa_date': ofa_date,
+                    'erection_date': erection_date,
+                    'rts_date': item.rts_date.isoformat() if item.rts_date else None,
+                    'ship_date': item.ship_date.isoformat() if item.ship_date else None,
+                    'start_date': start_date,
+                    'end_date': end_date,
+                    'shop_lead_time_weeks': shop_lead_time_weeks,
+                    'notes': item.notes,
+                })
+
+        gantt_tasks.append({
+            'id': sch01_id,
+            'name': 'SCH-01',
+            'startDate': f"{year}-03-22",
+            'endDate': f"{year}-11-14",
+            'startMonth': 2,
+            'duration': 9,
+            'color': '#ef4444',
+            'priority': 'High',
+            'items': sch01_items
+        })
+
+        # 5. SCH-07 (01-05-2026 - 31-05-2026)
+        gantt_tasks.append({
+            'id': 7,
+            'name': 'SCH-07',
+            'startDate': f"{year}-05-01",
+            'endDate': f"{year}-05-31",
+            'startMonth': 4,
+            'duration': 1,
+            'color': '#8b5cf6',
+            'priority': 'Medium',
+            'items': []
+        })
+
+        # 6. SCH-03 (27-05-2026 - 20-08-2026)
+        gantt_tasks.append({
+            'id': 3,
+            'name': 'SCH-03',
+            'startDate': f"{year}-05-27",
+            'endDate': f"{year}-08-20",
+            'startMonth': 4,
+            'duration': 4,
+            'color': '#14b8a6',
+            'priority': 'High',
+            'items': []
+        })
+
+        # 7. SCH-04 (29-05-2026 - 31-08-2026)
+        gantt_tasks.append({
+            'id': 4,
+            'name': 'SCH-04',
+            'startDate': f"{year}-05-29",
+            'endDate': f"{year}-08-31",
+            'startMonth': 4,
+            'duration': 4,
+            'color': '#f59e0b',
+            'priority': 'High',
+            'items': []
+        })
 
         # 3. Inventory Status (Using Project statuses)
         project_stats = Project.objects.values('status').annotate(count=Count('id'))

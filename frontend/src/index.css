@@ -40,9 +40,9 @@
   }
 
   /* Global Styling for Buttons & Inputs */
-  button, 
-  input, 
-  select, 
+  button,
+  input,
+  select,
   textarea {
     border-radius: 0.5rem;
   }
@@ -55,13 +55,16 @@
   .scrollbar-thin::-webkit-scrollbar {
     width: 4px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb {
     background: rgba(148, 163, 184, 0.2);
     border-radius: 99px;
   }
+
   .scrollbar-thin::-webkit-scrollbar-thumb:hover {
     background: rgba(148, 163, 184, 0.4);
   }
@@ -69,6 +72,7 @@
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
   .scrollbar-none {
     -ms-overflow-style: none;
     scrollbar-width: none;
@@ -208,12 +212,17 @@
    ANIMATIONS
    ============================================ */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .animate-shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
   background-size: 200% 100%;
   animation: shimmer 2s infinite;
 }
@@ -228,6 +237,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -237,14 +247,16 @@
 /* ============================================
    GANTT CHART CUSTOM STYLES
    ============================================ */
-.gantt-grid {
-  display: grid;
-  grid-template-columns: 200px repeat(12, 1fr);
+.db-gantt-grid {
   border-left: 1px solid #e2e8f0;
   border-top: 1px solid #e2e8f0;
+  width: 100%;
+  min-width: 1000px;
+  display: flex;
+  flex-direction: column;
 }
 
-.gantt-header-cell {
+.db-gantt-header-cell {
   padding: 0.5rem;
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
@@ -256,11 +268,13 @@
   color: #475569;
 }
 
-.gantt-row {
-  display: contents;
+.db-gantt-row {
+  display: grid;
+  grid-template-columns: 160px repeat(48, 1fr);
+  width: 100%;
 }
 
-.gantt-cell {
+.db-gantt-cell {
   height: 40px;
   border-right: 1px solid #e2e8f0;
   border-bottom: 1px solid #e2e8f0;
@@ -268,7 +282,7 @@
   background-color: white;
 }
 
-.gantt-label-cell {
+.db-gantt-label-cell {
   display: flex;
   align-items: center;
   padding: 0 0.5rem;
@@ -278,13 +292,15 @@
   background-color: #fff;
   border-right: 2px solid #94a3b8;
   border-bottom: 1px solid #e2e8f0;
+  position: relative;
 }
 
-.gantt-bar {
+.db-gantt-bar {
   position: absolute;
   top: 0;
   height: 100%;
-  border-radius: 0; /* Keeping with the square theme */
+  border-radius: 0;
+  /* Keeping with the square theme */
   z-index: 10;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   display: flex;
@@ -298,25 +314,26 @@
   transition: all 0.3s ease;
 }
 
-.gantt-bar:hover {
+.db-gantt-bar:hover {
   filter: brightness(0.9) saturate(1.15);
   z-index: 20;
   box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
 }
 
-.gantt-pink-header {
-  background-color: #ffd1d1 !important; /* Soft pink as in reference */
+.db-gantt-pink-header {
+  background-color: #ffd1d1 !important;
+  /* Soft pink as in reference */
   color: #334155 !important;
   border-right: 2px solid #94a3b8 !important;
 }
 
-.gantt-month-sub {
+.db-gantt-month-sub {
   font-size: 0.55rem;
   color: #64748b;
   margin-top: 2px;
 }
 
-.gantt-bar-details {
+.db-gantt-bar-details {
   position: absolute;
   left: 100%;
   top: 50%;
@@ -346,43 +363,43 @@
   border-color: rgba(255, 255, 255, 0.1) !important;
 }
 
-.dark .gantt-cell {
+.dark .db-gantt-cell {
   background-color: #1e293b !important;
   border-color: #334155 !important;
 }
 
-.dark .gantt-header-cell {
+.dark .db-gantt-header-cell {
   background-color: #0f172a !important;
   border-color: #334155 !important;
   color: #94a3b8 !important;
 }
 
-.dark .gantt-label-cell {
+.dark .db-gantt-label-cell {
   background-color: #1e293b !important;
   color: #e2e8f0 !important;
   border-color: #334155 !important;
 }
 
-.dark .gantt-month-sub {
+.dark .db-gantt-month-sub {
   color: #94a3b8 !important;
 }
 
-.dark .gantt-bar-details {
+.dark .db-gantt-bar-details {
   background-color: #1e293b !important;
   color: #f1f5f9 !important;
   border-color: #334155 !important;
 }
 
 
-.dark input, 
-.dark select, 
+.dark input,
+.dark select,
 .dark textarea {
   background-color: #1e293b !important;
   border-color: #334155 !important;
   color: #f1f5f9 !important;
 }
 
-.dark input:focus, 
+.dark input:focus,
 .dark select:focus {
   border-color: #fbbf24 !important;
 }
@@ -429,13 +446,13 @@ tr[class*="hover:bg-"]:hover {
 }
 
 /* Fix text colors in dark mode for common slate classes */
-.dark .text-slate-900, 
-.dark .text-slate-800, 
+.dark .text-slate-900,
+.dark .text-slate-800,
 .dark .text-slate-700 {
   color: #f1f5f9 !important;
 }
 
-.dark .text-slate-600, 
+.dark .text-slate-600,
 .dark .text-slate-500 {
   color: #94a3b8 !important;
 }

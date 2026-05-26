@@ -118,7 +118,7 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const response = await dashboardAPI.getStats({ 
+        const response = await dashboardAPI.getStats({
           year: selectedYear,
           capacity_month: capacityMonth,
           capacity_year: capacityYear
@@ -220,30 +220,32 @@ export default function Dashboard() {
             </div>
           </div>
 
-          <div className="overflow-x-auto xl:overflow-x-hidden scrollbar-thin xl:scrollbar-none">
-            <div
-              className="gantt-grid"
-              style={{
-                gridTemplateColumns: `160px repeat(${(toMonth - fromMonth + 1) * 4}, 1fr)`
-              }}
-            >
+          <div className="overflow-x-auto scrollbar-thin">
+            <div className="db-gantt-grid">
               {/* Header Row: Months */}
               <div
-                className="gantt-header-cell gantt-pink-header flex flex-col justify-center font-bold text-slate-700"
-                style={{ padding: '6px 8px' }}
+                className="db-gantt-row"
+                style={{
+                  gridTemplateColumns: `160px repeat(${(toMonth - fromMonth + 1) * 4}, 1fr)`
+                }}
               >
-                <span>Schedule / Project</span>
-              </div>
-
-              {data.ganttData?.months?.slice(fromMonth, toMonth + 1).map((m, i) => (
                 <div
-                  key={fromMonth + i}
-                  className="gantt-header-cell text-center font-bold text-slate-700"
-                  style={{ gridColumn: 'span 4', padding: '6px 0' }}
+                  className="db-gantt-header-cell db-gantt-pink-header flex flex-col justify-center font-bold text-slate-700"
+                  style={{ padding: '6px 8px' }}
                 >
-                  {m}
+                  <span>Schedule / Project</span>
                 </div>
-              ))}
+
+                {data.ganttData?.months?.slice(fromMonth, toMonth + 1).map((m, i) => (
+                  <div
+                    key={fromMonth + i}
+                    className="db-gantt-header-cell text-center font-bold text-slate-700"
+                    style={{ gridColumn: 'span 4', padding: '6px 0' }}
+                  >
+                    {m}
+                  </div>
+                ))}
+              </div>
 
               {/* Header Row: Weeks */}
               {Array.from({ length: toMonth - fromMonth + 1 }).map((_, mIdx) => (
@@ -266,12 +268,15 @@ export default function Dashboard() {
                   );
 
                   return (
-                    <div key={idx} className="contents">
+                    <Fragment key={idx}>
                       <div
-                        className={`gantt-row cursor-pointer transition-colors hover:bg-slate-50/50 ${expandedTaskId === task.id ? 'bg-slate-50' : ''}`}
+                        className={`db-gantt-row cursor-pointer transition-colors hover:bg-slate-50/50 ${expandedTaskId === task.id ? 'bg-slate-50' : ''}`}
                         onClick={() => toggleExpand(task.id)}
+                        style={{
+                          gridTemplateColumns: `160px repeat(${(toMonth - fromMonth + 1) * 4}, 1fr)`
+                        }}
                       >
-                        <div className="gantt-label-cell flex items-center gap-2">
+                        <div className="db-gantt-label-cell flex items-center gap-2">
                           <div className={`w-1.5 h-full absolute left-0 top-0 transition-colors ${expandedTaskId === task.id ? 'bg-amber-500' : 'bg-transparent'}`} />
                           <div className="flex flex-col">
                             <span className="truncate max-w-[160px] font-bold text-slate-800">{task.name}</span>
@@ -284,13 +289,13 @@ export default function Dashboard() {
                           return (
                             <div
                               key={colIdx}
-                              className="gantt-cell"
+                              className="db-gantt-cell"
                               style={isFirstVisibleWeek && barPosition ? { zIndex: 12 } : undefined}
                             >
                               {/* Task Bar */}
                               {isFirstVisibleWeek && barPosition && (
                                 <div
-                                  className="gantt-bar shadow-sm"
+                                  className="db-gantt-bar shadow-sm"
                                   title={`${task.name} (${formatDate(task.startDate || new Date(parseInt(selectedYear), task.startMonth, 1))} - ${formatDate(task.endDate || new Date(parseInt(selectedYear), task.startMonth + task.duration, 0))})`}
                                   style={{
                                     left: `${(barPosition.startCol - Math.floor(barPosition.startCol)) * 100}%`,
@@ -302,7 +307,7 @@ export default function Dashboard() {
                                     fontWeight: 800
                                   }}
                                 >
-                                  <span className="gantt-bar-details">
+                                  <span className="db-gantt-bar-details">
                                     {task.name} ({formatDate(task.startDate || new Date(parseInt(selectedYear), task.startMonth, 1))} - {formatDate(task.endDate || new Date(parseInt(selectedYear), task.startMonth + task.duration, 0))})
                                   </span>
                                 </div>
@@ -321,8 +326,14 @@ export default function Dashboard() {
                             : null;
 
                         return (
-                          <div key={`sub-${task.id}-${iIdx}`} className="gantt-row">
-                            <div className="gantt-label-cell flex items-center bg-slate-50 relative">
+                          <div
+                            key={`sub-${task.id}-${iIdx}`}
+                            className="db-gantt-row"
+                            style={{
+                              gridTemplateColumns: `160px repeat(${(toMonth - fromMonth + 1) * 4}, 1fr)`
+                            }}
+                          >
+                            <div className="db-gantt-label-cell flex items-center bg-slate-50 relative">
                               {/* Indentation line */}
                               <div className="absolute left-4 top-0 bottom-0 w-px bg-slate-300"></div>
                               {/* Horizontal connector */}
@@ -339,13 +350,13 @@ export default function Dashboard() {
                               return (
                                 <div
                                   key={`sub-cell-${colIdx}`}
-                                  className="gantt-cell bg-slate-50/50 border-dashed border-slate-200"
+                                  className="db-gantt-cell bg-slate-50/50 border-dashed border-slate-200"
                                   style={isFirstVisibleWeek && subBarPosition ? { zIndex: 12 } : undefined}
                                 >
                                   {/* Sub-task Bar */}
                                   {isFirstVisibleWeek && subBarPosition && (
                                     <div
-                                      className="gantt-bar shadow-sm"
+                                      className="db-gantt-bar shadow-sm"
                                       title={item.start_date && item.end_date && item.shop_lead_time_weeks
                                         ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
                                         : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
@@ -361,7 +372,7 @@ export default function Dashboard() {
                                         fontWeight: 800
                                       }}
                                     >
-                                      <span className="gantt-bar-details">
+                                      <span className="db-gantt-bar-details">
                                         {item.start_date && item.end_date && item.shop_lead_time_weeks
                                           ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
                                           : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
@@ -375,7 +386,7 @@ export default function Dashboard() {
                           </div>
                         );
                       })}
-                    </div>
+                    </Fragment>
                   );
                 })
               ) : (
@@ -466,8 +477,8 @@ export default function Dashboard() {
             <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
             <div className="space-y-4">
               {(data.announcements && data.announcements.length > 0 ? data.announcements : announcements).map((a) => (
-                <div 
-                  key={a.id} 
+                <div
+                  key={a.id}
                   className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
                   onClick={() => setSelectedNotice(a)}
                   title="Click to view details"
@@ -484,15 +495,15 @@ export default function Dashboard() {
 
       {/* Notice Detail Modal */}
       {selectedNotice && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in" 
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in"
           onClick={() => setSelectedNotice(null)}
         >
-          <div 
-            className="bg-white border border-slate-200 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl relative" 
+          <div
+            className="bg-white border border-slate-200 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl relative"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setSelectedNotice(null)}
               className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 transition-colors"
             >
