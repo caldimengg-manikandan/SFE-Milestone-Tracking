@@ -61,16 +61,17 @@ export default function EstimationModel() {
   // --- State for all other 6 Estimation Sections ---
   const [estimationSections, setEstimationSections] = useState(() => {
     const saved = localStorage.getItem('sfe_est_sections');
-    return saved ? JSON.parse(saved) : {
+    const defaults = {
       // Shop Labor
       shopFabricationHours: '',
       miscLaborHours: '',
       miscLaborOtherHours: '',
+      miscLaborOther2Hours: '',
       totalPieces: '',
       hourlyLaborRate: 60.0,
-      numTrucks: '',
-      hoursPerTruck: '',
-      galvanizingTrucks: '',
+      numTrucks: 3,
+      hoursPerTruck: 3,
+      galvanizingTrucks: 5,
       galvHoursPerTruck: 5.0,
       shippingRate: 195.0,
 
@@ -83,6 +84,7 @@ export default function EstimationModel() {
       overheadPercent: 12.0,
 
       // Buyouts
+      steelJoistTons: '',
       steelJoistCost: '',
       deckCost: '',
       subletErectionCost: '',
@@ -101,6 +103,15 @@ export default function EstimationModel() {
       profitPercent: 10.0,
       miscCharges: ''
     };
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.numTrucks === '') parsed.numTrucks = 3;
+      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
+      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
+      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
+      return { ...defaults, ...parsed };
+    }
+    return defaults;
   });
 
   // --- State and Effect for Project Master Dropdown ---
@@ -166,22 +177,31 @@ export default function EstimationModel() {
 
   // --- Calculations ---
 
+  const formatTons = (val) => {
+    if (val === 0) return '0.000';
+    const str = val.toFixed(4);
+    if (str.endsWith('0')) {
+      return val.toFixed(3);
+    }
+    return str;
+  };
+
   // ── Material Section ──
   // 1. Mill
   const millWeightVal = Number(bidEnquiry.millWeight) || 0;
   const millAmountVal = Number(bidEnquiry.millAmount) || 0;
-  const millTons = Number((millWeightVal / 2000).toFixed(3));
+  const millTons = millWeightVal / 2000;
   const millRatePerLb = millWeightVal < 1 ? 0 : millAmountVal / millWeightVal;
 
   // 2. Whse
   const warehouseWeightVal = Number(bidEnquiry.warehouseWeight) || 0;
   const warehouseAmountVal = Number(bidEnquiry.warehouseAmount) || 0;
-  const warehouseTons = Number((warehouseWeightVal / 2000).toFixed(3));
+  const warehouseTons = warehouseWeightVal / 2000;
   const warehouseRatePerLb = warehouseWeightVal < 1 ? 0 : warehouseAmountVal / warehouseWeightVal;
 
   // 3. Scrap
   const scrapPercentVal = Number(bidEnquiry.scrapPercent) || 0;
-  const scrapTons = Number((millTons + warehouseTons).toFixed(3));
+  const scrapTons = millTons + warehouseTons;
   const scrapAmount = (millAmountVal + warehouseAmountVal) * scrapPercentVal / 100;
 
   // 4. Shop & Field Bolts
@@ -221,12 +241,13 @@ export default function EstimationModel() {
   const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
 
   // ── Grand Tonnage ──
-  const totalTons = Number((millTons + warehouseTons).toFixed(3));
+  const totalTons = millTons + warehouseTons;
 
   // ── Section 1: Shop Labor Calculations ──
   const shopFabricationHoursVal = Number(estimationSections.shopFabricationHours) || 0;
   const miscLaborHoursVal = Number(estimationSections.miscLaborHours) || 0;
   const miscLaborOtherHoursVal = Number(estimationSections.miscLaborOtherHours) || 0;
+  const miscLaborOther2HoursVal = Number(estimationSections.miscLaborOther2Hours) || 0;
   const totalPiecesVal = Number(estimationSections.totalPieces) || 0;
   const hourlyLaborRateVal = Number(estimationSections.hourlyLaborRate) || 0;
   const numTrucksVal = Number(estimationSections.numTrucks) || 0;
@@ -235,7 +256,7 @@ export default function EstimationModel() {
   const galvHoursPerTruckVal = Number(estimationSections.galvHoursPerTruck) || 0;
   const shippingRateVal = Number(estimationSections.shippingRate) || 0;
 
-  const totalLaborHours = shopFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal;
+  const totalLaborHours = shopFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
   const manHoursPerTon = totalTons > 0 ? totalLaborHours / totalTons : 0;
   const piecesPerTon = totalTons > 0 ? totalPiecesVal / totalTons : 0;
   const totalDirectShopCost = totalLaborHours * hourlyLaborRateVal;
@@ -256,13 +277,16 @@ export default function EstimationModel() {
 
   // Include material cost in direct costs
   const totalDirectCosts = totalMaterialCost + totalDirectShopCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
-  const directCostPerTon = totalTons > 0 ? totalDirectCosts / totalTons : 0;
+  const directCostPerTon = totalTons > 0 ? Math.round(totalDirectCosts) / totalTons : 0;
 
   // ── Section 3: Profit on Direct Costs ──
   const overheadPercentVal = Number(estimationSections.overheadPercent) || 0;
-  const directCostOverhead = totalDirectCosts * (overheadPercentVal / 100);
-  const bidAmountOnDirectCosts = totalDirectCosts + directCostOverhead;
+  const directCostOverheadRaw = totalDirectCosts * (overheadPercentVal / 100);
+  const directCostOverhead = Math.round(directCostOverheadRaw * 100) / 100;
+  const bidAmountOnDirectCosts = Math.round(totalDirectCosts) + directCostOverhead;
   const bidAmountPerTon = totalTons > 0 ? bidAmountOnDirectCosts / totalTons : 0;
+  const totalWeightLbs = millWeightVal + warehouseWeightVal;
+  const bidAmountPerLb = totalWeightLbs > 0 ? bidAmountOnDirectCosts / totalWeightLbs : 0;
 
   // ── Section 4: Buyouts Calculations ──
   const steelJoistCostVal = Number(estimationSections.steelJoistCost) || 0;
@@ -285,14 +309,14 @@ export default function EstimationModel() {
 
   // ── Section 5: Profit on Buyouts ──
   const buyoutOverheadPercentVal = Number(estimationSections.buyoutOverheadPercent) || 0;
-  const buyoutOverhead = totalBuyoutCosts * (buyoutOverheadPercentVal / 100);
-  const bidAmountOnBuyouts = totalBuyoutCosts + buyoutOverhead;
+  const buyoutOverhead = Math.round(totalBuyoutCosts) * (buyoutOverheadPercentVal / 100);
+  const bidAmountOnBuyouts = Math.round(totalBuyoutCosts) + buyoutOverhead;
 
   // ── Section 6: Final Totals ──
   const profitPercentVal = Number(estimationSections.profitPercent) || 0;
   const miscChargesVal = Number(estimationSections.miscCharges) || 0;
 
-  const totalAmountBeforeProfit = bidAmountOnDirectCosts + bidAmountOnBuyouts;
+  const totalAmountBeforeProfit = Math.round(bidAmountOnDirectCosts) + Math.round(bidAmountOnBuyouts);
   const profitAmount = totalAmountBeforeProfit * (profitPercentVal / 100);
   const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
   const finalBidAmount = finalAmountBeforeMisc + miscChargesVal;
@@ -338,17 +362,19 @@ export default function EstimationModel() {
         shopFabricationHours: '',
         miscLaborHours: '',
         miscLaborOtherHours: '',
+        miscLaborOther2Hours: '',
         totalPieces: '',
         hourlyLaborRate: 60.0,
-        numTrucks: '',
-        hoursPerTruck: '',
-        galvanizingTrucks: '',
+        numTrucks: 3,
+        hoursPerTruck: 3,
+        galvanizingTrucks: 5,
         galvHoursPerTruck: 5.0,
         shippingRate: 195.0,
         subletDetailingCost: '',
         peStampCost: '',
         otherDirectCosts: '',
         overheadPercent: 12.0,
+        steelJoistTons: '',
         steelJoistCost: '',
         deckCost: '',
         subletErectionCost: '',
@@ -403,7 +429,7 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-800">Mill</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
-                  <span className="w-16 font-bold text-slate-500 text-right">{millTons.toFixed(3)} Tons</span>
+                  <span className="w-16 font-bold text-slate-500 text-right">{formatTons(millTons)} Tons</span>
                   <input
                     type="number"
                     min="0"
@@ -448,7 +474,7 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-800">Whse</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
-                  <span className="w-16 font-bold text-slate-500 text-right">{warehouseTons.toFixed(3)} Tons</span>
+                  <span className="w-16 font-bold text-slate-500 text-right">{formatTons(warehouseTons)} Tons</span>
                   <input
                     type="number"
                     min="0"
@@ -493,7 +519,7 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-800">Scrap</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
-                  <span className="w-16 font-bold text-slate-500 text-right">{scrapTons.toFixed(3)} Tons</span>
+                  <span className="w-16 font-bold text-slate-500 text-right">{formatTons(scrapTons)} Tons</span>
                   <input
                     type="number"
                     min="0"
@@ -789,6 +815,18 @@ export default function EstimationModel() {
                     />
                     <span className="font-bold text-slate-400">Hrs</span>
                   </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 text-slate-400 font-semibold text-[10px]">OTHER:</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.miscLaborOther2Hours}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscLaborOther2Hours: e.target.value })}
+                      className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                    <span className="font-bold text-slate-400">Hrs</span>
+                  </div>
                 </div>
               </td>
               <td className="py-4 px-4">
@@ -820,19 +858,12 @@ export default function EstimationModel() {
                 <span className="font-bold text-slate-500">{totalLaborHours} Total Hrs</span>
               </td>
               <td className="py-4 px-4">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-slate-400">@</span>
-                  <span className="relative flex items-center">
-                    <span className="absolute left-2.5 font-bold text-slate-800">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={estimationSections.hourlyLaborRate}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, hourlyLaborRate: e.target.value })}
-                      className="w-20 pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right"
-                    />
+                <div className="flex items-center gap-1 font-bold text-slate-500">
+                  <span>@</span>
+                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-20 text-right text-slate-500">
+                    ${Number(estimationSections.hourlyLaborRate || 60).toFixed(0)}
                   </span>
-                  <span className="font-bold text-slate-400 ml-1">/Hr</span>
+                  <span className="ml-1">/Hr</span>
                 </div>
               </td>
               <td className="py-4 px-4 text-right pr-6">
@@ -848,32 +879,36 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-800">Freight Out Destination</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">{freightOutCost}</span>
+                  <span className="font-bold text-slate-400">Hrs</span>
+                </div>
+              </td>
+              <td className="py-4 px-4">
+                <div className="flex items-center gap-1.5 font-bold text-slate-505">
+                  <span>(</span>
                   <input
                     type="number"
                     min="0"
                     value={estimationSections.numTrucks}
-                    placeholder="Trucks"
+                    placeholder="0"
                     onChange={(e) => setEstimationSections({ ...estimationSections, numTrucks: e.target.value })}
-                    className="w-20 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    className="w-14 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-200 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
                   />
-                  <span className="font-bold text-slate-400">Trucks</span>
-                </div>
-              </td>
-              <td className="py-4 px-4">
-                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">Truck(s)</span>
+                  <span>@</span>
                   <input
                     type="number"
                     min="0"
                     value={estimationSections.hoursPerTruck}
-                    placeholder="Hrs/Truck"
+                    placeholder="0"
                     onChange={(e) => setEstimationSections({ ...estimationSections, hoursPerTruck: e.target.value })}
-                    className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right"
+                    className="w-14 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-200 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
                   />
-                  <span className="font-bold text-slate-400">Hrs/Truck</span>
+                  <span className="text-[10px] text-slate-400">Hrs. each)</span>
                 </div>
               </td>
               <td className="py-4 px-4 text-right pr-6 font-bold text-slate-650">
-                ={freightOutCost.toFixed(1)} Hrs
+                ={freightOutCost} Hrs
               </td>
             </tr>
 
@@ -883,32 +918,36 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-800">Freight Galvanizing</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">{freightGalvanizingCost}</span>
+                  <span className="font-bold text-slate-400">Hrs</span>
+                </div>
+              </td>
+              <td className="py-4 px-4">
+                <div className="flex items-center gap-1.5 font-bold text-slate-505">
+                  <span>(</span>
                   <input
                     type="number"
                     min="0"
                     value={estimationSections.galvanizingTrucks}
-                    placeholder="Trucks"
+                    placeholder="0"
                     onChange={(e) => setEstimationSections({ ...estimationSections, galvanizingTrucks: e.target.value })}
-                    className="w-20 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    className="w-14 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-200 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
                   />
-                  <span className="font-bold text-slate-400">Trucks</span>
-                </div>
-              </td>
-              <td className="py-4 px-4">
-                <div className="flex items-center gap-1.5">
+                  <span className="text-[10px] text-slate-400">Truck(s)</span>
+                  <span>@</span>
                   <input
                     type="number"
                     min="0"
                     value={estimationSections.galvHoursPerTruck}
-                    placeholder="5"
+                    placeholder="0"
                     onChange={(e) => setEstimationSections({ ...estimationSections, galvHoursPerTruck: e.target.value })}
-                    className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right"
+                    className="w-14 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-200 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
                   />
-                  <span className="font-bold text-slate-400">Hrs/Truck</span>
+                  <span className="text-[10px] text-slate-400">Hrs. each)</span>
                 </div>
               </td>
               <td className="py-4 px-4 text-right pr-6 font-bold text-slate-650">
-                ={freightGalvanizingCost.toFixed(1)} Hrs
+                ={freightGalvanizingCost} Hrs
               </td>
             </tr>
 
@@ -917,22 +956,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-400">6</td>
               <td className="py-4 px-4 font-bold text-slate-800">Total Shipping Cost</td>
               <td className="py-4 px-4">
-                <span className="font-bold text-slate-500">{totalShippingHours.toFixed(1)} Total Hrs</span>
+                <span className="font-bold text-slate-505">{totalShippingHours} Total Hrs</span>
               </td>
               <td className="py-4 px-4">
-                <div className="flex items-center gap-1">
-                  <span className="font-bold text-slate-400">@</span>
-                  <span className="relative flex items-center">
-                    <span className="absolute left-2.5 font-bold text-slate-855">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={estimationSections.shippingRate}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, shippingRate: e.target.value })}
-                      className="w-20 pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right"
-                    />
+                <div className="flex items-center gap-1 font-bold text-slate-500">
+                  <span>@</span>
+                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-20 text-right text-slate-500">
+                    ${Number(estimationSections.shippingRate || 195).toFixed(0)}
                   </span>
-                  <span className="font-bold text-slate-400 ml-1">/Hr</span>
+                  <span className="ml-1">/Hr</span>
                 </div>
               </td>
               <td className="py-4 px-4 text-right pr-6">
@@ -1106,7 +1138,7 @@ export default function EstimationModel() {
                 </div>
               </td>
               <td className="py-4 px-4 font-bold text-slate-500">
-                ${(directCostOverhead / (totalTons || 1)).toFixed(2)} /Ton
+                ${bidAmountPerLb.toFixed(2)} /Lb
               </td>
               <td className="py-4 px-4 text-right pr-6 font-bold text-slate-850">
                 =${directCostOverhead.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
@@ -1147,265 +1179,234 @@ export default function EstimationModel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-150">
-            {/* 15. Steel Joist and Deck */}
+            {/* 21. Steel Joist and/or Deck */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">15</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Steel Joist And Deck</td>
+              <td className="py-4 px-4 font-bold text-slate-400">21</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Steel Joist and/or Deck</td>
               <td className="py-4 px-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">JOIST:</span>
-                    <span className="relative flex items-center max-w-[120px]">
-                      <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={estimationSections.steelJoistCost}
-                        placeholder="0"
-                        onChange={(e) => setEstimationSections({ ...estimationSections, steelJoistCost: e.target.value })}
-                        className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                      />
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">DECK:</span>
-                    <span className="relative flex items-center max-w-[120px]">
-                      <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={estimationSections.deckCost}
-                        placeholder="0"
-                        onChange={(e) => setEstimationSections({ ...estimationSections, deckCost: e.target.value })}
-                        className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                      />
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    value={estimationSections.steelJoistTons}
+                    placeholder="0"
+                    onChange={(e) => setEstimationSections({ ...estimationSections, steelJoistTons: e.target.value })}
+                    className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right text-xs"
+                  />
+                  <span className="font-bold text-slate-400">Tons</span>
                 </div>
               </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${((steelJoistCostVal + deckCostVal) / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-805">
-                =${(steelJoistCostVal + deckCostVal).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.steelJoistCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, steelJoistCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
               </td>
             </tr>
 
-            {/* 16. Sublet Erection */}
+            {/* 23. Sublet Erection */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">16</td>
+              <td className="py-4 px-4 font-bold text-slate-400">23</td>
               <td className="py-4 px-4 font-bold text-slate-800">Sublet Erection</td>
               <td className="py-4 px-4">
-                <span className="relative flex items-center max-w-[150px]">
-                  <span className="absolute left-3 font-bold text-slate-800">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={estimationSections.subletErectionCost}
-                    placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, subletErectionCost: e.target.value })}
-                    className="w-full pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
-                  />
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-24 text-right font-bold text-slate-500">
+                    ${subletErectionCostPerTon.toFixed(2)}
+                  </span>
+                  <span className="font-bold text-slate-400">/ Ton</span>
+                </div>
               </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${subletErectionCostPerTon.toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${subletErectionCostVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </td>
-            </tr>
-
-            {/* 17. Miscellaneous Metals */}
-            <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">17</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Miscellaneous Metals Cost</td>
-              <td className="py-4 px-4">
-                <span className="relative flex items-center max-w-[150px]">
-                  <span className="absolute left-3 font-bold text-slate-800">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={estimationSections.miscMetalCost}
-                    placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, miscMetalCost: e.target.value })}
-                    className="w-full pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
-                  />
-                </span>
-              </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(miscMetalCostVal / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${miscMetalCostVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.subletErectionCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, subletErectionCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
               </td>
             </tr>
 
-            {/* 18. OSHA Posts */}
+            {/* 24. Miscellaneous Metals */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">18</td>
-              <td className="py-4 px-4 font-bold text-slate-800">OSHA Posts</td>
+              <td className="py-4 px-4 font-bold text-slate-400">24</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Miscellaneous Metals</td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.miscMetalCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscMetalCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            {/* 25. Other */}
+            <tr className="bg-slate-50/30">
+              <td className="py-4 px-4 font-bold text-slate-400">25</td>
+              <td className="py-4 px-4 font-bold text-slate-850" colSpan="4">Other</td>
+            </tr>
+
+            {/* OSHA Posts Lin.Ft. */}
+            <tr className="hover:bg-slate-50/50 transition-colors">
+              <td className="py-4 px-4 font-bold text-slate-400"></td>
+              <td className="py-4 px-4 pl-8 font-semibold text-slate-700">OSHA Posts Lin.Ft.</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="0"
                     value={estimationSections.oshaLinearFeet}
-                    placeholder="Linear Feet"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, oshaLinearFeet: e.target.value })}
-                    className="w-28 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
-                  />
-                  <span className="font-bold text-slate-400">Linear Ft</span>
-                </div>
-              </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                @ $50 / 5 Ft
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${oshaPostsCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </td>
-            </tr>
-
-            {/* 19. Safety */}
-            <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">19</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Safety Costs</td>
-              <td className="py-4 px-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">SAFETY:</span>
-                    <span className="relative flex items-center max-w-[120px]">
-                      <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={estimationSections.additionalSafetyCosts}
-                        placeholder="0"
-                        onChange={(e) => setEstimationSections({ ...estimationSections, additionalSafetyCosts: e.target.value })}
-                        className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                      />
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">CCIP:</span>
-                    <span className="relative flex items-center max-w-[120px]">
-                      <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={estimationSections.ccipCosts}
-                        placeholder="0"
-                        onChange={(e) => setEstimationSections({ ...estimationSections, ccipCosts: e.target.value })}
-                        className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                      />
-                    </span>
-                  </div>
-                </div>
-              </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(safetyCost / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${safetyCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </td>
-            </tr>
-
-            {/* 20. LEED */}
-            <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">20</td>
-              <td className="py-4 px-4 font-bold text-slate-800">LEED Submission</td>
-              <td className="py-4 px-4">
-                <span className="relative flex items-center max-w-[150px]">
-                  <span className="absolute left-3 font-bold text-slate-800">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={estimationSections.leedSubmissionCost}
                     placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, leedSubmissionCost: e.target.value })}
-                    className="w-full pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    onChange={(e) => setEstimationSections({ ...estimationSections, oshaLinearFeet: e.target.value })}
+                    className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right text-xs"
                   />
-                </span>
+                  <span className="font-bold text-slate-400">LF</span>
+                </div>
               </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(leedSubmissionCostVal / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${leedSubmissionCostVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
-              </td>
-            </tr>
-
-            {/* 21. Total Direct Buyout Costs */}
-            <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/30">
-              <td className="py-4 px-4 font-bold text-slate-400">21</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Total Direct Buyout Costs</td>
-              <td className="py-4 px-4">
-                <span className="font-semibold text-slate-400 italic">Subtotal</span>
-              </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(totalDirectBuyoutCosts / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${totalDirectBuyoutCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="px-3 py-2 border border-amber-300 rounded-xl bg-[#fef9c3] w-28 text-right font-bold text-slate-900">
+                    ${oshaPostsCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
               </td>
             </tr>
 
-            {/* 22. Use Tax */}
+            {/* SAFETY Additional Safety Costs/CCIP */}
             <tr className="hover:bg-slate-50/50 transition-colors">
-              <td className="py-4 px-4 font-bold text-slate-400">22</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Use Tax (Material Buyout)</td>
-              <td className="py-4 px-4">
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-16 text-slate-400 font-bold text-[9px] uppercase">Material:</span>
-                    <span className="relative flex items-center max-w-[120px]">
-                      <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                      <input
-                        type="number"
-                        min="0"
-                        value={estimationSections.suppliedMaterialCost}
-                        placeholder="0"
-                        onChange={(e) => setEstimationSections({ ...estimationSections, suppliedMaterialCost: e.target.value })}
-                        className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                      />
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-16 text-slate-400 font-bold text-[9px] uppercase">Rate:</span>
+              <td className="py-4 px-4 font-bold text-slate-400"></td>
+              <td className="py-4 px-4 pl-8 font-semibold text-slate-700">SAFETY Additional Safety Costs/CCIP</td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
                     <input
                       type="number"
                       min="0"
-                      max="100"
-                      step="any"
-                      value={estimationSections.useTaxPercent}
-                      placeholder="6.0"
-                      onChange={(e) => setEstimationSections({ ...estimationSections, useTaxPercent: e.target.value })}
-                      className="w-16 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
+                      value={estimationSections.additionalSafetyCosts}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, additionalSafetyCosts: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
-                    <span className="font-bold text-slate-400 text-xs">%</span>
-                  </div>
+                  </span>
                 </div>
-              </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(useTax / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${useTax.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
             </tr>
 
-            {/* 23. Total Buyout Costs */}
-            <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50 border-t-2 border-slate-200">
-              <td className="py-4 px-4 font-bold text-slate-400">23</td>
-              <td className="py-4 px-4 font-black text-slate-900 text-sm">TOTAL BUYOUT COSTS</td>
+            {/* LEED Data Submittal */}
+            <tr className="hover:bg-slate-50/50 transition-colors">
+              <td className="py-4 px-4 font-bold text-slate-400"></td>
+              <td className="py-4 px-4 pl-8 font-semibold text-slate-700">LEED LEED Data Submittal</td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.leedSubmissionCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, leedSubmissionCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            {/* 26. Total Direct Buyout Costs */}
+            <tr className="bg-slate-50/50 border-t-2 border-slate-200">
+              <td className="py-4 px-4 font-bold text-slate-400">26</td>
+              <td className="py-4 px-4 font-bold text-slate-800" colSpan="3">Total Direct Buyout Costs</td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5 font-bold text-slate-900">
+                  <span>=</span>
+                  <span className="px-3 py-2 border-2 border-slate-300 rounded-xl bg-white w-28 text-right shadow-sm">
+                    ${totalDirectBuyoutCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            {/* 27. Use Tax */}
+            <tr className="hover:bg-slate-50/50 transition-colors">
+              <td className="py-4 px-4 font-bold text-slate-400">27</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Use Tax 6% x Cost of Supplied Material</td>
               <td className="py-4 px-4">
-                <span className="font-semibold text-slate-400 italic">Buyout Directs + Use Tax</span>
+                <div className="flex items-center gap-2">
+                  <span className="relative flex items-center max-w-[120px]">
+                    <span className="absolute left-2 text-slate-500 font-bold">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.suppliedMaterialCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, suppliedMaterialCost: e.target.value })}
+                      className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
+                    />
+                  </span>
+                </div>
               </td>
-              <td className="py-4 px-4 font-black text-slate-900 text-sm">
-                ${(totalBuyoutCosts / (totalTons || 1)).toFixed(2)} /Ton
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="px-3 py-2 border border-amber-300 rounded-xl bg-[#fef9c3] w-28 text-right font-bold text-slate-900">
+                    ${useTax.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
               </td>
+            </tr>
+
+            {/* 29. Total Buyout Costs */}
+            <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50 border-t-2 border-slate-200">
+              <td className="py-4 px-4 font-bold text-slate-400">29</td>
+              <td className="py-4 px-4 font-black text-slate-900 text-sm" colSpan="3">Total Buyout Costs</td>
               <td className="py-4 px-4 text-right pr-6 font-black text-slate-900 text-sm">
-                =${totalBuyoutCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                <div className="flex items-center justify-end gap-1.5">
+                  <span>=</span>
+                  <span className="px-3 py-2 border-2 border-slate-350 rounded-xl bg-white w-28 text-right shadow-md">
+                    ${totalBuyoutCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  </span>
+                </div>
               </td>
             </tr>
           </tbody>
@@ -1622,7 +1623,7 @@ export default function EstimationModel() {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tonnage</span>
-            <h4 className="text-xl font-extrabold text-slate-800 mt-1">{totalTons.toFixed(3)} Tons</h4>
+            <h4 className="text-xl font-extrabold text-slate-800 mt-1">{formatTons(totalTons)} Tons</h4>
           </div>
           <Calculator className="w-8 h-8 text-amber-500 bg-amber-50 p-1.5 rounded-xl animate-pulse" />
         </div>

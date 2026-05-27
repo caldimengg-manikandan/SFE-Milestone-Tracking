@@ -38,64 +38,58 @@ class DashboardStatsView(APIView):
         gantt_tasks = []
         months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
-        # 1. SCH-02 (14-03-2026 - 25-07-2026)
-        gantt_tasks.append({
-            'id': 2,
-            'name': 'SCH-02',
-            'startDate': f"{year}-03-14",
-            'endDate': f"{year}-07-25",
-            'startMonth': 2,
-            'duration': 5,
-            'color': '#f59e0b',
-            'priority': 'High',
-            'items': []
-        })
-
-        # 2. SCH-11 (14-03-2026 - 21-06-2026)
-        gantt_tasks.append({
-            'id': 11,
-            'name': 'SCH-11',
-            'startDate': f"{year}-03-14",
-            'endDate': f"{year}-06-21",
-            'startMonth': 2,
-            'duration': 4,
-            'color': '#6366f1',
-            'priority': 'Medium',
-            'items': []
-        })
-
-        # 3. SCH-45 (14-03-2026 - 14-11-2026)
-        gantt_tasks.append({
-            'id': 45,
-            'name': 'SCH-45',
-            'startDate': f"{year}-03-14",
-            'endDate': f"{year}-11-14",
-            'startMonth': 2,
-            'duration': 9,
-            'color': '#10b981',
-            'priority': 'High',
-            'items': []
-        })
-
-        # 4. SCH-01 (22-03-2026 - 14-11-2026)
-        sch01_items = []
-        sch01_id = 1
-        db_sch01 = ProductionSchedule.objects.filter(schedule_number='SCH-01').first()
-        if db_sch01:
-            sch01_id = db_sch01.id
-            for item in db_sch01.items.all():
+        COLOR_PALETTE = ['#f59e0b', '#6366f1', '#10b981', '#ef4444', '#8b5cf6', '#14b8a6', '#ec4899', '#3b82f6']
+        
+        schedules = ProductionSchedule.objects.all().order_by('schedule_number')
+        for idx, schedule in enumerate(schedules):
+            start_date = schedule.start_date
+            end_date = schedule.end_date
+            
+            # Find boundaries from items if start_date or end_date is null
+            if not start_date or not end_date:
+                item_dates = []
+                for item in schedule.items.all():
+                    if item.rts_date:
+                        item_dates.append(item.rts_date)
+                    if item.ship_date:
+                        item_dates.append(item.ship_date)
+                if item_dates:
+                    if not start_date:
+                        start_date = min(item_dates)
+                    if not end_date:
+                        end_date = max(item_dates)
+            
+            # Fallback if still null
+            if not start_date:
+                try:
+                    start_date = timezone.now().date()
+                except:
+                    import datetime
+                    start_date = datetime.date.today()
+            if not end_date:
+                end_date = start_date + timedelta(days=90)
+                
+            start_month = start_date.month - 1
+            duration = max(1, (end_date.year - start_date.year) * 12 + end_date.month - start_date.month + 1)
+            
+            color = COLOR_PALETTE[idx % len(COLOR_PALETTE)]
+            
+            schedule_items = []
+            for item in schedule.items.all():
                 ofa_date = None
                 erection_date = None
-                start_date = None
-                end_date = None
+                item_start = None
+                item_end = None
                 shop_lead_time_weeks = 0
                 project_name = item.job_number
+                
                 try:
                     project = Project.objects.filter(code=item.job_number).first()
                     if project:
                         project_name = project.name
                 except:
                     pass
+                    
                 try:
                     struct_item = StructuralScheduleItem.objects.filter(
                         project__code=item.job_number, 
@@ -106,20 +100,20 @@ class DashboardStatsView(APIView):
                         erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
                         shop_lead_time_weeks = struct_item.shop_lead_time_weeks
                         if struct_item.rts_date:
-                            start_date = struct_item.rts_date.isoformat()
-                            end_date = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
+                            item_start = struct_item.rts_date.isoformat()
+                            item_end = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
                         else:
-                            start_date = ofa_date
-                            end_date = erection_date
+                            item_start = ofa_date
+                            item_end = erection_date
                 except:
                     pass
 
-                if not start_date:
-                    start_date = item.rts_date.isoformat() if item.rts_date else ofa_date
-                if not end_date:
-                    end_date = item.ship_date.isoformat() if item.ship_date else erection_date
+                if not item_start:
+                    item_start = item.rts_date.isoformat() if item.rts_date else ofa_date
+                if not item_end:
+                    item_end = item.ship_date.isoformat() if item.ship_date else erection_date
 
-                sch01_items.append({
+                schedule_items.append({
                     'job_number': item.job_number,
                     'project_name': project_name,
                     'sequence_number': item.sequence_number,
@@ -129,62 +123,23 @@ class DashboardStatsView(APIView):
                     'erection_date': erection_date,
                     'rts_date': item.rts_date.isoformat() if item.rts_date else None,
                     'ship_date': item.ship_date.isoformat() if item.ship_date else None,
-                    'start_date': start_date,
-                    'end_date': end_date,
+                    'start_date': item_start,
+                    'end_date': item_end,
                     'shop_lead_time_weeks': shop_lead_time_weeks,
                     'notes': item.notes,
                 })
 
-        gantt_tasks.append({
-            'id': sch01_id,
-            'name': 'SCH-01',
-            'startDate': f"{year}-03-22",
-            'endDate': f"{year}-11-14",
-            'startMonth': 2,
-            'duration': 9,
-            'color': '#ef4444',
-            'priority': 'High',
-            'items': sch01_items
-        })
-
-        # 5. SCH-07 (01-05-2026 - 31-05-2026)
-        gantt_tasks.append({
-            'id': 7,
-            'name': 'SCH-07',
-            'startDate': f"{year}-05-01",
-            'endDate': f"{year}-05-31",
-            'startMonth': 4,
-            'duration': 1,
-            'color': '#8b5cf6',
-            'priority': 'Medium',
-            'items': []
-        })
-
-        # 6. SCH-03 (27-05-2026 - 20-08-2026)
-        gantt_tasks.append({
-            'id': 3,
-            'name': 'SCH-03',
-            'startDate': f"{year}-05-27",
-            'endDate': f"{year}-08-20",
-            'startMonth': 4,
-            'duration': 4,
-            'color': '#14b8a6',
-            'priority': 'High',
-            'items': []
-        })
-
-        # 7. SCH-04 (29-05-2026 - 31-08-2026)
-        gantt_tasks.append({
-            'id': 4,
-            'name': 'SCH-04',
-            'startDate': f"{year}-05-29",
-            'endDate': f"{year}-08-31",
-            'startMonth': 4,
-            'duration': 4,
-            'color': '#f59e0b',
-            'priority': 'High',
-            'items': []
-        })
+            gantt_tasks.append({
+                'id': schedule.id,
+                'name': schedule.schedule_number,
+                'startDate': start_date.isoformat(),
+                'endDate': end_date.isoformat(),
+                'startMonth': start_month,
+                'duration': duration,
+                'color': color,
+                'priority': 'High',
+                'items': schedule_items
+            })
 
         # 3. Inventory Status (Using Project statuses)
         project_stats = Project.objects.values('status').annotate(count=Count('id'))
