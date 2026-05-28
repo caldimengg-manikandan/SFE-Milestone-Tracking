@@ -1,13 +1,8 @@
 {
-  "python.defaultInterpreterPath": "c:/SFE-Milestone-Tracking/backend/venv/Scripts/python.exe",
+  "python.defaultInterpreterPath": "${workspaceFolder}/backend/venv/Scripts/python.exe",
   "python.analysis.extraPaths": [
-    "c:/SFE-Milestone-Tracking/backend",
-    "c:/SFE-Milestone-Tracking/backend/venv/Lib/site-packages"
+    "${workspaceFolder}/backend"
   ],
-  "python.autoComplete.extraPaths": [
-    "c:/SFE-Milestone-Tracking/backend",
-    "c:/SFE-Milestone-Tracking/backend/venv/Lib/site-packages"
-  ],
-  "python.pythonPath": "c:/SFE-Milestone-Tracking/backend/venv/Scripts/python.exe",
-  "python.analysis.pythonPath": "c:/SFE-Milestone-Tracking/backend/venv/Scripts/python.exe"
+  "python.analysis.venvPath": "${workspaceFolder}/backend",
+  "python.analysis.venv": "venv"
 }

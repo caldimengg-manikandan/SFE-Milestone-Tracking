@@ -9,15 +9,21 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.100.14",
+    "ag-grid-community": "^35.3.0",
+    "ag-grid-react": "^35.3.0",
     "axios": "^1.6.2",
+    "date-fns": "^4.3.0",
     "framer-motion": "^10.16.16",
     "jspdf": "^4.2.1",
     "jspdf-autotable": "^5.0.7",
     "lucide-react": "^0.294.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.6.0",
     "react-router-dom": "^6.20.1",
-    "recharts": "^2.10.3"
+    "recharts": "^2.10.3",
+    "zustand": "^5.0.13"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

@@ -1,12 +1,12 @@
 {
-  "venvPath": "c:/SFE-Milestone-Tracking/backend",
+  "venvPath": "backend",
   "venv": "venv",
   "pythonVersion": "3.11",
-  "extraPaths": ["c:/SFE-Milestone-Tracking/backend"],
+  "extraPaths": ["backend"],
   "executionEnvironments": [
     {
       "root": "backend",
-      "extraPaths": ["c:/SFE-Milestone-Tracking/backend/venv/Lib/site-packages"]
+      "extraPaths": ["backend/venv/Lib/site-packages"]
     }
   ]
 }

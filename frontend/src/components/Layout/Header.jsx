@@ -13,12 +13,13 @@ import {
   ArrowLeft,
 } from 'lucide-react';
 
-/* Map paths to page titles */
 const pageTitles = {
   '/dashboard': 'Dashboard',
   '/employees': 'Employee Master',
   '/customers': 'Customer Master',
   '/management': 'Detailer Master',
+  '/detailers': 'Detailer Master',
+  '/estimation': 'Estimation Model',
   '/steel-budget/input': 'Design Inputs',
   '/steel-budget/result': 'Estimation Result',
   '/projects': 'Project Master',
@@ -40,6 +41,13 @@ const pageTitles = {
   '/production/capacity-mapping/machine': 'Machine Master',
   '/production/capacity-mapping/manpower': 'Workforce Master',
   '/production/capacity-mapping/summary': 'Capacity Mapping Summary',
+  '/rfq/data-entry': 'RFQ Data Entry',
+  '/rfq/print': 'Print Setup',
+  '/rfq/bid-performance': 'Bid Performance',
+  '/rfq/dollar-dashboard': 'Dollar Dashboard',
+  '/rfq/job-analytics': 'Job Analytics',
+  '/rfq/sales-cycle': 'Sales Cycle',
+  '/rfq/capacity': 'Future Capacity',
 };
 
 export default function Header({ onMenuClick }) {

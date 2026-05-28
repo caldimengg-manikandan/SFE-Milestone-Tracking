@@ -7,6 +7,9 @@ class User(AbstractUser):
         ('admin', 'Admin'),
         ('manager', 'Manager'),
         ('employee', 'Employee'),
+        ('estimator', 'Estimator'),
+        ('detailing', 'Detailing / JF'),
+        ('readonly', 'Read-Only'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
     phone = models.CharField(max_length=20, blank=True)
@@ -18,6 +21,22 @@ class User(AbstractUser):
     class Meta:
         db_table = 'users'
         ordering = ['-date_joined']
+
+    @property
+    def is_manager(self):
+        return self.role in ('admin', 'manager')
+
+    @property
+    def is_estimator(self):
+        return self.role in ('admin', 'manager', 'estimator')
+
+    @property
+    def is_detailing(self):
+        return self.role in ('admin', 'manager', 'detailing')
+
+    @property
+    def can_edit(self):
+        return self.role != 'readonly'
 
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"

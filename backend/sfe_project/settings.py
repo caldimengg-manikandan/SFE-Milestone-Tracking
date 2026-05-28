@@ -29,6 +29,10 @@ INSTALLED_APPS = [
     'production',
     'dashboard',
     'bids',
+    
+    # Integrated Application B modules
+    'apps.rfq',
+    'apps.dashboards',
 ]
 
 MIDDLEWARE = [

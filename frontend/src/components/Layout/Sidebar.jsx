@@ -25,6 +25,8 @@ import {
   Calculator,
   FolderInput,
   CalendarRange,
+  DollarSign,
+  TrendingUp,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -41,6 +43,17 @@ const navSections = [
       { name: 'Bid Enquiry', path: '/bids/enquiry', icon: FolderInput },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
       { name: 'Estimation Model', path: '/estimation', icon: Calculator },
+    ],
+  },
+  {
+    label: 'RFQ MODULE',
+    items: [
+      { name: 'RFQ Data Entry', path: '/rfq/data-entry', icon: FileSpreadsheet },
+      { name: 'Bid Performance', path: '/rfq/bid-performance', icon: BarChart3 },
+      { name: 'Dollar Dashboard', path: '/rfq/dollar-dashboard', icon: DollarSign },
+      { name: 'Job Analytics', path: '/rfq/job-analytics', icon: TrendingUp },
+      { name: 'Sales Cycle', path: '/rfq/sales-cycle', icon: CalendarRange },
+      { name: 'Future Capacity', path: '/rfq/capacity', icon: Cpu },
     ],
   },
   {

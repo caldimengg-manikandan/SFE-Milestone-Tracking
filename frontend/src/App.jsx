@@ -1,4 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { Toaster } from 'react-hot-toast';
 import Layout from './components/Layout/Layout';
 import ProtectedRoute from './components/Layout/ProtectedRoute';
 import Login from './features/auth/Login';
@@ -22,9 +24,30 @@ import EstimationModel from './pages/EstimationModel';
 import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 
+// ── RFQ Module & Dashboard Integrations ───────────────────────────────────────
+import DataEntryPage from './pages/DataEntry/DataEntryPage';
+import PrintSetupPage from './pages/PrintSetup/PrintSetupPage';
+import BidPerformancePage from './pages/BidPerformance/BidPerformancePage';
+import DollarDashboardPage from './pages/DollarDashboard/DollarDashboardPage';
+import JobAnalyticsPage from './pages/JobAnalytics/JobAnalyticsPage';
+import SalesCyclePage from './pages/SalesCycle/SalesCyclePage';
+import FutureCapacityPage from './pages/FutureCapacity/FutureCapacityPage';
+import './assets/styles/rfq-scope.css';
+
+// ── Query Client Instantiation ───────────────────────────────────────────────
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 1,
+    },
+  },
+});
+
 export default function App() {
   return (
-    <Router basename="/SFE">
+    <QueryClientProvider client={queryClient}>
+      <Router basename="/SFE">
       <Routes>
         {/* Public Routes */}
         <Route path="/login" element={<Login />} />
@@ -64,6 +87,15 @@ export default function App() {
           <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
           <Route path="production/capacity-mapping/:tab?" element={<CapacityMapping />} />
 
+          {/* Integrated RFQ & Dashboards */}
+          <Route path="rfq/data-entry" element={<div className="rfq-scope w-full h-full"><DataEntryPage /></div>} />
+          <Route path="rfq/print" element={<div className="rfq-scope w-full h-full"><PrintSetupPage /></div>} />
+          <Route path="rfq/bid-performance" element={<div className="rfq-scope w-full h-full"><BidPerformancePage /></div>} />
+          <Route path="rfq/dollar-dashboard" element={<div className="rfq-scope w-full h-full"><DollarDashboardPage /></div>} />
+          <Route path="rfq/job-analytics" element={<div className="rfq-scope w-full h-full"><JobAnalyticsPage /></div>} />
+          <Route path="rfq/sales-cycle" element={<div className="rfq-scope w-full h-full"><SalesCyclePage /></div>} />
+          <Route path="rfq/capacity" element={<div className="rfq-scope w-full h-full"><FutureCapacityPage /></div>} />
+
           <Route path="settings" element={<Settings />} />
           <Route path="announcements" element={<Announcements />} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
@@ -71,6 +103,8 @@ export default function App() {
         </Route>
       </Routes>
     </Router>
+      <Toaster position="top-right" toastOptions={{ duration: 3000 }} />
+    </QueryClientProvider>
   );
 }
 

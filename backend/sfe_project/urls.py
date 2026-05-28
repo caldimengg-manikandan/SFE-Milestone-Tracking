@@ -27,6 +27,10 @@ urlpatterns = [
     path('api/production/', include('production.urls')),
     path('api/dashboard/', include('dashboard.urls')),
     path('api/bids/', include('bids.urls')),
+    
+    # Integrated RFQ & Dashboards module APIs
+    path('api/rfq/', include('apps.rfq.urls')),
+    path('api/rfq-dashboard/', include('apps.dashboards.urls')),
 ]
 
 from django.conf import settings
