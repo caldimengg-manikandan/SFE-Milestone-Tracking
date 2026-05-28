@@ -7,7 +7,6 @@ import { X } from 'lucide-react'
 export default function RFQFormModal({ customers, estimators, onClose, onSaved }) {
   const [form, setForm] = useState({
     quote_no: '', budget_type: 'Budget',
-    bid_reference: '',
     project_name: '', project_comments: '', bid_due_date: '', bid_due_time: '',
     location: '', distance_travel: '',
     prevailing_wage: false,
@@ -40,7 +39,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
     ;['bid_amount', 'customer', 'primary_estimator', 'distance_travel'].forEach(f => {
       if (payload[f] === '' || payload[f] === null) payload[f] = null
     })
-    ;['bid_due_time', 'bid_reference'].forEach(f => {
+    ;['bid_due_time'].forEach(f => {
       if (payload[f] === '') payload[f] = null
     })
     mutation.mutate(payload)
@@ -56,7 +55,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
-            {/* Row 1: Quote No + Type + Bid Ref */}
+            {/* Row 1: Quote No + Type + Quote Date */}
             <div className="form-group">
               <label className="form-label">Quote No *</label>
               <input className="form-input" value={form.quote_no}
@@ -71,10 +70,9 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
               </select>
             </div>
             <div className="form-group">
-              <label className="form-label">Bid Reference</label>
-              <input className="form-input" value={form.bid_reference}
-                onChange={e => set('bid_reference', e.target.value)}
-                placeholder="e.g. GC-REF-001" />
+              <label className="form-label">Quote Date</label>
+              <input className="form-input" type="date" value={form.quote_date}
+                onChange={e => set('quote_date', e.target.value)} />
             </div>
 
             {/* Row 2: Project Name (full width) */}
@@ -91,7 +89,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
                 onChange={e => set('project_comments', e.target.value)} />
             </div>
 
-            {/* Row 4: Bid Due Date + Bid Due Time + Quote Date */}
+            {/* Row 4: Bid Due Date + Bid Due Time + Location */}
             <div className="form-group">
               <label className="form-label">Bid Due Date</label>
               <input className="form-input" type="date" value={form.bid_due_date}
@@ -103,42 +101,17 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
                 onChange={e => set('bid_due_time', e.target.value)} />
             </div>
             <div className="form-group">
-              <label className="form-label">Quote Date</label>
-              <input className="form-input" type="date" value={form.quote_date}
-                onChange={e => set('quote_date', e.target.value)} />
-            </div>
-
-            {/* Row 5: Location + Distance + Prevailing Wage */}
-            <div className="form-group">
               <label className="form-label">Location</label>
               <input className="form-input" value={form.location}
                 onChange={e => set('location', e.target.value)} />
             </div>
+
+            {/* Row 5: Distance + Customer + Decision to Bid */}
             <div className="form-group">
               <label className="form-label">Distance (miles)</label>
               <input className="form-input" type="number" step="1" value={form.distance_travel}
                 onChange={e => set('distance_travel', e.target.value)} placeholder="0" />
             </div>
-            <div className="form-group" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}>
-              <label style={{
-                display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer',
-                fontFamily: 'var(--font-head)', fontSize: '0.78rem', fontWeight: 600,
-                letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--text-secondary)',
-              }}>
-                <input
-                  type="checkbox"
-                  checked={form.prevailing_wage}
-                  onChange={e => set('prevailing_wage', e.target.checked)}
-                  style={{ width: 14, height: 14, accentColor: 'var(--primary)', cursor: 'pointer' }}
-                />
-                Prevailing Wage / Union Scale
-              </label>
-              <span style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: 4 }}>
-                Drives SEBW wage rate selection
-              </span>
-            </div>
-
-            {/* Row 6: Customer + Decision + Estimator */}
             <div className="form-group">
               <label className="form-label">Customer</label>
               <select className="form-select" value={form.customer}
@@ -154,6 +127,8 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
                 {['Yes','No','NoBid','Bid'].map(v => <option key={v}>{v}</option>)}
               </select>
             </div>
+
+            {/* Row 6: Primary Estimator + Bid Amount + Status */}
             <div className="form-group">
               <label className="form-label">Primary Estimator</label>
               <select className="form-select" value={form.primary_estimator}
@@ -162,8 +137,6 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
                 {estimators.map(e => <option key={e.id} value={e.id}>{e.initials}</option>)}
               </select>
             </div>
-
-            {/* Row 7: Bid Amount + Won/Lost */}
             <div className="form-group">
               <label className="form-label">Bid Amount</label>
               <input className="form-input" type="number" value={form.bid_amount}

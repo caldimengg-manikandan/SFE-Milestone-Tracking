@@ -317,7 +317,6 @@ function buildColumnDefs(customers, estimators, canEdit) {
           cellEditorParams: { values: ['Budget', 'Final', 'Rebid'] },
           ...editableIf,
         },
-        { field: 'bid_reference', headerName: 'Bid Ref', width: 110, ...editableIf },
         { field: 'project_comments', headerName: 'Project Comments', width: 220, ...editableIf },
         { field: 'bid_due_date', headerName: 'Bid Due', width: 110, cellDataType: 'dateString', ...editableIf },
         { field: 'bid_due_time', headerName: 'Time', width: 90, ...editableIf },
