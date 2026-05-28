@@ -1,6 +1,7 @@
 from django.db import models
 
 class Employee(models.Model):
+    objects = models.Manager()
     STATUS_CHOICES = [('Active', 'Active'), ('On Leave', 'On Leave'), ('Inactive', 'Inactive')]
 
     emp_id = models.CharField(max_length=20, unique=True)

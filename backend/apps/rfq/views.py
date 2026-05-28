@@ -199,7 +199,7 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         return Response(RFQMasterSerializer(source).data, status=status.HTTP_201_CREATED)
 
     @action(detail=False, methods=['post'], url_path='upload-excel',
-            permission_classes=[IsAuthenticated, IsManagerOrReadOnly],
+            permission_classes=[IsAuthenticated, CanEditRFQ],
             parser_classes=[MultiPartParser, FormParser])
     def upload_excel(self, request):
         """

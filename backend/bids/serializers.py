@@ -5,7 +5,7 @@ class BidEnquirySerializer(serializers.ModelSerializer):
     customer_name_str = serializers.CharField(source='customer_name.name', read_only=True)
     primary_estimator_name = serializers.CharField(source='primary_estimator.name', read_only=True)
 
-    class Meta:
+    class Meta:  # type: ignore
         model = BidEnquiry
         fields = '__all__'
         read_only_fields = [
