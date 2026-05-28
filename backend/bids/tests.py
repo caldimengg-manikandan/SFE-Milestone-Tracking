@@ -81,25 +81,25 @@ class BidEnquiryModelTest(TestCase):
         )
 
         # 1. Total Tonnage = ton_steel (100) + ton_joist (20) = 120
-        self.assertEqual(bid.total_tonnage, 120.00)
+        self.assertEqual(float(bid.total_tonnage), 120.00)
 
         # 2. Structural Pieces / Ton (Without Jst) = main_structural_pcs (500) / ton_steel (100) = 5.0
-        self.assertEqual(bid.struct_pcs_per_ton, 5.0)
+        self.assertEqual(float(bid.struct_pcs_per_ton), 5.0)
 
         # 3. Structural Cost / Ton = price_structure (150000) / ton_steel (100) = 1500.0
-        self.assertEqual(bid.struct_cost_per_ton, 1500.0)
+        self.assertEqual(float(bid.struct_cost_per_ton), 1500.0)
 
         # 4. Structural Tonnage / Sq. ft (Without Jst) = ton_steel (100) / sqft_structural (25000) = 0.004
-        self.assertEqual(bid.struct_ton_per_sqft_no_joist, 0.004)
+        self.assertEqual(float(bid.struct_ton_per_sqft_no_joist), 0.004)
 
         # 5. Structural Tonnage / Sq. ft (With joist) = total_tonnage (120) / sqft_structural (25000) = 0.0048
-        self.assertEqual(bid.struct_ton_per_sqft_with_joist, 0.0048)
+        self.assertEqual(float(bid.struct_ton_per_sqft_with_joist), 0.0048)
 
         # 6. Structural Cost / Sq. ft = price_structure (150000) / sqft_structural (25000) = 6.0
-        self.assertEqual(bid.struct_cost_per_sqft, 6.0)
+        self.assertEqual(float(bid.struct_cost_per_sqft), 6.0)
 
         # 7. Structural Erection Cost / Sq. ft = price_struc_erection (50000) / sqft_structural (25000) = 2.0
-        self.assertEqual(bid.struct_erect_cost_per_sqft, 2.0)
+        self.assertEqual(float(bid.struct_erect_cost_per_sqft), 2.0)
 
         # 8. Structural Erection Cost / Ton = price_struc_erection (50000) / total_tonnage (120) = 416.67
         self.assertAlmostEqual(float(bid.struct_erect_cost_per_ton), 416.66666667, places=2)
@@ -107,24 +107,24 @@ class BidEnquiryModelTest(TestCase):
         # 9. Monthly Hours and End Months
         # Struct Fab: 1200 hours / 3 months = 400.0 avg hours/month
         self.assertEqual(bid.struct_fab_end_month, "July 2026")
-        self.assertEqual(bid.avg_monthly_struct_fab_hours, 400.0)
+        self.assertEqual(float(bid.avg_monthly_struct_fab_hours), 400.0)
 
         # Misc Fab: 400 hours / 2 months = 200.0 avg hours/month
         self.assertEqual(bid.misc_fab_end_month, "July 2026")
-        self.assertEqual(bid.avg_monthly_misc_fab_hours, 200.0)
+        self.assertEqual(float(bid.avg_monthly_misc_fab_hours), 200.0)
 
         # Struct Erect: 800 hours / 4 months = 200.0 avg hours/month
         self.assertEqual(bid.struct_erect_end_month, "October 2026")
-        self.assertEqual(bid.avg_monthly_struct_erect_hours, 200.0)
+        self.assertEqual(float(bid.avg_monthly_struct_erect_hours), 200.0)
 
         # Misc Erect: 200 hours / 1 month = 200.0 avg hours/month
         self.assertEqual(bid.misc_erect_end_month, "August 2026")
-        self.assertEqual(bid.avg_monthly_misc_erect_hours, 200.0)
+        self.assertEqual(float(bid.avg_monthly_misc_erect_hours), 200.0)
 
 
 class BidEnquiryAPITest(APITestCase):
     def setUp(self):
-        self.user = User.objects.create_user(username='testestimator', email='test@sfe.com', password='password123')
+        self.user = User.objects.create_user(username='testestimator', email='test@sfe.com', password='password123')  # type: ignore
         self.client.force_authenticate(user=self.user)
         self.customer1 = Customer.objects.create(name="Apex Builders", code="APX")
         self.customer2 = Customer.objects.create(name="Zenith Corp", code="ZEN")

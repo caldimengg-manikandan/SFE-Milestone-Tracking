@@ -61,6 +61,8 @@ def calculate_end_month(start_month_str, duration):
 
 
 class BidEnquiry(models.Model):
+    objects = models.Manager()
+
     # --- Part 1: Bidding & Enquiry Details (Pink Section — 19 Fields) ---
     quote_no = models.CharField(max_length=100, unique=True)
     project_name = models.CharField(max_length=300)
@@ -153,55 +155,56 @@ class BidEnquiry(models.Model):
         self.total_tonnage = ton_steel_dec + ton_joist_dec
         
         # 2. Structural Pieces / Ton (Without Jst)
-        if self.ton_steel and self.ton_steel > 0:
-            self.struct_pcs_per_ton = float(self.main_structural_pcs or 0) / float(self.ton_steel)
-            self.struct_cost_per_ton = float(self.price_structure or 0.0) / float(self.ton_steel)
+        if self.ton_steel and float(self.ton_steel) > 0:
+            self.struct_pcs_per_ton = Decimal(self.main_structural_pcs or 0) / ton_steel_dec
+            self.struct_cost_per_ton = Decimal(str(self.price_structure or 0.0)) / ton_steel_dec
         else:
-            self.struct_pcs_per_ton = 0.0
-            self.struct_cost_per_ton = 0.0
+            self.struct_pcs_per_ton = Decimal('0.0')
+            self.struct_cost_per_ton = Decimal('0.0')
 
         # 3. Structural Tonnage / Sq. ft (Without Jst) & (With joist) & Cost/Sqft
-        if self.sqft_structural and self.sqft_structural > 0:
-            self.struct_ton_per_sqft_no_joist = float(self.ton_steel or 0.0) / float(self.sqft_structural)
-            self.struct_ton_per_sqft_with_joist = float(self.total_tonnage) / float(self.sqft_structural)
-            self.struct_cost_per_sqft = float(self.price_structure or 0.0) / float(self.sqft_structural)
-            self.struct_erect_cost_per_sqft = float(self.price_struc_erection or 0.0) / float(self.sqft_structural)
+        sqft_dec = Decimal(str(self.sqft_structural or 0.0))
+        if sqft_dec > 0:
+            self.struct_ton_per_sqft_no_joist = ton_steel_dec / sqft_dec
+            self.struct_ton_per_sqft_with_joist = self.total_tonnage / sqft_dec
+            self.struct_cost_per_sqft = Decimal(str(self.price_structure or 0.0)) / sqft_dec
+            self.struct_erect_cost_per_sqft = Decimal(str(self.price_struc_erection or 0.0)) / sqft_dec
         else:
-            self.struct_ton_per_sqft_no_joist = 0.0
-            self.struct_ton_per_sqft_with_joist = 0.0
-            self.struct_cost_per_sqft = 0.0
-            self.struct_erect_cost_per_sqft = 0.0
+            self.struct_ton_per_sqft_no_joist = Decimal('0.0')
+            self.struct_ton_per_sqft_with_joist = Decimal('0.0')
+            self.struct_cost_per_sqft = Decimal('0.0')
+            self.struct_erect_cost_per_sqft = Decimal('0.0')
 
         # 4. Structural Erection Cost / Ton
         if self.total_tonnage and self.total_tonnage > 0:
-            self.struct_erect_cost_per_ton = float(self.price_struc_erection or 0.0) / float(self.total_tonnage)
+            self.struct_erect_cost_per_ton = Decimal(str(self.price_struc_erection or 0.0)) / self.total_tonnage
         else:
-            self.struct_erect_cost_per_ton = 0.0
+            self.struct_erect_cost_per_ton = Decimal('0.0')
 
         # 5. Average Monthly Fabrication Hours & End Months
         self.struct_fab_end_month = calculate_end_month(self.struct_fab_start_month, self.struct_fab_duration or 0)
         if self.struct_fab_duration and self.struct_fab_duration > 0:
-            self.avg_monthly_struct_fab_hours = float(self.struct_fab_hours or 0.0) / float(self.struct_fab_duration)
+            self.avg_monthly_struct_fab_hours = Decimal(str(self.struct_fab_hours or 0.0)) / Decimal(self.struct_fab_duration)
         else:
-            self.avg_monthly_struct_fab_hours = 0.0
+            self.avg_monthly_struct_fab_hours = Decimal('0.0')
 
         self.misc_fab_end_month = calculate_end_month(self.misc_fab_start_month, self.misc_fab_duration or 0)
         if self.misc_fab_duration and self.misc_fab_duration > 0:
-            self.avg_monthly_misc_fab_hours = float(self.misc_fab_hours or 0.0) / float(self.misc_fab_duration)
+            self.avg_monthly_misc_fab_hours = Decimal(str(self.misc_fab_hours or 0.0)) / Decimal(self.misc_fab_duration)
         else:
-            self.avg_monthly_misc_fab_hours = 0.0
+            self.avg_monthly_misc_fab_hours = Decimal('0.0')
 
         self.struct_erect_end_month = calculate_end_month(self.struct_erect_start_month, self.struct_erect_duration or 0)
         if self.struct_erect_duration and self.struct_erect_duration > 0:
-            self.avg_monthly_struct_erect_hours = float(self.struct_erect_hours or 0.0) / float(self.struct_erect_duration)
+            self.avg_monthly_struct_erect_hours = Decimal(str(self.struct_erect_hours or 0.0)) / Decimal(self.struct_erect_duration)
         else:
-            self.avg_monthly_struct_erect_hours = 0.0
+            self.avg_monthly_struct_erect_hours = Decimal('0.0')
 
         self.misc_erect_end_month = calculate_end_month(self.misc_erect_start_month, self.misc_erect_duration or 0)
         if self.misc_erect_duration and self.misc_erect_duration > 0:
-            self.avg_monthly_misc_erect_hours = float(self.misc_erect_hours or 0.0) / float(self.misc_erect_duration)
+            self.avg_monthly_misc_erect_hours = Decimal(str(self.misc_erect_hours or 0.0)) / Decimal(self.misc_erect_duration)
         else:
-            self.avg_monthly_misc_erect_hours = 0.0
+            self.avg_monthly_misc_erect_hours = Decimal('0.0')
 
     def save(self, *args, **kwargs):
         self.calculate_values()

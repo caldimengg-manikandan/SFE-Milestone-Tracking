@@ -71,6 +71,7 @@ class StructuralScheduleItem(models.Model):
 
 
 class Customer(models.Model):
+    objects = models.Manager()
     name = models.CharField(max_length=300)
     code = models.CharField(max_length=100, blank=True)
     category = models.CharField(max_length=100, default='Domestic')

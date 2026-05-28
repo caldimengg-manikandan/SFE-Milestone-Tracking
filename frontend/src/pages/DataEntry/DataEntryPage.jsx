@@ -724,7 +724,7 @@ export default function DataEntryPage() {
               <Plus /> New RFQ
             </button>
           )}
-          {isManager && (
+          { (isManager || canEdit) && (
             <button
               className="btn btn-secondary btn-sm"
               onClick={() => setShowExcelUpload(true)}

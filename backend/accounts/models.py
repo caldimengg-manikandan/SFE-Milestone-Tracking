@@ -12,6 +12,16 @@ class User(AbstractUser):
         ('readonly', 'Read-Only'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
+
+    @property
+    def is_manager(self):
+        """Return True if user is admin or manager."""
+        return self.role in ('admin', 'manager')
+
+    @property
+    def can_edit(self):
+        """Return True if user can create/edit RFQs (admin, manager, estimator)."""
+        return self.role in ('admin', 'manager', 'estimator')
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)

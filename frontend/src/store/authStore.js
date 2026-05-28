@@ -29,10 +29,10 @@ export const useAuthStore = create(
       },
 
       // Role helpers
-      isManager: () => ['admin', 'manager'].includes(get().getUser()?.role),
-      isEstimator: () => ['admin', 'manager', 'estimator'].includes(get().getUser()?.role),
-      isDetailing: () => ['admin', 'manager', 'detailing'].includes(get().getUser()?.role),
-      canEdit: () => get().getUser()?.role !== 'readonly',
+      isManager: () => ['admin', 'manager'].includes(get().user?.role || get().getUser()?.role),
+      isEstimator: () => ['admin', 'manager', 'estimator'].includes(get().user?.role || get().getUser()?.role),
+      isDetailing: () => ['admin', 'manager', 'detailing'].includes(get().user?.role || get().getUser()?.role),
+      canEdit: () => get().user?.role !== 'readonly' && get().getUser()?.role !== 'readonly',
     }),
     {
       name: 'sfe-auth',
