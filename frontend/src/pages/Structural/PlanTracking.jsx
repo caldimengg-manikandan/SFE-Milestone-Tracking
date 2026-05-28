@@ -34,21 +34,56 @@ export default function PlanTracking() {
     }
   };
 
-  const calculateStatus = (rtsDateStr, leadWeeks) => {
-    if (!rtsDateStr) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
+  const parseDate = (dStr) => {
+    if (!dStr) return null;
+    if (typeof dStr === 'string' && dStr.includes('-')) {
+      const parts = dStr.split('-');
+      if (parts.length === 3 && parts[0].length === 4) {
+        const d = new Date(
+          parseInt(parts[0], 10),
+          parseInt(parts[1], 10) - 1,
+          parseInt(parts[2], 10)
+        );
+        return isNaN(d.getTime()) ? null : d;
+      }
+    }
+    const iso = new Date(dStr);
+    return isNaN(iso.getTime()) ? null : iso;
+  };
+
+  const calculateStatus = (item) => {
+    if (item.tracking_status) {
+      if (item.tracking_status === 'Erected') {
+        return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
+      } else if (item.tracking_status === 'On Hold') {
+        return { label: 'On Hold', color: 'text-rose-600', bg: 'bg-rose-50', dot: 'bg-rose-500', icon: AlertCircle };
+      } else {
+        // 'Half Erected' or 'In Fabrication'
+        return { label: 'In Progress', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500', icon: Clock };
+      }
+    }
+
+    const ofa = parseDate(item.scheduled_ofa_date);
+    const bfa = parseDate(item.scheduled_bfa_date);
+    const rts = parseDate(item.rts_date);
+    const erection = parseDate(item.scheduled_erection_date);
+
+    const start = ofa || bfa || rts;
+    const end = erection || rts;
+
+    if (!start || !end) {
+      return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
+    }
 
     const now = new Date();
-    const rtsDate = new Date(rtsDateStr);
-    const weeks = parseFloat(leadWeeks) || 0;
-    const leadDays = weeks * 7;
-    const completionDate = new Date(rtsDate.getTime() + leadDays * 24 * 60 * 60 * 1000);
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    const twoDaysFromNow = new Date();
+    const twoDaysFromNow = new Date(today);
     twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
 
-    if (rtsDate > twoDaysFromNow) {
+    if (start > twoDaysFromNow) {
       return { label: 'Yet to Start', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500', icon: AlertCircle };
-    } else if (now >= completionDate) {
+    } else if (end < today) {
       return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
     } else {
       return { label: 'In Progress', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500', icon: Clock };
@@ -110,7 +145,21 @@ export default function PlanTracking() {
   };
 
   const [openDropdownId, setOpenDropdownId] = useState(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
+  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0, showUpward: false });
+
+  // Close dropdown on scroll or resize to avoid floating detached dropdowns
+  useEffect(() => {
+    if (openDropdownId === null) return;
+    const handleScrollOrResize = () => {
+      setOpenDropdownId(null);
+    };
+    window.addEventListener('scroll', handleScrollOrResize, { capture: true });
+    window.addEventListener('resize', handleScrollOrResize);
+    return () => {
+      window.removeEventListener('scroll', handleScrollOrResize, { capture: true });
+      window.removeEventListener('resize', handleScrollOrResize);
+    };
+  }, [openDropdownId]);
 
   const handleStatusUpdate = async (itemId, subStatus) => {
     try {
@@ -218,7 +267,7 @@ export default function PlanTracking() {
                                   <tbody className="divide-y divide-slate-100 bg-white">
                                     {projectSchedules.length > 0 ? (
                                       projectSchedules.map((item) => {
-                                        const status = calculateStatus(item.rts_date, item.shop_lead_time_weeks);
+                                        const status = calculateStatus(item);
                                         const leadDays = (parseFloat(item.shop_lead_time_weeks) || 0) * 7;
                                         const isUnderProgress = status.label === 'In Progress';
                                         const isNotInScope = item.notes?.toLowerCase() === 'not in scope';
@@ -236,19 +285,22 @@ export default function PlanTracking() {
                                               <div className="flex flex-col items-center gap-1">
                                                 <button
                                                   onClick={(e) => {
-                                                    if (!isUnderProgress) return;
                                                     const rect = e.currentTarget.getBoundingClientRect();
+                                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                                    const showUpward = spaceBelow < 220; // 220px is safe estimate for the dropdown height
+                                                    
                                                     setDropdownPosition({
-                                                      top: rect.bottom,
-                                                      left: rect.left + rect.width / 2
+                                                      top: showUpward ? rect.top - 8 : rect.bottom + 8,
+                                                      left: rect.left + rect.width / 2,
+                                                      showUpward
                                                     });
                                                     setOpenDropdownId(openDropdownId === item.id ? null : item.id);
                                                   }}
-                                                  className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border ${status.bg} ${status.color} border-current/10 ${isUnderProgress ? 'hover:scale-105 active:scale-95' : 'cursor-default'}`}
+                                                  className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border ${status.bg} ${status.color} border-current/10 hover:scale-105 active:scale-95 cursor-pointer`}
                                                 >
                                                   <div className={`w-1 h-1 rounded-full ${status.dot} shadow-[0_0_4px_rgba(0,0,0,0.1)]`} />
                                                   {status.label}
-                                                  {isUnderProgress && <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform ${openDropdownId === item.id ? 'rotate-180' : ''}`} />}
+                                                  <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform ${openDropdownId === item.id ? 'rotate-180' : ''}`} />
                                                 </button>
 
                                                 {item.tracking_status && (
@@ -263,8 +315,16 @@ export default function PlanTracking() {
                                                   <>
                                                     <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
                                                     <div
-                                                      className="fixed z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[125px] mt-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                                                      style={{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, transform: 'translateX(-50%)' }}
+                                                      className={`fixed z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[125px] overflow-hidden animate-in fade-in duration-200 ${
+                                                        dropdownPosition.showUpward 
+                                                          ? 'slide-in-from-bottom-2' 
+                                                          : 'slide-in-from-top-2'
+                                                      }`}
+                                                      style={{ 
+                                                        top: `${dropdownPosition.top}px`, 
+                                                        left: `${dropdownPosition.left}px`, 
+                                                        transform: dropdownPosition.showUpward ? 'translate(-50%, -100%)' : 'translate(-50%)' 
+                                                      }}
                                                     >
                                                       <div className="px-3 py-1 border-b border-slate-100 mb-1">
                                                         <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Select Status</span>

@@ -46,11 +46,11 @@ const navSections = [
     ],
   },
   {
-    label: 'RFQ MODULE',
+    label: 'RFQ MASTER',
     items: [
       { name: 'RFQ Data Entry', path: '/rfq/data-entry', icon: FileSpreadsheet },
       { name: 'Bid Performance', path: '/rfq/bid-performance', icon: BarChart3 },
-      { name: 'Dollar Dashboard', path: '/rfq/dollar-dashboard', icon: DollarSign },
+      { name: 'RFQ Dashboard', path: '/rfq/dollar-dashboard', icon: DollarSign },
       { name: 'Job Analytics', path: '/rfq/job-analytics', icon: TrendingUp },
       { name: 'Sales Cycle', path: '/rfq/sales-cycle', icon: CalendarRange },
       { name: 'Future Capacity', path: '/rfq/capacity', icon: Cpu },
@@ -65,7 +65,7 @@ const navSections = [
     ],
   },
   {
-    label: 'BUDGET ESTIMATOR',
+    label: 'PROPOSED BUDGET ESTIMATOR',
     items: [
       { name: 'Design Inputs', path: 'steel-budget/input', icon: FileSpreadsheet },
       { name: 'Estimation Result', path: 'steel-budget/result', icon: BarChart3 },
