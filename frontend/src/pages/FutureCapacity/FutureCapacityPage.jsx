@@ -40,7 +40,6 @@ export default function FutureCapacityPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 250ms ease' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Future Capacity</h1>
           <div className="page-subtitle">
             Rolling 18-Month Projection · 4 Trade Types · Potential vs Confirmed Hours
           </div>

@@ -58,7 +58,6 @@ export default function BidPerformancePage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 250ms ease' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">Bid Performance Dashboard</h1>
           <div className="page-subtitle">Quote Win Ratio — Count & $ — Monthly × 5 Years</div>
         </div>
       </div>

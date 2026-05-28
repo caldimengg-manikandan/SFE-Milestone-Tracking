@@ -46,7 +46,6 @@ export default function SalesCyclePage() {
     <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 56px - 32px)', gap: 16, animation: 'fadeIn 250ms ease' }}>
       <div className="page-header" style={{ marginBottom: 0, paddingBottom: 12 }}>
         <div>
-          <h1 className="page-title">Sales Cycle</h1>
           <div className="page-subtitle">Milestone Day-Counts per Awarded Job</div>
         </div>
       </div>

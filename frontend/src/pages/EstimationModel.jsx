@@ -1791,85 +1791,85 @@ export default function EstimationModel() {
               {/* Button 1: Material Section */}
               <button
                 onClick={() => setActiveSection('material')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'material' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-amber-50 hover:bg-amber-100/50 border-amber-200 text-amber-900'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'material' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className={`w-5 h-5 ${activeSection === 'material' ? 'text-white' : 'text-amber-500'}`} />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'material' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Material Section</span>
                 </div>
-                <span className={`${activeSection === 'material' ? 'text-white' : 'text-amber-500'} group-hover:translate-x-1 transition-transform`}>→</span>
+                <span className={`${activeSection === 'material' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 2: Shop Labor */}
               <button
                 onClick={() => setActiveSection('shopLabor')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'shopLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Shop Labor</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 3: Drafting */}
               <button
                 onClick={() => setActiveSection('drafting')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'drafting' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'drafting' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Drafting Section</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'drafting' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 4: Profit on Direct Costs */}
               <button
                 onClick={() => setActiveSection('profitDirect')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitDirect' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'profitDirect' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Profit on Direct Costs</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'profitDirect' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 5: Buyouts */}
               <button
                 onClick={() => setActiveSection('buyouts')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'buyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'buyouts' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Buyouts Section</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'buyouts' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 6: Profit on Buyouts */}
               <button
                 onClick={() => setActiveSection('profitBuyouts')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitBuyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'profitBuyouts' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Profit on Buyouts</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'profitBuyouts' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 7: Final Totals */}
               <button
                 onClick={() => setActiveSection('finalTotals')}
-                className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01]"
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'finalTotals' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className="w-5 h-5 text-slate-500" />
+                  <Calculator className={`w-5 h-5 ${activeSection === 'finalTotals' ? 'text-white' : 'text-slate-500'}`} />
                   <span>Final Totals</span>
                 </div>
-                <span className="text-slate-400 group-hover:translate-x-1 transition-transform">→</span>
+                <span className={`${activeSection === 'finalTotals' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
             </div>
           </div>
@@ -1944,7 +1944,7 @@ export default function EstimationModel() {
             <div className="px-6 py-4 bg-slate-50 border-t border-slate-150 flex justify-end gap-3 font-semibold text-xs">
               <button
                 onClick={() => setActiveSection(null)}
-                className="px-5 py-2.5 bg-slate-850 hover:bg-slate-900 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
+                className="px-5 py-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl font-bold text-xs transition-colors shadow-sm"
               >
                 Done
               </button>

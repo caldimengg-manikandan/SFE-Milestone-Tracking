@@ -711,7 +711,6 @@ export default function DataEntryPage() {
       {/* Header */}
       <div className="page-header" style={{ marginBottom: 0 }}>
         <div>
-          <h1 className="page-title">RFQ Data Entry</h1>
           <div className="page-subtitle">
             {rowData.length} records &nbsp;·&nbsp;
             <span style={{ color: 'var(--success)' }}>{wonCount} Won</span> &nbsp;·&nbsp;

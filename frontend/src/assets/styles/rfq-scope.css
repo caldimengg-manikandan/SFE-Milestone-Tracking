@@ -14,11 +14,11 @@
   --bg-row-lost:    rgba(220, 38, 38, 0.04);
   --bg-row-pending: transparent;
 
-  /* ── Brand Blues ── Primary Blue ── */
-  --primary:        #1D4ED8;   /* Primary Blue Standard */
-  --primary-hover:  #1E40AF;
-  --primary-muted:  rgba(29, 78, 216, 0.08);
-  --primary-border: rgba(29, 78, 216, 0.2);
+  /* ── Brand Orange ── Primary Orange ── */
+  --primary:        #F97316;   /* Primary Orange Standard */
+  --primary-hover:  #EA580C;
+  --primary-muted:  rgba(249, 115, 22, 0.08);
+  --primary-border: rgba(249, 115, 22, 0.2);
 
   /* ── SEBW Accent (orange) ── */
   --accent-orange: #F97316;
@@ -60,7 +60,7 @@
   --grid-header-group-bg: #EEF2F6;
   --grid-header-group-text: var(--primary);
   --grid-border:        #D9DEE5;   /* Grid border standard */
-  --grid-selected:      rgba(29, 78, 216, 0.08);
+  --grid-selected:      rgba(249, 115, 22, 0.08);
   --grid-readonly-bg:   #F8FAFC;
   --grid-readonly-text: #6B7280;
 
@@ -87,7 +87,7 @@
   --shadow-sm:  0 1px 2px rgba(0,0,0,0.05);
   --shadow-md:  0 4px 6px -1px rgba(0,0,0,0.08), 0 2px 4px -1px rgba(0,0,0,0.04);
   --shadow-lg:  0 10px 15px -3px rgba(0,0,0,0.08), 0 4px 6px -2px rgba(0,0,0,0.04);
-  --shadow-glow: 0 0 12px rgba(29, 78, 216, 0.12);
+  --shadow-glow: 0 0 12px rgba(249, 115, 22, 0.15);
 
   /* ── Transitions ── */
   --transition-fast: 120ms ease;
@@ -113,11 +113,11 @@ body.dark .rfq-scope,
   --bg-row-lost:    rgba(239, 68, 68, 0.06);
   --bg-row-pending: transparent;
 
-  /* ── Brand Blues ── Steel Blue ── */
-  --primary:        #2E6FDB;
-  --primary-hover:  #3D80F0;
-  --primary-muted:  rgba(46, 111, 219, 0.15);
-  --primary-border: rgba(46, 111, 219, 0.35);
+  /* ── Brand Orange ── Steel Orange ── */
+  --primary:        #FB923C;
+  --primary-hover:  #F97316;
+  --primary-muted:  rgba(251, 146, 60, 0.15);
+  --primary-border: rgba(251, 146, 60, 0.35);
 
   /* ── Semantic Colors ── */
   --success:        #10B981;
@@ -153,7 +153,7 @@ body.dark .rfq-scope,
   --grid-header-group-bg: #0A0D12;
   --grid-header-group-text: var(--primary);
   --grid-border:        rgba(255, 255, 255, 0.06);
-  --grid-selected:      rgba(46, 111, 219, 0.18);
+  --grid-selected:      rgba(251, 146, 60, 0.18);
   --grid-readonly-bg:   rgba(255, 255, 255, 0.02);
   --grid-readonly-text: #636E7A;
 
@@ -161,7 +161,7 @@ body.dark .rfq-scope,
   --shadow-sm:  0 1px 3px rgba(0,0,0,0.4);
   --shadow-md:  0 4px 16px rgba(0,0,0,0.5);
   --shadow-lg:  0 8px 32px rgba(0,0,0,0.6);
-  --shadow-glow: 0 0 20px rgba(46, 111, 219, 0.2);
+  --shadow-glow: 0 0 20px rgba(251, 146, 60, 0.2);
 }
 
 /* ── Scoped Element Declarations ────────────────────────────────────────── */
@@ -343,6 +343,7 @@ body.dark .rfq-scope,
   .kpi-card.success::before { background: var(--success); }
   .kpi-card.warning::before { background: var(--warning); }
   .kpi-card.danger::before { background: var(--danger); }
+  .kpi-card.info::before { background: var(--info); }
 
   .kpi-label {
     font-family: var(--font-head);
@@ -545,7 +546,7 @@ body.dark .rfq-scope,
 
   .progress-fill {
     height: 100%;
-    background: var(--warning);
+    background: var(--info);
     border-radius: 2px;
     transition: width var(--transition-slow);
   }
@@ -573,7 +574,7 @@ body.dark .rfq-scope,
     --ag-font-size: 13px;
     --ag-row-height: 36px;
     --ag-header-height: 40px;
-    --ag-column-hover-color: rgba(46, 111, 219, 0.04);
+    --ag-column-hover-color: rgba(251, 146, 60, 0.04);
   }
 
   .ag-theme-rfq .ag-header-cell-label {

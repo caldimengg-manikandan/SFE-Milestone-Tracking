@@ -130,7 +130,6 @@ export default function JobAnalyticsPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 250ms ease' }}>
       <div className="page-header" style={{ marginBottom: 0 }}>
         <div>
-          <h1 className="page-title">Job Analytics</h1>
           <div className="page-subtitle">Historical Performance &amp; Unit Cost Trends of Awarded Bids</div>
         </div>
       </div>
@@ -183,7 +182,7 @@ export default function JobAnalyticsPage() {
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
                 <Bar dataKey="ton_2026" fill="var(--primary)" radius={[4, 4, 0, 0]} name="2026" />
                 <Bar dataKey="ton_2025" fill="#10b981" radius={[4, 4, 0, 0]} name="2025" />
-                <Bar dataKey="ton_2024" fill="#f59e0b" radius={[4, 4, 0, 0]} name="2024" />
+                <Bar dataKey="ton_2024" fill="#3b82f6" radius={[4, 4, 0, 0]} name="2024" />
                 <Bar dataKey="ton_2023" fill="#06b6d4" radius={[4, 4, 0, 0]} name="2023" />
                 <Bar dataKey="ton_2022" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="2022" />
               </BarChart>
@@ -205,7 +204,7 @@ export default function JobAnalyticsPage() {
                 <Legend iconType="circle" wrapperStyle={{ fontSize: 11, paddingTop: 10 }} />
                 <Bar dataKey="sqft_2026" fill="var(--primary)" radius={[4, 4, 0, 0]} name="2026" />
                 <Bar dataKey="sqft_2025" fill="#10b981" radius={[4, 4, 0, 0]} name="2025" />
-                <Bar dataKey="sqft_2024" fill="#f59e0b" radius={[4, 4, 0, 0]} name="2024" />
+                <Bar dataKey="sqft_2024" fill="#3b82f6" radius={[4, 4, 0, 0]} name="2024" />
                 <Bar dataKey="sqft_2023" fill="#06b6d4" radius={[4, 4, 0, 0]} name="2023" />
                 <Bar dataKey="sqft_2022" fill="#8b5cf6" radius={[4, 4, 0, 0]} name="2022" />
               </BarChart>

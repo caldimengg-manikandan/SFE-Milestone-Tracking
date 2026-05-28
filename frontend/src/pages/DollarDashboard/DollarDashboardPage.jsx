@@ -105,7 +105,6 @@ export default function DollarDashboardPage() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24, animation: 'fadeIn 250ms ease' }}>
       <div className="page-header">
         <div>
-          <h1 className="page-title">$ Dashboard</h1>
           <div className="page-subtitle">Amount Bid / Awarded / Quoted Profit · Monthly × 5 Years</div>
         </div>
       </div>
@@ -116,7 +115,7 @@ export default function DollarDashboardPage() {
           { label: 'Total Bid (YTD)', val: annualTotals[currentYear]?.bid, color: 'primary' },
           { label: 'Total Awarded (YTD)', val: annualTotals[currentYear]?.awarded, color: 'success' },
           { label: 'Quoted Profit (YTD)', val: annualTotals[currentYear]?.profit, color: 'warning' },
-          { label: 'Annual Goal', val: annualTotals[currentYear]?.goal, color: 'warning' },
+          { label: 'Annual Goal', val: annualTotals[currentYear]?.goal, color: 'info' },
         ].map(({ label, val, color }) => (
           <div key={label} className={`kpi-card ${color}`}>
             <div className="kpi-label">{label}</div>
@@ -143,7 +142,7 @@ export default function DollarDashboardPage() {
               />
               <Bar dataKey="Bid" fill="var(--primary)" radius={[2,2,0,0]} />
               <Bar dataKey="Awarded" fill="var(--success)" radius={[2,2,0,0]} />
-              <Bar dataKey="Goal" fill="var(--warning)" radius={[2,2,0,0]} />
+              <Bar dataKey="Goal" fill="var(--info)" radius={[2,2,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
