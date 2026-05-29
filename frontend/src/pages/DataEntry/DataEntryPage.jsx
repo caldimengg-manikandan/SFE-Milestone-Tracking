@@ -5,9 +5,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { rfqAPI, customersAPI, estimatorsAPI } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
-import { Plus, Search, Download, RefreshCw, Zap, Copy, Trash2, FileSpreadsheet, Briefcase } from 'lucide-react'
+import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase } from 'lucide-react'
 import RFQFormModal from './RFQFormModal'
-import SEBWSyncModal from './SEBWSyncModal'
 import ExcelUploadModal from './ExcelUploadModal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 
@@ -88,38 +87,13 @@ function getRowClass({ data }) {
 function ActionsRenderer(params) {
   const { data, context } = params
   if (!data) return null
-  const { canEdit, isManager, onSebwSync, onDuplicate, onDelete, onSetJobNo, queryClient } = context
+  const { canEdit, isManager, onDuplicate, onDelete, onSetJobNo, queryClient } = context
 
   const isWonNoJob = data.won_lost === 'Won' && !data.sfe_job_no
   const isAwarded  = data.won_lost === 'Won' && data.sfe_job_no
 
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 4, height: '100%' }}>
-      {/* SEBW Sync */}
-      {canEdit && (
-        <button
-          title="Pull from SEBW"
-          onClick={() => onSebwSync(data)}
-          style={{
-            background: 'rgba(249,115,22,0.1)',
-            border: '1px solid rgba(249,115,22,0.3)',
-            borderRadius: 4,
-            padding: '2px 6px',
-            cursor: 'pointer',
-            color: '#F97316',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 3,
-            fontSize: '0.68rem',
-            fontFamily: 'var(--font-head)',
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-          }}
-        >
-          <Zap style={{ width: 10, height: 10 }} /> SEBW
-        </button>
-      )}
-
       {/* Duplicate as Rebid */}
       {canEdit && (
         <button
@@ -285,8 +259,8 @@ function buildColumnDefs(customers, estimators, canEdit) {
           headerName: 'Actions',
           field: '__actions',
           pinned: 'left',
-          width: 200,
-          minWidth: 180,
+          width: 120,
+          minWidth: 100,
           sortable: false,
           filter: false,
           resizable: true,
@@ -298,6 +272,10 @@ function buildColumnDefs(customers, estimators, canEdit) {
           field: 'quote_no', headerName: 'Quote No', width: 140, pinned: 'left',
           editable: canEdit,
           cellStyle: { fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600 },
+        },
+        {
+          field: 'bid_reference', headerName: 'Bid Reference', width: 140, pinned: 'left',
+          editable: canEdit,
         },
         {
           field: 'project_name', headerName: 'Project Name', width: 260,
@@ -569,7 +547,6 @@ export default function DataEntryPage() {
   const isManager = useAuthStore((s) => s.isManager())
 
   const [showModal,       setShowModal]       = useState(false)
-  const [sebwTarget,      setSebwTarget]       = useState(null)   // rfq record for SEBW sync
   const [jobNoTarget,     setJobNoTarget]      = useState(null)   // rfq record for Set Job #
   const [showExcelUpload, setShowExcelUpload]  = useState(false)
   const [searchText,      setSearchText]       = useState('')
@@ -690,7 +667,6 @@ export default function DataEntryPage() {
   const gridContext = useMemo(() => ({
     canEdit,
     isManager,
-    onSebwSync:  (rfq) => setSebwTarget(rfq),
     onDuplicate: (rfq) => duplicateMutation.mutate(rfq.id),
     onDelete:    (rfq) => handleDelete(rfq),
     onSetJobNo:  (rfq) => setJobNoTarget(rfq),
@@ -823,14 +799,7 @@ export default function DataEntryPage() {
         />
       )}
 
-      {/* SEBW Sync Modal */}
-      {sebwTarget && (
-        <SEBWSyncModal
-          rfq={sebwTarget}
-          onClose={() => setSebwTarget(null)}
-          onSaved={() => setSebwTarget(null)}
-        />
-      )}
+
 
       {/* Set SFE Job # Modal */}
       {jobNoTarget && (

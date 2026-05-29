@@ -481,6 +481,16 @@ body.dark .rfq-scope,
     font-size: 0.82rem;
   }
 
+  .dash-table th,
+  .dash-table td {
+    border-right: 1px solid var(--grid-border);
+  }
+
+  .dash-table th:last-child,
+  .dash-table td:last-child {
+    border-right: none;
+  }
+
   .dash-table thead th {
     font-family: var(--font-head);
     font-size: 0.68rem;
@@ -563,6 +573,7 @@ body.dark .rfq-scope,
     --ag-header-foreground-color: var(--grid-header-text);
     --ag-border-color: var(--grid-border);
     --ag-cell-horizontal-border: solid var(--grid-border);
+    --ag-cell-vertical-border: solid var(--grid-border);
     --ag-row-border-color: var(--grid-border);
     --ag-selected-row-background-color: var(--grid-selected);
     --ag-range-selection-border-color: var(--primary);
@@ -575,6 +586,10 @@ body.dark .rfq-scope,
     --ag-row-height: 36px;
     --ag-header-height: 40px;
     --ag-column-hover-color: rgba(251, 146, 60, 0.04);
+    --ag-header-column-separator-display: block;
+    --ag-header-column-separator-color: var(--grid-border);
+    --ag-header-column-separator-height: 100%;
+    --ag-header-column-separator-width: 1px;
   }
 
   .ag-theme-rfq .ag-header-cell-label {
@@ -587,6 +602,11 @@ body.dark .rfq-scope,
     text-align: center;
   }
 
+  .ag-theme-rfq .ag-header-cell,
+  .ag-theme-rfq .ag-header-group-cell {
+    border-right: 1px solid var(--grid-border) !important;
+  }
+
   .ag-theme-rfq .ag-header-group-cell-label {
     justify-content: center !important;
     text-align: center;
@@ -597,6 +617,7 @@ body.dark .rfq-scope,
     font-size: 13px;
     font-weight: 500;
     line-height: 36px;
+    border-right: 1px solid var(--grid-border) !important;
   }
 
   .ag-theme-rfq .ag-cell.numeric-cell {
