@@ -115,31 +115,31 @@ export default function EstimationSummary() {
   const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
   const finalBidAmount = finalAmountBeforeMisc + miscChargesVal;
 
-  // --- Namrutha Calculations ---
-  const namruthaLaborRateVal = Number(estimationSections.namruthaLaborRate) !== undefined && estimationSections.namruthaLaborRate !== '' ? Number(estimationSections.namruthaLaborRate) : 85.0;
-  const namruthaErectionMultiplierVal = Number(estimationSections.namruthaErectionMultiplier) !== undefined && estimationSections.namruthaErectionMultiplier !== '' ? Number(estimationSections.namruthaErectionMultiplier) : 1.12;
-  const namruthaJoistDeckMultiplierVal = Number(estimationSections.namruthaJoistDeckMultiplier) !== undefined && estimationSections.namruthaJoistDeckMultiplier !== '' ? Number(estimationSections.namruthaJoistDeckMultiplier) : 1.12;
-  const namruthaOtherCostMultiplierVal = Number(estimationSections.namruthaOtherCostMultiplier) !== undefined && estimationSections.namruthaOtherCostMultiplier !== '' ? Number(estimationSections.namruthaOtherCostMultiplier) : 1.12;
+  // --- miscellaneous Calculations ---
+  const miscellaneousLaborRateVal = Number(estimationSections.miscellaneousLaborRate) !== undefined && estimationSections.miscellaneousLaborRate !== '' ? Number(estimationSections.miscellaneousLaborRate) : 85.0;
+  const miscellaneousErectionMultiplierVal = Number(estimationSections.miscellaneousErectionMultiplier) !== undefined && estimationSections.miscellaneousErectionMultiplier !== '' ? Number(estimationSections.miscellaneousErectionMultiplier) : 1.12;
+  const miscellaneousJoistDeckMultiplierVal = Number(estimationSections.miscellaneousJoistDeckMultiplier) !== undefined && estimationSections.miscellaneousJoistDeckMultiplier !== '' ? Number(estimationSections.miscellaneousJoistDeckMultiplier) : 1.12;
+  const miscellaneousOtherCostMultiplierVal = Number(estimationSections.miscellaneousOtherCostMultiplier) !== undefined && estimationSections.miscellaneousOtherCostMultiplier !== '' ? Number(estimationSections.miscellaneousOtherCostMultiplier) : 1.12;
 
-  const namruthaLaborCost = totalLaborHours * namruthaLaborRateVal;
-  const namruthaMaterialTotal = totalMaterialCost;
-  const namruthaTruckingTotal = totalShippingCost;
-  const namruthaDetailingEngineeringTotal = totalDirectDraftingCost;
-  const namruthaSubTotal = namruthaLaborCost + namruthaMaterialTotal + namruthaTruckingTotal + namruthaDetailingEngineeringTotal;
+  const miscellaneousLaborCost = totalLaborHours * miscellaneousLaborRateVal;
+  const miscellaneousMaterialTotal = totalMaterialCost;
+  const miscellaneousTruckingTotal = totalShippingCost;
+  const miscellaneousDetailingEngineeringTotal = totalDirectDraftingCost;
+  const miscellaneousSubTotal = miscellaneousLaborCost + miscellaneousMaterialTotal + miscellaneousTruckingTotal + miscellaneousDetailingEngineeringTotal;
 
-  const namruthaErectionTotal = subletErectionCostVal * namruthaErectionMultiplierVal;
+  const miscellaneousErectionTotal = subletErectionCostVal * miscellaneousErectionMultiplierVal;
 
-  const namruthaJoistDeckCost = steelJoistCostVal + deckCostVal;
+  const miscellaneousJoistDeckCost = steelJoistCostVal + deckCostVal;
   const taxMultiplier = 1 + useTaxPercentVal / 100;
-  const namruthaJoistDeckTotal = (namruthaJoistDeckCost * taxMultiplier) * namruthaJoistDeckMultiplierVal;
+  const miscellaneousJoistDeckTotal = (miscellaneousJoistDeckCost * taxMultiplier) * miscellaneousJoistDeckMultiplierVal;
 
-  const namruthaOtherCostsSum = miscMetalCostVal + safetyCost + leedSubmissionCostVal;
-  const namruthaOtherCostsTotal = namruthaOtherCostsSum * namruthaOtherCostMultiplierVal;
+  const miscellaneousOtherCostsSum = miscMetalCostVal + safetyCost + leedSubmissionCostVal;
+  const miscellaneousOtherCostsTotal = miscellaneousOtherCostsSum * miscellaneousOtherCostMultiplierVal;
 
-  const namruthaTotalBeforeProfit = namruthaSubTotal + namruthaErectionTotal + namruthaJoistDeckTotal + namruthaOtherCostsTotal;
-  const namruthaProfitAmount = namruthaTotalBeforeProfit * (profitPercentVal / 100);
-  const namruthaMiscellaneousTotal = miscChargesVal;
-  const namruthaFinalPrice = namruthaTotalBeforeProfit + namruthaProfitAmount + namruthaMiscellaneousTotal;
+  const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
+  const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercentVal / 100);
+  const miscellaneousMiscellaneousTotal = miscChargesVal;
+  const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscellaneousMiscellaneousTotal;
 
   // --- Navigation deep-link ---
   const handleEditSection = (sectionKey) => {
@@ -197,7 +197,7 @@ export default function EstimationSummary() {
         </div>
       </div>
 
-      {/* Primary KPI Cards (Standard vs Namrutha) */}
+      {/* Primary KPI Cards (Standard vs miscellaneous) */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Standard Bid Grand Total */}
         <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-950 rounded-[2rem] p-6 md:p-8 text-white relative overflow-hidden border border-white/[0.06] shadow-xl shadow-slate-900/10">
@@ -228,17 +228,17 @@ export default function EstimationSummary() {
           </div>
         </div>
 
-        {/* Namrutha Final Summary Price */}
+        {/* miscellaneous Final Summary Price */}
         <div className="bg-gradient-to-br from-amber-500 via-amber-600 to-orange-600 rounded-[2rem] p-6 md:p-8 text-white relative overflow-hidden border border-amber-400/10 shadow-xl shadow-orange-500/10">
           <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-48 h-48 bg-white/10 rounded-full blur-3xl pointer-events-none" />
           <div className="flex justify-between items-start gap-4">
             <div>
-              <span className="text-[10px] font-black text-amber-100 uppercase tracking-widest block">Namrutha Summary Total</span>
+              <span className="text-[10px] font-black text-amber-100 uppercase tracking-widest block">miscellaneous Summary Total</span>
               <h4 className="text-3xl font-black mt-2 tracking-tight">
-                ${namruthaFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                ${miscellaneousFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </h4>
               <p className="text-xs text-amber-50 mt-1 font-semibold">
-                Per Ton Rate: ${hasTons ? (namruthaFinalPrice / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                Per Ton Rate: ${hasTons ? (miscellaneousFinalPrice / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
               </p>
             </div>
             <div className="bg-white/10 border border-white/20 p-3 rounded-2xl">
@@ -246,9 +246,9 @@ export default function EstimationSummary() {
             </div>
           </div>
           <div className="mt-8 pt-4 border-t border-white/10 flex items-center justify-between text-xs">
-            <span className="text-amber-100 font-semibold">Calculated using Namrutha multipliers</span>
+            <span className="text-amber-100 font-semibold">Calculated using miscellaneous multipliers</span>
             <button
-              onClick={() => handleEditSection('namrutha')}
+              onClick={() => handleEditSection('miscellaneous')}
               className="flex items-center gap-1.5 text-white hover:text-amber-100 font-bold hover:translate-x-0.5 transition-all cursor-pointer"
             >
               Adjust Multipliers
