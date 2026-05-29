@@ -115,14 +115,14 @@ export default function EstimationModel() {
       profitPercent: 10.0,
       miscCharges: '',
 
-      // Namrutha final summary multipliers
-      namruthaLaborRate: 85.0,
-      namruthaErectionMultiplier: 1.12,
-      namruthaTaxMultiplier: 1.06,
-      namruthaJoistDeckMultiplier: 1.12,
-      namruthaOtherCostMultiplier: 1.12,
-      namruthaProfitPercent: 10.0,
-      namruthaMiscCharges: '',
+      // miscellaneous final summary multipliers
+      miscellaneousLaborRate: 85.0,
+      miscellaneousErectionMultiplier: 1.12,
+      miscellaneousTaxMultiplier: 1.06,
+      miscellaneousJoistDeckMultiplier: 1.12,
+      miscellaneousOtherCostMultiplier: 1.12,
+      miscellaneousProfitPercent: 10.0,
+      miscellaneousMiscCharges: '',
     };
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -342,33 +342,33 @@ export default function EstimationModel() {
   const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
   const finalBidAmount = finalAmountBeforeMisc + miscChargesVal;
 
-  // ── Namrutha Calculations ──
-  const namruthaLaborRateVal = Math.max(0, Number(estimationSections.namruthaLaborRate) || 0);
-  const namruthaErectionMultiplierVal = Math.max(0, Number(estimationSections.namruthaErectionMultiplier) || 0);
-  const namruthaJoistDeckMultiplierVal = Math.max(0, Number(estimationSections.namruthaJoistDeckMultiplier) || 0);
-  const namruthaOtherCostMultiplierVal = Math.max(0, Number(estimationSections.namruthaOtherCostMultiplier) || 0);
+  // ── miscellaneous Calculations ──
+  const miscellaneousLaborRateVal = Math.max(0, Number(estimationSections.miscellaneousLaborRate) || 0);
+  const miscellaneousErectionMultiplierVal = Math.max(0, Number(estimationSections.miscellaneousErectionMultiplier) || 0);
+  const miscellaneousJoistDeckMultiplierVal = Math.max(0, Number(estimationSections.miscellaneousJoistDeckMultiplier) || 0);
+  const miscellaneousOtherCostMultiplierVal = Math.max(0, Number(estimationSections.miscellaneousOtherCostMultiplier) || 0);
 
-  const namruthaLaborCost = totalLaborHours * namruthaLaborRateVal;
-  const namruthaMaterialTotal = totalMaterialDirectCosts + materialUseTaxAmount;
-  const namruthaTruckingTotal = totalShippingCost;
-  const namruthaDetailingEngineeringTotal = totalDirectDraftingCost;
+  const miscellaneousLaborCost = totalLaborHours * miscellaneousLaborRateVal;
+  const miscellaneousMaterialTotal = totalMaterialDirectCosts + materialUseTaxAmount;
+  const miscellaneousTruckingTotal = totalShippingCost;
+  const miscellaneousDetailingEngineeringTotal = totalDirectDraftingCost;
 
-  const namruthaSubTotal = namruthaLaborCost + namruthaMaterialTotal + namruthaTruckingTotal + namruthaDetailingEngineeringTotal;
+  const miscellaneousSubTotal = miscellaneousLaborCost + miscellaneousMaterialTotal + miscellaneousTruckingTotal + miscellaneousDetailingEngineeringTotal;
 
-  const namruthaErectionTotal = subletErectionCostVal * namruthaErectionMultiplierVal;
+  const miscellaneousErectionTotal = subletErectionCostVal * miscellaneousErectionMultiplierVal;
 
-  const namruthaJoistDeckCost = steelJoistCostVal + deckCostVal;
+  const miscellaneousJoistDeckCost = steelJoistCostVal + deckCostVal;
   const taxMultiplier = 1 + useTaxPercentVal / 100;
-  const namruthaJoistDeckTotal = (namruthaJoistDeckCost * taxMultiplier) * namruthaJoistDeckMultiplierVal;
+  const miscellaneousJoistDeckTotal = (miscellaneousJoistDeckCost * taxMultiplier) * miscellaneousJoistDeckMultiplierVal;
 
-  const namruthaOtherCostsSum = miscMetalCostVal + additionalSafetyCostsVal + ccipCostsVal + leedSubmissionCostVal;
-  const namruthaOtherCostsTotal = namruthaOtherCostsSum * namruthaOtherCostMultiplierVal;
+  const miscellaneousOtherCostsSum = miscMetalCostVal + additionalSafetyCostsVal + ccipCostsVal + leedSubmissionCostVal;
+  const miscellaneousOtherCostsTotal = miscellaneousOtherCostsSum * miscellaneousOtherCostMultiplierVal;
 
-  const namruthaTotalBeforeProfit = namruthaSubTotal + namruthaErectionTotal + namruthaJoistDeckTotal + namruthaOtherCostsTotal;
-  const namruthaProfitAmount = namruthaTotalBeforeProfit * (profitPercentVal / 100);
-  const namruthaMiscellaneousTotal = miscChargesVal;
+  const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
+  const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercentVal / 100);
+  const miscellaneousMiscellaneousTotal = miscChargesVal;
 
-  const namruthaFinalPrice = namruthaTotalBeforeProfit + namruthaProfitAmount + namruthaMiscellaneousTotal;
+  const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscellaneousMiscellaneousTotal;
 
   // Clear Form handler
   const handleClear = () => {
@@ -437,13 +437,13 @@ export default function EstimationModel() {
         buyoutOverheadPercent: 12.0,
         profitPercent: 10.0,
         miscCharges: '',
-        namruthaLaborRate: 85.0,
-        namruthaErectionMultiplier: 1.12,
-        namruthaTaxMultiplier: 1.06,
-        namruthaJoistDeckMultiplier: 1.12,
-        namruthaOtherCostMultiplier: 1.12,
-        namruthaProfitPercent: 10.0,
-        namruthaMiscCharges: ''
+        miscellaneousLaborRate: 85.0,
+        miscellaneousErectionMultiplier: 1.12,
+        miscellaneousTaxMultiplier: 1.06,
+        miscellaneousJoistDeckMultiplier: 1.12,
+        miscellaneousOtherCostMultiplier: 1.12,
+        miscellaneousProfitPercent: 10.0,
+        miscellaneousMiscCharges: ''
       });
     }
   };
@@ -1532,15 +1532,15 @@ export default function EstimationModel() {
     );
   };
 
-  const renderNamruthaSection = () => {
-    const namruthaFinalPricePerTon = totalTons > 0 ? namruthaFinalPrice / totalTons : 0;
+  const rendermiscellaneousSection = () => {
+    const miscellaneousFinalPricePerTon = totalTons > 0 ? miscellaneousFinalPrice / totalTons : 0;
     return (
       <div className="space-y-6">
         <div className="overflow-x-auto border border-slate-200 rounded-[1.5rem]">
           <table className="w-full text-left border-collapse min-w-[500px] text-xs">
             <thead>
               <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">
-                <th className="py-4 px-6 w-[350px]">Namrutha Final Category</th>
+                <th className="py-4 px-6 w-[350px]">miscellaneous Final Category</th>
                 <th className="py-4 px-6 w-[250px]">Factor / Input</th>
                 <th className="py-4 px-6 text-right pr-8 w-[250px]">Amount</th>
               </tr>
@@ -1556,15 +1556,15 @@ export default function EstimationModel() {
                       type="number"
                       min="0"
                       step="any"
-                      value={estimationSections.namruthaLaborRate}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaLaborRate: e.target.value })}
+                      value={estimationSections.miscellaneousLaborRate}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscellaneousLaborRate: e.target.value })}
                       className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
                     <span className="font-bold text-slate-500">/Hr</span>
                   </div>
                 </td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaLaborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousLaborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1573,7 +1573,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Material</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaMaterialTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousMaterialTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1582,7 +1582,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Trucking</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaTruckingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousTruckingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1591,7 +1591,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Det/Eng</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaDetailingEngineeringTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousDetailingEngineeringTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1600,7 +1600,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Sub-total</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaSubTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousSubTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1613,14 +1613,14 @@ export default function EstimationModel() {
                       type="number"
                       min="0"
                       step="any"
-                      value={estimationSections.namruthaErectionMultiplier}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaErectionMultiplier: e.target.value })}
+                      value={estimationSections.miscellaneousErectionMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscellaneousErectionMultiplier: e.target.value })}
                       className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
                   </div>
                 </td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaErectionTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousErectionTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1633,14 +1633,14 @@ export default function EstimationModel() {
                       type="number"
                       min="0"
                       step="any"
-                      value={estimationSections.namruthaJoistDeckMultiplier}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaJoistDeckMultiplier: e.target.value })}
+                      value={estimationSections.miscellaneousJoistDeckMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscellaneousJoistDeckMultiplier: e.target.value })}
                       className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
                   </div>
                 </td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaJoistDeckTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousJoistDeckTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1653,14 +1653,14 @@ export default function EstimationModel() {
                       type="number"
                       min="0"
                       step="any"
-                      value={estimationSections.namruthaOtherCostMultiplier}
-                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaOtherCostMultiplier: e.target.value })}
+                      value={estimationSections.miscellaneousOtherCostMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscellaneousOtherCostMultiplier: e.target.value })}
                       className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
                   </div>
                 </td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaOtherCostsTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousOtherCostsTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1669,7 +1669,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Total</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaTotalBeforeProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousTotalBeforeProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1685,7 +1685,7 @@ export default function EstimationModel() {
                 </td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
                   <div className="flex flex-col items-end">
-                    <span>${namruthaProfitAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span>${miscellaneousProfitAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                     <span className="text-[10px] text-slate-400 font-normal">Struct With Profit</span>
                   </div>
                 </td>
@@ -1696,7 +1696,7 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-bold text-slate-800">Misc.</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
-                  ${namruthaMiscellaneousTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousMiscellaneousTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
 
@@ -1705,26 +1705,26 @@ export default function EstimationModel() {
                 <td className="py-4 px-6 font-extrabold text-amber-600 text-sm">Final Price</td>
                 <td className="py-4 px-6"></td>
                 <td className="py-4 px-6 text-right pr-8 font-extrabold text-amber-600 text-sm">
-                  ${namruthaFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${miscellaneousFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {/* Namrutha Prominent Display */}
+        {/* miscellaneous Prominent Display */}
         <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-[1.5rem] p-6 text-white flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg border border-amber-500/30">
           <div>
-            <h4 className="text-sm font-black uppercase tracking-wider text-amber-100">NAMRUTHA FINAL SUMMARY PRICE</h4>
-            <p className="text-xs text-amber-50 mt-1">This is the final calculated price for the Namrutha summary section.</p>
+            <h4 className="text-sm font-black uppercase tracking-wider text-amber-100">miscellaneous FINAL SUMMARY PRICE</h4>
+            <p className="text-xs text-amber-50 mt-1">This is the final calculated price for the miscellaneous summary section.</p>
           </div>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-black">
-              ${namruthaFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+              ${miscellaneousFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
             {totalTons > 0 && (
               <span className="text-xs font-bold text-amber-100">
-                (${namruthaFinalPricePerTon.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Ton)
+                (${miscellaneousFinalPricePerTon.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Ton)
               </span>
             )}
           </div>
@@ -2129,16 +2129,16 @@ export default function EstimationModel() {
                 <span className={`${activeSection === 'finalTotals' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
-              {/* Button 8: Namrutha */}
+              {/* Button 8: miscellaneous */}
               <button
-                onClick={() => setActiveSection('namrutha')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'namrutha' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                onClick={() => setActiveSection('miscellaneous')}
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'miscellaneous' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className={`w-5 h-5 ${activeSection === 'namrutha' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>Namrutha</span>
+                  <Calculator className={`w-5 h-5 ${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>miscellaneous</span>
                 </div>
-                <span className={`${activeSection === 'namrutha' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+                <span className={`${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
             </div>
           </div>
@@ -2164,7 +2164,7 @@ export default function EstimationModel() {
                     {activeSection === 'buyouts' && 'Buyouts Section'}
                     {activeSection === 'profitBuyouts' && 'Profit on Buyouts'}
                     {activeSection === 'finalTotals' && 'Final Totals Section'}
-                    {activeSection === 'namrutha' && 'Namrutha Section'}
+                    {activeSection === 'miscellaneous' && 'miscellaneous Section'}
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     {activeSection === 'material' && 'Perform calculations for mill, warehouse, and scrap materials.'}
@@ -2174,7 +2174,7 @@ export default function EstimationModel() {
                     {activeSection === 'buyouts' && 'Calculate buyout material and erection expenses.'}
                     {activeSection === 'profitBuyouts' && 'Apply overhead percentage to buyout costs.'}
                     {activeSection === 'finalTotals' && 'Review totals, apply profit percentage, and calculate final bid amount.'}
-                    {activeSection === 'namrutha' && 'Review Row 66-77 Final Summary, apply multipliers, tax, and profit percentages to calculate Namrutha final price.'}
+                    {activeSection === 'miscellaneous' && 'Review Row 66-77 Final Summary, apply multipliers, tax, and profit percentages to calculate miscellaneous final price.'}
                   </p>
                 </div>
               </div>
@@ -2209,7 +2209,7 @@ export default function EstimationModel() {
               {activeSection === 'buyouts' && renderBuyoutsSection()}
               {activeSection === 'profitBuyouts' && renderProfitBuyoutsSection()}
               {activeSection === 'finalTotals' && renderFinalTotalsSection()}
-              {activeSection === 'namrutha' && renderNamruthaSection()}
+              {activeSection === 'miscellaneous' && rendermiscellaneousSection()}
             </div>
 
             {/* Modal Footer */}
