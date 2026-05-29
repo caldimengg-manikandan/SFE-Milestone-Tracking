@@ -6,7 +6,7 @@ import { X } from 'lucide-react'
 
 export default function RFQFormModal({ customers, estimators, onClose, onSaved }) {
   const [form, setForm] = useState({
-    quote_no: '', budget_type: 'Budget',
+    quote_no: '', budget_type: 'Budget', bid_reference: '',
     project_name: '', project_comments: '', bid_due_date: '', bid_due_time: '',
     location: '', distance_travel: '',
     prevailing_wage: false,
@@ -55,7 +55,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
 
         <form onSubmit={handleSubmit}>
           <div className="form-grid">
-            {/* Row 1: Quote No + Type + Quote Date */}
+            {/* Row 1: Quote No + Type + Quote Date + Bid Reference */}
             <div className="form-group">
               <label className="form-label">Quote No *</label>
               <input className="form-input" value={form.quote_no}
@@ -73,6 +73,12 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
               <label className="form-label">Quote Date</label>
               <input className="form-input" type="date" value={form.quote_date}
                 onChange={e => set('quote_date', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Bid Reference</label>
+              <input className="form-input" value={form.bid_reference}
+                onChange={e => set('bid_reference', e.target.value)}
+                placeholder="e.g. Ref #123" />
             </div>
 
             {/* Row 2: Project Name (full width) */}
