@@ -123,6 +123,16 @@ export default function PlanTracking() {
     }
   };
 
+  const handleDateUpdate = async (itemId, field, value) => {
+    try {
+      await scheduleAPI.update(itemId, { [field]: value || null });
+      setAllSchedules(prev => prev.map(s => s.id === itemId ? { ...s, [field]: value || null } : s));
+    } catch (err) {
+      console.error(`Failed to update ${field}:`, err);
+      alert(`Failed to update ${field}`);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6">
       {/* Search Bar */}
@@ -198,17 +208,19 @@ export default function PlanTracking() {
                         <tr className="bg-slate-50/20 border-y border-slate-100">
                           <td colSpan="4" className="p-0">
                             <div className="overflow-hidden animate-fade-in">
-                              <div className="w-full overflow-hidden">
-                                <table className="w-full text-left border-collapse table-fixed">
+                              <div className="w-full overflow-x-auto">
+                                <table className="w-full text-left border-collapse table-fixed min-w-[1400px]">
                                   <thead>
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
-                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Sequence</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[13%]">Item Description</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[7%]">Material</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[6%]">Weight</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">RTS date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Ship date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[11%]">Status</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[8%]">Sequence</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Item Description</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[6%]">Material</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[5%]">Weight</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">RTS date</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. RTS</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Ship date</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. Ship</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Status</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Lead Time</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Exp. Completion</th>
                                       <th className="px-2 py-3 text-center w-[7%]">Notes</th>
@@ -228,8 +240,31 @@ export default function PlanTracking() {
                                             <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}> {item.item_description || '-'} </td>
                                             <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.rts_date)}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.ship_date)}</td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.rts_date)}</td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
+                                              <input
+                                                type="date"
+                                                value={item.actual_rts_date || ''}
+                                                onChange={(e) => handleDateUpdate(item.id, 'actual_rts_date', e.target.value)}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                              />
+                                            </td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
+                                              <input
+                                                type="date"
+                                                value={item.ship_date || ''}
+                                                onChange={(e) => handleDateUpdate(item.id, 'ship_date', e.target.value)}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                              />
+                                            </td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
+                                              <input
+                                                type="date"
+                                                value={item.actual_ship_date || ''}
+                                                onChange={(e) => handleDateUpdate(item.id, 'actual_ship_date', e.target.value)}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                              />
+                                            </td>
                                             <td className="px-2 py-2.5 border-r border-slate-100">
                                               <div className="flex flex-col items-center gap-1">
                                                 <button

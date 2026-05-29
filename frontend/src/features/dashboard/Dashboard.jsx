@@ -13,7 +13,7 @@ import { dashboardAPI } from '../../services/api';
 const statConfigs = {
   'Total Projects': { icon: FolderKanban, iconBg: 'bg-amber-100', color: 'text-amber-600' },
   'In Progress': { icon: Box, iconBg: 'bg-blue-100', color: 'text-blue-600' },
-  'Yet to Complete': { icon: Clock, iconBg: 'bg-orange-100', color: 'text-orange-600' },
+  'Yet to Start': { icon: Clock, iconBg: 'bg-orange-100', color: 'text-orange-600' },
   'Completed': { icon: CheckCircle2, iconBg: 'bg-emerald-100', color: 'text-emerald-600' },
 };
 

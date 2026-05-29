@@ -60,6 +60,34 @@ const getStatus = (start, end) => {
 
 const ONE_DAY = 86400000;
 
+/**
+ * Recalculate milestone dates from erection date.
+ * Same formula as calculateDates in PlanCreation.jsx.
+ */
+const calculateMilestones = (erectionDate, isFMRequired) => {
+  if (!erectionDate) return {};
+  const base = new Date(erectionDate);
+
+  const rts = new Date(base);
+  rts.setMonth(rts.getMonth() - 2);
+
+  if (isFMRequired) {
+    const fm = new Date(rts);
+    fm.setDate(fm.getDate() - 14);
+    const bfa = new Date(fm);
+    bfa.setDate(bfa.getDate() - 14);
+    const ofa = new Date(bfa);
+    ofa.setDate(ofa.getDate() - 14);
+    return { ofa, bfa, fm, rts };
+  } else {
+    const bfa = new Date(rts);
+    bfa.setDate(bfa.getDate() - 14);
+    const ofa = new Date(bfa);
+    ofa.setDate(ofa.getDate() - 14);
+    return { ofa, bfa, fm: null, rts };
+  }
+};
+
 /* ── component ──────────────────────────────────────────────── */
 
 export default function GanttChart({ project, allSchedules }) {
@@ -87,22 +115,35 @@ export default function GanttChart({ project, allSchedules }) {
     );
   }
 
+  // Is field measure required for this project?
+  const isFMRequired = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
+
   /* ── timeline range ─────────────────────────────────────── */
-  // Use exact earliest milestone start date to latest milestone erection date
   let earliest = null;
   let latest = null;
 
-  sorted.forEach((s) => {
-    const ofa = parseDate(s.scheduled_ofa_date);
-    const bfa = parseDate(s.scheduled_bfa_date);
-    const rts = parseDate(s.rts_date);
-    const erection = parseDate(s.scheduled_erection_date);
+  // Awarded date (bar start)
+  const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
 
-    const barStart = ofa || bfa || rts;
-    const barEnd = erection || rts;
-
-    if (barStart && (!earliest || barStart < earliest)) earliest = barStart;
-    if (barEnd && (!latest || barEnd > latest)) latest = barEnd;
+  sorted.forEach(s => {
+    const erection = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
+    const milestones = calculateMilestones(erection, isFMRequired);
+    const ship = parseDate(s.ship_date);
+    const dates = [
+      awardedDate,
+      milestones.ofa,
+      milestones.bfa,
+      milestones.fm,
+      milestones.rts,
+      ship,
+      erection,
+    ].filter(Boolean);
+    if (dates.length > 0) {
+      const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+      const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+      if (!earliest || minDate < earliest) earliest = minDate;
+      if (!latest || maxDate > latest) latest = maxDate;
+    }
   });
 
   if (!earliest) earliest = new Date();
@@ -110,7 +151,7 @@ export default function GanttChart({ project, allSchedules }) {
 
   // Set timelineStart to the 1st day of the earliest milestone's month
   const timelineStart = new Date(earliest.getFullYear(), earliest.getMonth(), 1);
-  // Set timelineEnd to the 1st day of the month AFTER the latest milestone's month, to fully include the entire latest month
+  // Set timelineEnd to the 1st day of the month AFTER the latest milestone's month
   const timelineEnd = new Date(latest.getFullYear(), latest.getMonth() + 1, 1);
 
   const timelineMs = timelineEnd.getTime() - timelineStart.getTime();
@@ -118,13 +159,11 @@ export default function GanttChart({ project, allSchedules }) {
   /* ── month columns ──────────────────────────────────────── */
   const months = [];
   {
-    // Start cursor at the 1st of the month containing timelineStart
     let cursor = new Date(timelineStart.getFullYear(), timelineStart.getMonth(), 1);
     while (cursor < timelineEnd) {
       const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
       const nextMonth = new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1);
 
-      // Compute visible intersection of this calendar month with [timelineStart, timelineEnd]
       const segmentStart = new Date(Math.max(monthStart.getTime(), timelineStart.getTime()));
       const segmentEnd = new Date(Math.min(nextMonth.getTime(), timelineEnd.getTime()));
 
@@ -145,26 +184,43 @@ export default function GanttChart({ project, allSchedules }) {
     }
   }
 
+  /* ── helper: get percentage position on timeline ── */
+  const getDatePct = (d) => {
+    if (!d || d < timelineStart || d > timelineEnd) return null;
+    return ((d - timelineStart) / timelineMs) * 100;
+  };
+
   /* ── bar data ───────────────────────────────────────────── */
   const bars = sorted.map((sched) => {
-    const start =
-      parseDate(sched.scheduled_ofa_date) ||
-      parseDate(sched.scheduled_bfa_date) ||
-      parseDate(sched.rts_date);
-    const end =
-      parseDate(sched.scheduled_erection_date) ||
-      parseDate(sched.rts_date);
-    if (!start) return null;
+    const erection = parseDate(sched.scheduled_erection_date) || parseDate(project?.erection_date);
+    const milestones = calculateMilestones(erection, isFMRequired);
+    const ship = parseDate(sched.ship_date);
 
-    // Use end date if provided, otherwise default to start date + 1 day
-    const barEnd = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1) : new Date(start.getFullYear(), start.getMonth(), start.getDate() + 1);
+    // Bar: Awarded Date → Erection Date
+    const start = awardedDate || milestones.ofa;
+    const end = erection;
+    if (!start && !end) return null;
 
-    const leftPct = ((start - timelineStart) / timelineMs) * 100;
-    const widthPct = ((barEnd - start) / timelineMs) * 100;
-    const { label, color } = getStatus(start, end || start);
+    const barStart = start || end;
+    const barEnd = end
+      ? new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1)
+      : new Date(barStart.getFullYear(), barStart.getMonth(), barStart.getDate() + 1);
 
-    return { sched, start, end: end || start, leftPct, widthPct, label, color };
+    const leftPct = ((barStart - timelineStart) / timelineMs) * 100;
+    const widthPct = ((barEnd - barStart) / timelineMs) * 100;
+    const { label, color } = getStatus(barStart, end);
+
+    return { sched, start: barStart, end, leftPct, widthPct, label, color, milestones, ship, erection };
   });
+
+  /* ── milestone dot definitions ── */
+  const milestoneTypes = [
+    { key: 'ofa', label: 'Sch OFA', color: '#a855f7' },
+    { key: 'bfa', label: 'Sch BFA', color: '#06b6d4' },
+    { key: 'fm', label: 'Sch Field Measure', color: '#f97316' },
+    { key: 'rts', label: 'RTS', color: '#1e293b' },
+    { key: 'ship', label: 'Ship Date', color: '#ef4444' },
+  ];
 
   return (
     <div className="gantt-wrapper">
@@ -188,7 +244,7 @@ export default function GanttChart({ project, allSchedules }) {
       {/* ── body rows ── */}
       {bars.map((bar, idx) => {
         if (!bar) return null;
-        const { sched, start, end, leftPct, widthPct, label, color } = bar;
+        const { sched, start, end, leftPct, widthPct, label, color, milestones, ship, erection } = bar;
         return (
           <div key={sched.id || idx} className="gantt-row">
             {/* Seq Column */}
@@ -220,16 +276,83 @@ export default function GanttChart({ project, allSchedules }) {
                   width: `${Math.max(widthPct, 0.5)}%`,
                   backgroundColor: color,
                 }}
-                title={`Seq ${sched.seq_no}${sched.seq_name ? ' – ' + sched.seq_name : ''}\nOFA: ${fmt(start)}\nErection: ${fmt(end)}\nStatus: ${label}`}
+                title={`Seq ${sched.seq_no}${sched.seq_name ? ' – ' + sched.seq_name : ''}\nAwarded: ${fmt(start)}\nErection: ${fmt(end)}\nStatus: ${label}`}
               >
                 <span className="gantt-bar-text">
                   {fmt(start)} → {fmt(end)}
                 </span>
               </div>
+
+              {/* Milestone Dots — using calculated dates */}
+              {milestoneTypes.map((m) => {
+                const dateVal = m.key === 'ship' ? ship : milestones[m.key];
+                const pct = getDatePct(dateVal);
+                if (pct === null) return null;
+                return (
+                  <div
+                    key={m.key}
+                    className="absolute z-10 w-3 h-3 rounded-full border-2 border-white shadow-md -translate-x-1/2 -translate-y-1/2 cursor-pointer hover:scale-125 transition-transform"
+                    style={{
+                      left: `${pct}%`,
+                      top: '50%',
+                      backgroundColor: m.color,
+                    }}
+                    title={`${m.label}: ${fmt(dateVal)}`}
+                  />
+                );
+              })}
+
+              {/* Erection Flag */}
+              {(() => {
+                const pct = getDatePct(erection);
+                if (pct === null) return null;
+                return (
+                  <div
+                    className="absolute z-20 -translate-x-1/2 -translate-y-[65%] cursor-pointer hover:scale-125 transition-transform"
+                    style={{
+                      left: `${pct}%`,
+                      top: '50%',
+                      fontSize: '12px',
+                    }}
+                    title={`Erection Flag: ${fmt(erection)}`}
+                  >
+                    🚩
+                  </div>
+                );
+              })()}
             </div>
           </div>
         );
       })}
+
+      {/* ── Legend ── */}
+      <div className="flex flex-wrap gap-4 items-center justify-start p-3 bg-slate-50 border-t border-slate-200 text-[10px] font-bold text-slate-500">
+        <span className="uppercase tracking-widest text-[8px] text-slate-400">Milestone Legend:</span>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#a855f7] shadow-sm" />
+          <span>Sch OFA</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#06b6d4] shadow-sm" />
+          <span>Sch BFA</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#f97316] shadow-sm" />
+          <span>Sch Field Measure</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#1e293b] shadow-sm" />
+          <span>RTS</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#ef4444] shadow-sm" />
+          <span>Ship Date</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[13px] leading-none">🚩</span>
+          <span>Erection Date</span>
+        </div>
+      </div>
     </div>
   );
 }

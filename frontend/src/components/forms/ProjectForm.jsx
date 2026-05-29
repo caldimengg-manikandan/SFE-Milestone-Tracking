@@ -731,7 +731,7 @@ export default function ProjectForm({
                       className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
                     >
                       <option value="In Progress">In Progress</option>
-                      <option value="Yet to Complete">Yet to Complete</option>
+                      <option value="Yet to Start">Yet to Start</option>
                       <option value="Completed">Completed</option>
                     </select>
                   </div>

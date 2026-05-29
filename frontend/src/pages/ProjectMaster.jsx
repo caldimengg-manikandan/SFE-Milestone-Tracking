@@ -59,7 +59,7 @@ export default function ProjectMaster() {
     total_ton: '',
     total_manhours: '',
     erection_date: '',
-    status: 'Yet to Complete',
+    status: 'Yet to Start',
     priority: 'Medium',
     shop_name: '',
     schedule_field_measure_required: 'Yes'
@@ -874,7 +874,7 @@ export default function ProjectMaster() {
       total_ton: project.total_ton || '',
       total_manhours: project.total_manhours || '',
       erection_date: project.erection_date || '',
-      status: project.status || 'Yet to Complete',
+      status: project.status || 'Yet to Start',
       priority: project.priority || 'Medium'
     });
     setViewMode(mode);
@@ -1102,7 +1102,7 @@ export default function ProjectMaster() {
             >
               <option value="All">All Statuses</option>
               <option value="In Progress">In Progress</option>
-              <option value="Yet to Complete">Yet to Complete</option>
+              <option value="Yet to Start">Yet to Start</option>
               <option value="Completed">Completed</option>
             </select>
             <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">

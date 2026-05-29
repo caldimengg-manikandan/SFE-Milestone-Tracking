@@ -4,7 +4,7 @@ class Project(models.Model):
     STATUS_CHOICES = [
         ('Planning', 'Planning'),
         ('In Progress', 'In Progress'),
-        ('Yet to Complete', 'Yet to Complete'),
+        ('Yet to Start', 'Yet to Start'),
         ('Completed', 'Completed')
     ]
     PRIORITY_CHOICES = [('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High')]
@@ -21,7 +21,7 @@ class Project(models.Model):
     erection_date = models.DateField(null=True, blank=True)
     shop_name = models.CharField(max_length=100, blank=True, null=True)
     schedule_field_measure_required = models.CharField(max_length=10, default='Yes')
-    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Yet to Complete')
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Yet to Start')
     priority = models.CharField(max_length=20, choices=PRIORITY_CHOICES, default='Medium')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -47,6 +47,8 @@ class StructuralScheduleItem(models.Model):
     scheduled_field_measure_date = models.DateField(null=True, blank=True)
     rts_date = models.DateField(null=True, blank=True)
     ship_date = models.DateField(null=True, blank=True)
+    actual_rts_date = models.DateField(null=True, blank=True)
+    actual_ship_date = models.DateField(null=True, blank=True)
     shop_lead_time_weeks = models.IntegerField(default=0)
     scheduled_erection_date = models.DateField(null=True, blank=True)
     budget_shop_hours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -87,6 +89,7 @@ class Customer(models.Model):
         return self.name
 
 class CustomerContact(models.Model):
+    objects = models.Manager()
     customer = models.ForeignKey(Customer, related_name='contacts', on_delete=models.CASCADE)
     person = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)
@@ -99,6 +102,7 @@ class CustomerContact(models.Model):
         return self.person
 
 class Detailer(models.Model):
+    objects = models.Manager()
     name = models.CharField(max_length=300)
     code = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -112,6 +116,7 @@ class Detailer(models.Model):
         return self.name
 
 class DetailerContact(models.Model):
+    objects = models.Manager()
     detailer = models.ForeignKey(Detailer, related_name='contacts', on_delete=models.CASCADE)
     person = models.CharField(max_length=200, blank=True)
     email = models.EmailField(blank=True)

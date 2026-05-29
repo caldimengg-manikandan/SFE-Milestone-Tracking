@@ -10,7 +10,7 @@ import { Edit3, Check, X } from 'lucide-react'
 const MONTHS = ['January','February','March','April','May','June',
                  'July','August','September','October','November','December']
 
-function GoalCell({ goal, id, isManager }) {
+function GoalCell({ goal, id, canEdit }) {
   const [editing, setEditing] = useState(false)
   const [val, setVal] = useState(goal)
   const qc = useQueryClient()
@@ -24,7 +24,7 @@ function GoalCell({ goal, id, isManager }) {
     },
   })
 
-  if (!isManager) return <span className="mono">{formatCurrency(goal)}</span>
+  if (!canEdit) return <span className="mono">{formatCurrency(goal)}</span>
 
   if (editing) {
     return (
@@ -59,7 +59,7 @@ function GoalCell({ goal, id, isManager }) {
 }
 
 export default function DollarDashboardPage() {
-  const isManager = useAuthStore(s => s.isManager())
+  const canEdit = useAuthStore(s => s.canEdit())
   const currentYear = new Date().getFullYear()
   const years = Array.from({ length: 5 }, (_, i) => currentYear - i)
 
@@ -152,7 +152,7 @@ export default function DollarDashboardPage() {
       <div className="card">
         <div className="card-header">
           <span className="card-title">Monthly Detail · All Years</span>
-          {isManager && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click goal $ to edit</span>}
+          {canEdit && <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Click goal $ to edit</span>}
         </div>
         <div className="dash-table-wrapper">
           <table className="dash-table">
@@ -202,7 +202,7 @@ export default function DollarDashboardPage() {
                     <td>
                       {goalRow && (
                         <div>
-                          <GoalCell goal={goalRow.monthly_goal} id={goalRow.id} isManager={isManager} />
+                          <GoalCell goal={goalRow.monthly_goal} id={goalRow.id} canEdit={canEdit} />
                           <div className="progress-bar">
                             <div
                               className={`progress-fill ${goalPct >= 100 ? 'over-goal' : goalPct < 50 ? 'under-50' : ''}`}

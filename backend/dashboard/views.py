@@ -257,7 +257,7 @@ class DashboardStatsView(APIView):
             ]
 
         in_progress = Project.objects.filter(status='In Progress').count()
-        yet_to_complete = Project.objects.filter(status='Yet to Complete').count()
+        yet_to_start = Project.objects.filter(status='Yet to Start').count()
         completed = Project.objects.filter(status='Completed').count()
 
         # Fetch active announcements
@@ -284,7 +284,7 @@ class DashboardStatsView(APIView):
             'stats': [
                 {'label': 'Total Projects', 'value': str(total_projects), 'change': '+0', 'up': True},
                 {'label': 'In Progress', 'value': str(in_progress), 'change': '+0', 'up': True},
-                {'label': 'Yet to Complete', 'value': str(yet_to_complete), 'change': '+0', 'up': True},
+                {'label': 'Yet to Start', 'value': str(yet_to_start), 'change': '+0', 'up': True},
                 {'label': 'Completed', 'value': str(completed), 'change': '+0', 'up': True},
             ],
             'ganttData': {

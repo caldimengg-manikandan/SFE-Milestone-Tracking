@@ -560,7 +560,7 @@ class EstimatorViewSet(viewsets.ModelViewSet):
 class MonthlyBidGoalViewSet(viewsets.ModelViewSet):
     queryset = MonthlyBidGoal.objects.all().order_by('year', 'month')
     serializer_class = MonthlyBidGoalSerializer
-    permission_classes = [IsAuthenticated, IsManagerOrReadOnly]
+    permission_classes = [IsAuthenticated, CanEditRFQ]
     pagination_class = None
 
     @action(detail=False, methods=['get'])

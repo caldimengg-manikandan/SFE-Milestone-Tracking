@@ -414,11 +414,18 @@ export default function PlanCreation() {
       const ofa = parseDate(s.scheduled_ofa_date);
       const bfa = parseDate(s.scheduled_bfa_date);
       const rts = parseDate(s.rts_date);
-      const erection = parseDate(s.scheduled_erection_date);
-      const barStart = ofa || bfa || rts;
-      const barEnd = erection || rts;
-      if (barStart && (!earliest || barStart < earliest)) earliest = barStart;
-      if (barEnd && (!latest || barEnd > latest)) latest = barEnd;
+      const erection = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
+      const ship = parseDate(s.ship_date);
+      const fieldMeasure = parseDate(s.scheduled_field_measure_date);
+      const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
+
+      const dates = [ofa, bfa, rts, erection, ship, fieldMeasure, awardedDate].filter(Boolean);
+      if (dates.length > 0) {
+        const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
+        const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
+        if (!earliest || minDate < earliest) earliest = minDate;
+        if (!latest || maxDate > latest) latest = maxDate;
+      }
     });
     if (!earliest) earliest = new Date();
     if (!latest || latest <= earliest) latest = new Date(earliest.getTime() + 90 * 86400000);
@@ -495,8 +502,10 @@ export default function PlanCreation() {
     sortedSchedules.forEach(s => {
       if (gy + rowH > pageHeight - 30) { doc.addPage(); gy = 20; }
 
-      const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
+      const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
+      const start = awardedDate;
+      const rawEnd = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
+      const end = (rawEnd && rawEnd >= start) ? rawEnd : start;
       const status = getStatus(start, end);
 
       // Label cell
