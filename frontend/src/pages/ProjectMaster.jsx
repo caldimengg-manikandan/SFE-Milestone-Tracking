@@ -457,12 +457,7 @@ export default function ProjectMaster() {
     };
 
     // Calculate sequence status color
-    const calculateSeqStatus = (rtsDateStr, leadWeeks, trackingStatus) => {
-      if (trackingStatus) {
-        if (trackingStatus === 'Erected') return { label: 'Completed', color: [34, 197, 94] };
-        if (trackingStatus === 'On Hold') return { label: 'On Hold', color: [244, 63, 94] };
-        return { label: 'InProgress', color: [245, 158, 11] };
-      }
+    const calculateSeqStatus = (rtsDateStr, leadWeeks) => {
       if (!rtsDateStr) return { label: 'TBD', color: [156, 163, 175] }; // Slate 400
       const now = new Date();
       const rtsDate = new Date(rtsDateStr);
@@ -730,7 +725,7 @@ export default function ProjectMaster() {
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
             const barHeight = 4.5;
-            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks, s.tracking_status);
+            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks);
             const [r, g, b] = seqStatus.color;
 
             // Draw schedule bar

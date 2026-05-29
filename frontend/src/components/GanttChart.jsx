@@ -49,12 +49,7 @@ const fmt = (d) =>
       })
     : 'N/A';
 
-const getStatus = (start, end, trackingStatus) => {
-  if (trackingStatus) {
-    if (trackingStatus === 'Erected') return { label: 'Completed', color: '#22c55e' };
-    if (trackingStatus === 'On Hold') return { label: 'On Hold', color: '#f43f5e' };
-    return { label: 'In Progress', color: '#f59e0b' };
-  }
+const getStatus = (start, end) => {
   if (!start || !end) return { label: 'TBD', color: '#9ca3af' };
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -166,7 +161,7 @@ export default function GanttChart({ project, allSchedules }) {
 
     const leftPct = ((start - timelineStart) / timelineMs) * 100;
     const widthPct = ((barEnd - start) / timelineMs) * 100;
-    const { label, color } = getStatus(start, end || start, sched.tracking_status);
+    const { label, color } = getStatus(start, end || start);
 
     return { sched, start, end: end || start, leftPct, widthPct, label, color };
   });

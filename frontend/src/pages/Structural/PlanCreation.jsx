@@ -475,12 +475,7 @@ export default function PlanCreation() {
     });
     gy += hH;
 
-    const getStatus = (start, end, trackingStatus) => {
-      if (trackingStatus) {
-        if (trackingStatus === 'Erected') return { label: 'Completed', color: [34, 197, 94] };
-        if (trackingStatus === 'On Hold') return { label: 'On Hold', color: [244, 63, 94] };
-        return { label: 'In Progress', color: [245, 158, 11] };
-      }
+    const getStatus = (start, end) => {
       if (!start || !end) return { label: 'TBD', color: [156, 163, 175] };
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -502,7 +497,7 @@ export default function PlanCreation() {
 
       const start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
       const end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
-      const status = getStatus(start, end, s.tracking_status);
+      const status = getStatus(start, end);
 
       // Label cell
       doc.setFillColor(255, 255, 255);
