@@ -21,10 +21,12 @@ import CapacityMapping from './pages/CapacityMapping';
 import Settings from './pages/Settings';
 import Announcements from './pages/Announcements';
 import EstimationModel from './pages/EstimationModel';
+import EstimationSummary from './pages/EstimationSummary';
 import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 
 // ── RFQ Module & Dashboard Integrations ───────────────────────────────────────
+import RFQLayout from './pages/DataEntry/RFQLayout';
 import DataEntryPage from './pages/DataEntry/DataEntryPage';
 import PrintSetupPage from './pages/PrintSetup/PrintSetupPage';
 import BidPerformancePage from './pages/BidPerformance/BidPerformancePage';
@@ -66,6 +68,7 @@ export default function App() {
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="estimation" element={<EstimationModel />} />
+          <Route path="estimation-summary" element={<EstimationSummary />} />
           
           {/* Bid Management Routes */}
           <Route path="bids/enquiry" element={<BidEnquiry />} />
@@ -88,13 +91,16 @@ export default function App() {
           <Route path="production/capacity-mapping/:tab?" element={<CapacityMapping />} />
 
           {/* Integrated RFQ & Dashboards */}
-          <Route path="rfq/data-entry" element={<div className="rfq-scope w-full h-full"><DataEntryPage /></div>} />
+          <Route path="rfq" element={<RFQLayout />}>
+            <Route index element={<Navigate to="data-entry" replace />} />
+            <Route path="data-entry" element={<DataEntryPage />} />
+            <Route path="bid-performance" element={<BidPerformancePage />} />
+            <Route path="dollar-dashboard" element={<DollarDashboardPage />} />
+            <Route path="job-analytics" element={<JobAnalyticsPage />} />
+            <Route path="sales-cycle" element={<SalesCyclePage />} />
+            <Route path="capacity" element={<FutureCapacityPage />} />
+          </Route>
           <Route path="rfq/print" element={<div className="rfq-scope w-full h-full"><PrintSetupPage /></div>} />
-          <Route path="rfq/bid-performance" element={<div className="rfq-scope w-full h-full"><BidPerformancePage /></div>} />
-          <Route path="rfq/dollar-dashboard" element={<div className="rfq-scope w-full h-full"><DollarDashboardPage /></div>} />
-          <Route path="rfq/job-analytics" element={<div className="rfq-scope w-full h-full"><JobAnalyticsPage /></div>} />
-          <Route path="rfq/sales-cycle" element={<div className="rfq-scope w-full h-full"><SalesCyclePage /></div>} />
-          <Route path="rfq/capacity" element={<div className="rfq-scope w-full h-full"><FutureCapacityPage /></div>} />
 
           <Route path="settings" element={<Settings />} />
           <Route path="announcements" element={<Announcements />} />

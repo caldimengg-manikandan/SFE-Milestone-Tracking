@@ -43,17 +43,13 @@ const navSections = [
       { name: 'Bid Enquiry', path: '/bids/enquiry', icon: FolderInput },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
       { name: 'Estimation Model', path: '/estimation', icon: Calculator },
+      { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
     ],
   },
   {
     label: 'RFQ MODULE',
     items: [
-      { name: 'RFQ Data Entry', path: '/rfq/data-entry', icon: FileSpreadsheet },
-      { name: 'Bid Performance', path: '/rfq/bid-performance', icon: BarChart3 },
-      { name: 'Dollar Dashboard', path: '/rfq/dollar-dashboard', icon: DollarSign },
-      { name: 'Job Analytics', path: '/rfq/job-analytics', icon: TrendingUp },
-      { name: 'Sales Cycle', path: '/rfq/sales-cycle', icon: CalendarRange },
-      { name: 'Future Capacity', path: '/rfq/capacity', icon: Cpu },
+      { name: 'RFQ Module', path: '/rfq', icon: FileSpreadsheet },
     ],
   },
   {
@@ -87,8 +83,8 @@ const navSections = [
   {
     label: 'PRODUCTION MANAGEMENT',
     items: [
-      { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
       { name: 'Production Schedule', path: '/production/priority-schedule', icon: ListChecks },
+      { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
     ],
   },
   {
@@ -222,7 +218,7 @@ export default function Sidebar({
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      end
+                      end={item.path !== '/rfq'}
                       onClick={onCloseMobile}
                       className={({ isActive }) => `sidebar-nav-item group ${isActive ? 'active' : ''} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
                     >

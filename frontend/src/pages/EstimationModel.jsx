@@ -13,6 +13,18 @@ export default function EstimationModel() {
   // --- State for Modal ---
   const [activeSection, setActiveSection] = useState(null);
 
+  // --- Auto-open Section from Query Param ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section) {
+      setActiveSection(section);
+      // Clean up search query param
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+
   // --- State for Project Info ---
   const [projectInfo, setProjectInfo] = useState(() => {
     const saved = localStorage.getItem('sfe_est_project');
@@ -101,7 +113,16 @@ export default function EstimationModel() {
 
       // Final Totals
       profitPercent: 10.0,
-      miscCharges: ''
+      miscCharges: '',
+
+      // Namrutha final summary multipliers
+      namruthaLaborRate: 85.0,
+      namruthaErectionMultiplier: 1.12,
+      namruthaTaxMultiplier: 1.06,
+      namruthaJoistDeckMultiplier: 1.12,
+      namruthaOtherCostMultiplier: 1.12,
+      namruthaProfitPercent: 10.0,
+      namruthaMiscCharges: '',
     };
     if (saved) {
       const parsed = JSON.parse(saved);
@@ -321,6 +342,34 @@ export default function EstimationModel() {
   const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
   const finalBidAmount = finalAmountBeforeMisc + miscChargesVal;
 
+  // ── Namrutha Calculations ──
+  const namruthaLaborRateVal = Math.max(0, Number(estimationSections.namruthaLaborRate) || 0);
+  const namruthaErectionMultiplierVal = Math.max(0, Number(estimationSections.namruthaErectionMultiplier) || 0);
+  const namruthaJoistDeckMultiplierVal = Math.max(0, Number(estimationSections.namruthaJoistDeckMultiplier) || 0);
+  const namruthaOtherCostMultiplierVal = Math.max(0, Number(estimationSections.namruthaOtherCostMultiplier) || 0);
+
+  const namruthaLaborCost = totalLaborHours * namruthaLaborRateVal;
+  const namruthaMaterialTotal = totalMaterialDirectCosts + materialUseTaxAmount;
+  const namruthaTruckingTotal = totalShippingCost;
+  const namruthaDetailingEngineeringTotal = totalDirectDraftingCost;
+
+  const namruthaSubTotal = namruthaLaborCost + namruthaMaterialTotal + namruthaTruckingTotal + namruthaDetailingEngineeringTotal;
+
+  const namruthaErectionTotal = subletErectionCostVal * namruthaErectionMultiplierVal;
+
+  const namruthaJoistDeckCost = steelJoistCostVal + deckCostVal;
+  const taxMultiplier = 1 + useTaxPercentVal / 100;
+  const namruthaJoistDeckTotal = (namruthaJoistDeckCost * taxMultiplier) * namruthaJoistDeckMultiplierVal;
+
+  const namruthaOtherCostsSum = miscMetalCostVal + additionalSafetyCostsVal + ccipCostsVal + leedSubmissionCostVal;
+  const namruthaOtherCostsTotal = namruthaOtherCostsSum * namruthaOtherCostMultiplierVal;
+
+  const namruthaTotalBeforeProfit = namruthaSubTotal + namruthaErectionTotal + namruthaJoistDeckTotal + namruthaOtherCostsTotal;
+  const namruthaProfitAmount = namruthaTotalBeforeProfit * (profitPercentVal / 100);
+  const namruthaMiscellaneousTotal = miscChargesVal;
+
+  const namruthaFinalPrice = namruthaTotalBeforeProfit + namruthaProfitAmount + namruthaMiscellaneousTotal;
+
   // Clear Form handler
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear all fields?")) {
@@ -387,7 +436,14 @@ export default function EstimationModel() {
         useTaxPercent: 6.0,
         buyoutOverheadPercent: 12.0,
         profitPercent: 10.0,
-        miscCharges: ''
+        miscCharges: '',
+        namruthaLaborRate: 85.0,
+        namruthaErectionMultiplier: 1.12,
+        namruthaTaxMultiplier: 1.06,
+        namruthaJoistDeckMultiplier: 1.12,
+        namruthaOtherCostMultiplier: 1.12,
+        namruthaProfitPercent: 10.0,
+        namruthaMiscCharges: ''
       });
     }
   };
@@ -1476,6 +1532,207 @@ export default function EstimationModel() {
     );
   };
 
+  const renderNamruthaSection = () => {
+    const namruthaFinalPricePerTon = totalTons > 0 ? namruthaFinalPrice / totalTons : 0;
+    return (
+      <div className="space-y-6">
+        <div className="overflow-x-auto border border-slate-200 rounded-[1.5rem]">
+          <table className="w-full text-left border-collapse min-w-[500px] text-xs">
+            <thead>
+              <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200">
+                <th className="py-4 px-6 w-[350px]">Namrutha Final Category</th>
+                <th className="py-4 px-6 w-[250px]">Factor / Input</th>
+                <th className="py-4 px-6 text-right pr-8 w-[250px]">Amount</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-150">
+              {/* Row 66: Labor Hour X */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Labor Hour X</td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-400">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={estimationSections.namruthaLaborRate}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaLaborRate: e.target.value })}
+                      className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                    <span className="font-bold text-slate-500">/Hr</span>
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaLaborCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 67: Material */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Material</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaMaterialTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 68: Trucking */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Trucking</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaTruckingTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 69: Det/Eng */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Det/Eng</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaDetailingEngineeringTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 70: Sub-total */}
+              <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/50">
+                <td className="py-4 px-6 font-bold text-slate-800">Sub-total</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaSubTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 71: Erection X 1.?? */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Erection X 1.??</td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={estimationSections.namruthaErectionMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaErectionMultiplier: e.target.value })}
+                      className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaErectionTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 72: J&D x 1.?? + Tax */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">J&D x 1.?? + Tax</td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={estimationSections.namruthaJoistDeckMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaJoistDeckMultiplier: e.target.value })}
+                      className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaJoistDeckTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 73: Other x 1.?? + Tax?? */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Other x 1.?? + Tax??</td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min="0"
+                      step="any"
+                      value={estimationSections.namruthaOtherCostMultiplier}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, namruthaOtherCostMultiplier: e.target.value })}
+                      className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaOtherCostsTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 74: Total */}
+              <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/50">
+                <td className="py-4 px-6 font-bold text-slate-800">Total</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaTotalBeforeProfit.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 75: Profit x 1.?? */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Profit x 1.??</td>
+                <td className="py-4 px-6">
+                  <div className="flex items-center gap-2">
+                    <span className="px-3 py-2 bg-white text-slate-500 border border-slate-200 rounded-xl font-bold text-right select-none w-24">
+                      {profitPercentVal}%
+                    </span>
+                  </div>
+                </td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  <div className="flex flex-col items-end">
+                    <span>${namruthaProfitAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Struct With Profit</span>
+                  </div>
+                </td>
+              </tr>
+
+              {/* Row 76: Misc. */}
+              <tr className="hover:bg-slate-50/50 transition-colors">
+                <td className="py-4 px-6 font-bold text-slate-800">Misc.</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-bold text-slate-800 text-sm">
+                  ${namruthaMiscellaneousTotal.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+
+              {/* Row 77: Final Price */}
+              <tr className="hover:bg-slate-50/50 transition-colors bg-amber-50/10">
+                <td className="py-4 px-6 font-extrabold text-amber-600 text-sm">Final Price</td>
+                <td className="py-4 px-6"></td>
+                <td className="py-4 px-6 text-right pr-8 font-extrabold text-amber-600 text-sm">
+                  ${namruthaFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* Namrutha Prominent Display */}
+        <div className="bg-gradient-to-r from-amber-500 to-amber-600 rounded-[1.5rem] p-6 text-white flex flex-col md:flex-row justify-between items-center gap-4 shadow-lg border border-amber-500/30">
+          <div>
+            <h4 className="text-sm font-black uppercase tracking-wider text-amber-100">NAMRUTHA FINAL SUMMARY PRICE</h4>
+            <p className="text-xs text-amber-50 mt-1">This is the final calculated price for the Namrutha summary section.</p>
+          </div>
+          <div className="flex items-baseline gap-2">
+            <span className="text-3xl font-black">
+              ${namruthaFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            </span>
+            {totalTons > 0 && (
+              <span className="text-xs font-bold text-amber-100">
+                (${namruthaFinalPricePerTon.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}/Ton)
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const renderFinalTotalsSection = () => {
     return (
       <div className="space-y-6">
@@ -1871,6 +2128,18 @@ export default function EstimationModel() {
                 </div>
                 <span className={`${activeSection === 'finalTotals' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
+
+              {/* Button 8: Namrutha */}
+              <button
+                onClick={() => setActiveSection('namrutha')}
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'namrutha' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <Calculator className={`w-5 h-5 ${activeSection === 'namrutha' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>Namrutha</span>
+                </div>
+                <span className={`${activeSection === 'namrutha' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+              </button>
             </div>
           </div>
         </div>
@@ -1895,6 +2164,7 @@ export default function EstimationModel() {
                     {activeSection === 'buyouts' && 'Buyouts Section'}
                     {activeSection === 'profitBuyouts' && 'Profit on Buyouts'}
                     {activeSection === 'finalTotals' && 'Final Totals Section'}
+                    {activeSection === 'namrutha' && 'Namrutha Section'}
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     {activeSection === 'material' && 'Perform calculations for mill, warehouse, and scrap materials.'}
@@ -1904,6 +2174,7 @@ export default function EstimationModel() {
                     {activeSection === 'buyouts' && 'Calculate buyout material and erection expenses.'}
                     {activeSection === 'profitBuyouts' && 'Apply overhead percentage to buyout costs.'}
                     {activeSection === 'finalTotals' && 'Review totals, apply profit percentage, and calculate final bid amount.'}
+                    {activeSection === 'namrutha' && 'Review Row 66-77 Final Summary, apply multipliers, tax, and profit percentages to calculate Namrutha final price.'}
                   </p>
                 </div>
               </div>
@@ -1938,6 +2209,7 @@ export default function EstimationModel() {
               {activeSection === 'buyouts' && renderBuyoutsSection()}
               {activeSection === 'profitBuyouts' && renderProfitBuyoutsSection()}
               {activeSection === 'finalTotals' && renderFinalTotalsSection()}
+              {activeSection === 'namrutha' && renderNamruthaSection()}
             </div>
 
             {/* Modal Footer */}
