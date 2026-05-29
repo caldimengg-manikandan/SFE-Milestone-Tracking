@@ -166,12 +166,12 @@ export default function GanttChart({ project, allSchedules }) {
     return { sched, start, end: end || start, leftPct, widthPct, label, color };
   });
 
-  /* ── render ─────────────────────────────────────────────── */
   return (
     <div className="gantt-wrapper">
-      {/* ── header row: label gutter + month columns + status gutter ── */}
+      {/* ── header row: label gutters + month columns ── */}
       <div className="gantt-header">
-        <div className="gantt-label-col" />
+        <div className="gantt-seq-col" style={{ color: '#374151', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 600 }}>Seq #</div>
+        <div className="gantt-desc-col" style={{ color: '#374151', textTransform: 'uppercase', fontSize: '0.65rem', fontWeight: 600 }}>Item Description</div>
         <div className="gantt-timeline-col">
           {months.map((m, i) => (
             <div
@@ -183,9 +183,6 @@ export default function GanttChart({ project, allSchedules }) {
             </div>
           ))}
         </div>
-        <div className="gantt-status-col" style={{ background: '#f9fafb' }}>
-          <span className="gantt-badge" style={{ color: '#374151', textTransform: 'uppercase', fontSize: '0.65rem' }}>Status</span>
-        </div>
       </div>
 
       {/* ── body rows ── */}
@@ -194,15 +191,14 @@ export default function GanttChart({ project, allSchedules }) {
         const { sched, start, end, leftPct, widthPct, label, color } = bar;
         return (
           <div key={sched.id || idx} className="gantt-row">
-            {/* left label */}
-            <div className="gantt-label-col gantt-row-label">
-              <span className="font-medium">
-                {sched.seq_no}
-                {sched.seq_name ? ` – ${sched.seq_name}` : ''}
-              </span>
-              {sched.item_description && (
-                <span className="gantt-item-desc">{sched.item_description}</span>
-              )}
+            {/* Seq Column */}
+            <div className="gantt-seq-col font-medium">
+              {sched.seq_no}
+            </div>
+
+            {/* Description Column */}
+            <div className="gantt-desc-col font-medium" title={sched.item_description}>
+              {sched.item_description || '-'}
             </div>
 
             {/* timeline area */}
@@ -230,11 +226,6 @@ export default function GanttChart({ project, allSchedules }) {
                   {fmt(start)} → {fmt(end)}
                 </span>
               </div>
-            </div>
-
-            {/* status badge */}
-            <div className="gantt-status-col">
-              <span className="gantt-badge" style={{ color }}>{label}</span>
             </div>
           </div>
         );

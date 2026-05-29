@@ -202,8 +202,7 @@ export default function PlanTracking() {
                                 <table className="w-full text-left border-collapse table-fixed">
                                   <thead>
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
-                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Job Name</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Customer Name</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Sequence</th>
                                       <th className="px-2 py-3 border-r border-white/10 w-[13%]">Item Description</th>
                                       <th className="px-2 py-3 border-r border-white/10 w-[7%]">Material</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[6%]">Weight</th>
@@ -225,9 +224,8 @@ export default function PlanTracking() {
 
                                         return (
                                           <tr key={item.id} className={`${isNotInScope ? 'bg-slate-200/60' : 'hover:bg-slate-50/50'} transition-colors`}>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-semibold border-r border-slate-100 truncate" title={item.projectName}>{item.projectName}</td>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.customerName}>{item.customerName}</td>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}>{item.item_description || '-'}</td>
+                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-semibold border-r border-slate-100 truncate" title={item.seq_no}> {item.seq_no} </td>
+                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}> {item.item_description || '-'} </td>
                                             <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{formatDate(item.rts_date)}</td>
