@@ -229,8 +229,8 @@ export default function PlanTracking() {
                                   <tbody className="divide-y divide-slate-100 bg-white">
                                     {projectSchedules.length > 0 ? (
                                       projectSchedules.map((item) => {
-                                        const status = calculateStatus(item.rts_date, item.shop_lead_time_weeks);
-                                        const leadDays = (parseFloat(item.shop_lead_time_weeks) || 0) * 7;
+                                        const status = calculateStatus(item.rts_date, item.plant_lead_time_weeks);
+                                        const leadDays = (parseFloat(item.plant_lead_time_weeks) || 0) * 7;
                                         const isUnderProgress = status.label === 'In Progress';
                                         const isNotInScope = item.notes?.toLowerCase() === 'not in scope';
 
@@ -327,7 +327,7 @@ export default function PlanTracking() {
                                               </div>
                                             </td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{leadDays}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{getExpectedCompletion(item.rts_date, item.shop_lead_time_weeks)}</td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{getExpectedCompletion(item.rts_date, item.plant_lead_time_weeks)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-600 italic text-[11px] truncate" title={item.notes}>{item.notes || '-'}</td>
                                           </tr>
                                         );

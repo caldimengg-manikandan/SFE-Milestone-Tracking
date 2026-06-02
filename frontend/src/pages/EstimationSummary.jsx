@@ -12,7 +12,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-export default function EstimationSummary() {
+export default function EstimationSummary({ isEmbedded = false, onEditSection }) {
   const navigate = useNavigate();
 
   // --- Load localStorage values ---
@@ -56,13 +56,13 @@ export default function EstimationSummary() {
   const materialUseTaxAmount = totalMaterialDirectCosts * (taxPercentVal / 100);
   const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
 
-  const shopFabricationHoursVal = Number(estimationSections.shopFabricationHours) || 0;
+  const plantFabricationHoursVal = Number(estimationSections.plantFabricationHours) || 0;
   const miscLaborHoursVal = Number(estimationSections.miscLaborHours) || 0;
   const miscLaborOtherHoursVal = Number(estimationSections.miscLaborOtherHours) || 0;
   const miscLaborOther2HoursVal = Number(estimationSections.miscLaborOther2Hours) || 0;
-  const totalLaborHours = shopFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
+  const totalLaborHours = plantFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
   const hourlyLaborRateVal = Number(estimationSections.hourlyLaborRate) !== undefined && estimationSections.hourlyLaborRate !== '' ? Number(estimationSections.hourlyLaborRate) : 60.0;
-  const totalDirectShopCost = totalLaborHours * hourlyLaborRateVal;
+  const totalDirectplantCost = totalLaborHours * hourlyLaborRateVal;
 
   const numTrucksVal = Number(estimationSections.numTrucks) !== undefined && estimationSections.numTrucks !== '' ? Number(estimationSections.numTrucks) : 3;
   const hoursPerTruckVal = Number(estimationSections.hoursPerTruck) !== undefined && estimationSections.hoursPerTruck !== '' ? Number(estimationSections.hoursPerTruck) : 3;
@@ -80,7 +80,7 @@ export default function EstimationSummary() {
   const otherDirectCostsVal = Number(estimationSections.otherDirectCosts) || 0;
   const totalDirectDraftingCost = subletDetailingCostVal + peStampCostVal;
 
-  const totalDirectCosts = totalMaterialCost + totalDirectShopCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
+  const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
 
   const overheadPercentVal = Number(estimationSections.overheadPercent) !== undefined && estimationSections.overheadPercent !== '' ? Number(estimationSections.overheadPercent) : 12.0;
   const directCostOverhead = Math.round(totalDirectCosts * (overheadPercentVal / 100) * 100) / 100;
@@ -141,9 +141,12 @@ export default function EstimationSummary() {
   const miscellaneousMiscellaneousTotal = miscChargesVal;
   const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscellaneousMiscellaneousTotal;
 
-  // --- Navigation deep-link ---
   const handleEditSection = (sectionKey) => {
-    navigate(`/estimation?section=${sectionKey}`);
+    if (isEmbedded && onEditSection) {
+      onEditSection(sectionKey);
+    } else {
+      navigate(`/estimation?section=${sectionKey}`);
+    }
   };
 
   const hasTons = totalTons > 0;
@@ -151,21 +154,23 @@ export default function EstimationSummary() {
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-2 animate-fade-in">
       {/* Header Area */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-        <div>
-          <h2 className="text-xl font-bold text-slate-900">Estimation Totals Dashboard</h2>
-          <p className="text-xs text-slate-500 mt-1">
-            Visual summary and KPI analysis of all 8 bid estimation sections.
-          </p>
+      {!isEmbedded && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900">Estimation Totals Dashboard</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Visual summary and KPI analysis of all 8 bid estimation sections.
+            </p>
+          </div>
+          <button
+            onClick={() => navigate('/estimation')}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 transition-all cursor-pointer"
+          >
+            <Calculator className="w-4 h-4" />
+            Edit Model Inputs
+          </button>
         </div>
-        <button
-          onClick={() => navigate('/estimation')}
-          className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 transition-all cursor-pointer"
-        >
-          <Calculator className="w-4 h-4" />
-          Edit Model Inputs
-        </button>
-      </div>
+      )}
 
       {/* Active Project Details Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
@@ -296,18 +301,18 @@ export default function EstimationSummary() {
             </div>
           </div>
 
-          {/* Card 2: Shop Labor & Shipping */}
+          {/* Card 2: plant Labor & Shipping */}
           <div className="bg-white rounded-[1.75rem] border border-slate-200 hover:border-green-400 p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all group">
             <div className="flex justify-between items-start gap-3">
               <div className="space-y-1">
                 <span className="text-[9px] font-black text-green-600 uppercase tracking-wider bg-green-50 px-2.5 py-1 rounded-lg">
-                  2. Shop Labor & Ship
+                  2. plant Labor & Ship
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${(totalDirectShopCost + totalShippingCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  ${(totalDirectplantCost + totalShippingCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? ((totalDirectShopCost + totalShippingCost) / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  ${hasTons ? ((totalDirectplantCost + totalShippingCost) / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
                 </p>
               </div>
               <div className="bg-green-50 p-2.5 rounded-xl text-green-600 group-hover:scale-105 transition-transform">
@@ -317,7 +322,7 @@ export default function EstimationSummary() {
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-400 italic">{totalLaborHours} Hrs + Freight</span>
               <button
-                onClick={() => handleEditSection('shopLabor')}
+                onClick={() => handleEditSection('plantLabor')}
                 className="text-green-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
               >
                 Edit inputs

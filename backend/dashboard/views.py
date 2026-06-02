@@ -80,7 +80,7 @@ class DashboardStatsView(APIView):
                 erection_date = None
                 item_start = None
                 item_end = None
-                shop_lead_time_weeks = 0
+                plant_lead_time_weeks = 0
                 project_name = item.job_number
                 
                 try:
@@ -98,10 +98,10 @@ class DashboardStatsView(APIView):
                     if struct_item:
                         ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
                         erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
-                        shop_lead_time_weeks = struct_item.shop_lead_time_weeks
+                        plant_lead_time_weeks = struct_item.shop_lead_time_weeks
                         if struct_item.rts_date:
                             item_start = struct_item.rts_date.isoformat()
-                            item_end = (struct_item.rts_date + timedelta(days=struct_item.shop_lead_time_weeks * 7)).isoformat()
+                            item_end = (struct_item.rts_date + timedelta(days=plant_lead_time_weeks * 7)).isoformat()
                         else:
                             item_start = ofa_date
                             item_end = erection_date
@@ -125,7 +125,7 @@ class DashboardStatsView(APIView):
                     'ship_date': item.ship_date.isoformat() if item.ship_date else None,
                     'start_date': item_start,
                     'end_date': item_end,
-                    'shop_lead_time_weeks': shop_lead_time_weeks,
+                    'plant_lead_time_weeks': plant_lead_time_weeks,
                     'notes': item.notes,
                 })
 
@@ -168,7 +168,7 @@ class DashboardStatsView(APIView):
                 {'name': 'Completed', 'value': 1, 'color': colors['Completed']},
             ]
 
-        # 4. Shop Capacity Loading
+        # 4. plant Capacity Loading
         from django.db.models import Sum, Q
         
         cap_month_param = request.query_params.get('capacity_month')
@@ -191,13 +191,16 @@ class DashboardStatsView(APIView):
             cap_year = now.year
 
         bar_data = []
-        for shop in ['shop1', 'shop2', 'shop3']:
-            # Sum daily capacity rate for this shop and multiply by 30
-            cap_sum = Capacity.objects.filter(shop__iexact=shop).aggregate(total=Sum('rate_per_day'))['total'] or 0
+        for plant in ['plant1', 'plant2', 'plant3']:
+            # Map 'plant1' -> 'shop1', 'plant2' -> 'shop2', etc. to match database records
+            shop_val = plant.replace('plant', 'shop')
+            
+            # Sum daily capacity rate for this plant and multiply by 30
+            cap_sum = Capacity.objects.filter(shop__iexact=shop_val).aggregate(total=Sum('rate_per_day'))['total'] or 0
             capacity_month = float(cap_sum) * 30
             
-            # Sum tons of all sequences of projects assigned to this shop distributed pro-rata by week start dates
-            sequences = StructuralScheduleItem.objects.filter(project__shop_name__iexact=shop)
+            # Sum tons of all sequences of projects assigned to this plant distributed pro-rata by week start dates
+            sequences = StructuralScheduleItem.objects.filter(project__shop_name__iexact=shop_val)
             allocated = 0.0
             for seq in sequences:
                 tons = float(seq.tons or 0)
@@ -222,7 +225,7 @@ class DashboardStatsView(APIView):
             remaining = capacity_month - allocated
             
             bar_data.append({
-                'name': shop.capitalize(),
+                'name': plant.capitalize(),
                 'capacity': round(capacity_month, 2),
                 'allocated': round(allocated, 2),
                 'remaining': round(remaining, 2)
@@ -230,9 +233,9 @@ class DashboardStatsView(APIView):
 
         if sum(item['capacity'] for item in bar_data) == 0:
             bar_data = [
-                {'name': 'Shop1', 'capacity': 450.0, 'allocated': 320.0, 'remaining': 130.0},
-                {'name': 'Shop2', 'capacity': 300.0, 'allocated': 150.0, 'remaining': 150.0},
-                {'name': 'Shop3', 'capacity': 600.0, 'allocated': 620.0, 'remaining': -20.0},
+                {'name': 'plant1', 'capacity': 450.0, 'allocated': 320.0, 'remaining': 130.0},
+                {'name': 'plant2', 'capacity': 300.0, 'allocated': 150.0, 'remaining': 150.0},
+                {'name': 'plant3', 'capacity': 600.0, 'allocated': 620.0, 'remaining': -20.0},
             ]
 
         # 5. Recent Activities (Recent Projects)

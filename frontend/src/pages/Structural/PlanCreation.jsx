@@ -45,7 +45,7 @@ export default function PlanCreation() {
     name: '', code: '', customer_name: '', detailer_name: '',
     project_manager_name: '', total_ton: '', total_manhours: '',
     erection_date: '', status: 'Planning', priority: 'Medium',
-    shop_name: '', schedule_field_measure_required: 'Yes'
+    plant_name: '', schedule_field_measure_required: 'Yes'
   });
 
   useEffect(() => {
@@ -59,15 +59,15 @@ export default function PlanCreation() {
     return ton > 0 ? (hours / ton).toFixed(2) : '0.00';
   };
 
-  // Recalculate all budget shop hours if project-wide manhour/ton changes
+  // Recalculate all budget plant hours if project-wide manhour/ton changes
   useEffect(() => {
     const mhTon = parseFloat(autocalculateManhourTon());
     if (schedules.length > 0 && mhTon > 0) {
       setSchedules(prev => prev.map(row => {
         const rowTons = parseFloat(row.tons) || 0;
         const newBudget = (mhTon * rowTons).toFixed(2);
-        if (row.budget_shop_hours === newBudget) return row;
-        return { ...row, budget_shop_hours: newBudget };
+        if (row.budget_plant_hours === newBudget) return row;
+        return { ...row, budget_plant_hours: newBudget };
       }));
     }
   }, [form.total_manhours, form.total_ton]);
@@ -146,10 +146,10 @@ export default function PlanCreation() {
     scheduled_erection_date: projectData.erection_date || '',
     ...calculateDates(projectData.erection_date, projectData.schedule_field_measure_required),
 
-    shop_lead_time_weeks: '0',
-    budget_shop_hours: '0',
+    plant_lead_time_weeks: '0',
+    budget_plant_hours: '0',
     budget_field_hours: '0',
-    actual_shop_hours: '0',
+    actual_plant_hours: '0',
     actual_field_hours: '0',
     detailer_vendor: projectData.detailer_name || '',
     dwg_status: '',
@@ -210,7 +210,7 @@ export default function PlanCreation() {
       name: '', code: '', customer_name: '', detailer_name: '',
       project_manager_name: '', total_ton: '', total_manhours: '',
       erection_date: '', status: 'Planning', priority: 'Medium',
-      shop_name: '', schedule_field_measure_required: 'Yes'
+      plant_name: '', schedule_field_measure_required: 'Yes'
     });
     setSchedules([createDefaultRow({})]);
     setDeletedSchedules([]);
@@ -329,9 +329,9 @@ export default function PlanCreation() {
     const tableHeaders = [
       'Seq #', 'Tons', 'Item Description', 'Category',
       'Schedule\nOFA', 'Actual\nOFA', 'Schedule\nBFA', 'Actual\nBFA',
-      'Schedule Field\nMeasure', 'RTS', 'Shop Lead\nTime\n(WEEKS)',
-      'Schedule\nErection', 'Budget\nShop\nHours', 'Budget\nField\nHours',
-      'Shop\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
+      'Schedule Field\nMeasure', 'RTS', 'plant Lead\nTime\n(WEEKS)',
+      'Schedule\nErection', 'Budget\nplant\nHours', 'Budget\nField\nHours',
+      'plant\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
       'DWG\nStatus', 'Notes'
     ];
 
@@ -346,11 +346,11 @@ export default function PlanCreation() {
       fmtDate(s.actual_bfa_date),
       fmtDate(s.scheduled_field_measure_date),
       fmtDate(s.rts_date),
-      s.shop_lead_time_weeks || '0',
+      s.plant_lead_time_weeks || '0',
       fmtDate(s.scheduled_erection_date),
-      s.budget_shop_hours || '0.00',
+      s.budget_plant_hours || '0.00',
       s.budget_field_hours || '0.00',
-      s.actual_shop_hours || '0.00',
+      s.actual_plant_hours || '0.00',
       s.actual_field_hours || '0.00',
       s.detailer_vendor || '',
       s.dwg_status || '',
@@ -761,7 +761,7 @@ export default function PlanCreation() {
               erection_date: selected.erection_date,
               status: selected.status,
               priority: selected.priority,
-              shop_name: selected.shop_name || '',
+              plant_name: selected.plant_name || '',
               schedule_field_measure_required: selected.schedule_field_measure_required || 'No',
             });
             setDeletedSchedules([]);
@@ -798,7 +798,7 @@ export default function PlanCreation() {
               if (f === 'tons') {
                 const mhTon = parseFloat(autocalculateManhourTon()) || 0;
                 const rowTons = parseFloat(v) || 0;
-                updated.budget_shop_hours = (mhTon * rowTons).toFixed(2);
+                updated.budget_plant_hours = (mhTon * rowTons).toFixed(2);
               }
 
               if (f === 'scheduled_erection_date' && v) {

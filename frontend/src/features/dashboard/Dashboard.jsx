@@ -653,7 +653,7 @@ export default function Dashboard() {
                                   {isFirstVisibleWeek && subBarPosition && (
                                     <div
                                       className="db-gantt-bar shadow-sm"
-                                      title={item.start_date && item.end_date && item.shop_lead_time_weeks
+                                      title={item.start_date && item.end_date && item.plant_lead_time_weeks
                                         ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
                                         : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                       }
@@ -669,7 +669,7 @@ export default function Dashboard() {
                                       }}
                                     >
                                       <span className="db-gantt-bar-details">
-                                        {item.start_date && item.end_date && item.shop_lead_time_weeks
+                                        {item.start_date && item.end_date && item.plant_lead_time_weeks
                                           ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
                                           : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
                                         }
@@ -708,7 +708,7 @@ export default function Dashboard() {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
             <div>
               <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Capacity vs Shop</p>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Capacity vs plant</p>
             </div>
             <div className="flex items-center gap-2">
               <select

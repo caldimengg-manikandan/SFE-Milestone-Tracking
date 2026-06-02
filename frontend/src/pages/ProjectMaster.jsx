@@ -61,7 +61,7 @@ export default function ProjectMaster() {
     erection_date: '',
     status: 'Yet to Start',
     priority: 'Medium',
-    shop_name: '',
+    plant_name: '',
     schedule_field_measure_required: 'Yes'
   });
 
@@ -70,7 +70,7 @@ export default function ProjectMaster() {
     fetchAllSchedules();
   }, []);
 
-  // Recalculate all budget shop hours if project-wide manhour/ton changes
+  // Recalculate all budget plant hours if project-wide manhour/ton changes
   useEffect(() => {
     const mhTonStr = autocalculateManhourTon();
     const mhTon = parseFloat(mhTonStr);
@@ -80,10 +80,10 @@ export default function ProjectMaster() {
         const rowTons = parseFloat(row.tons) || 0;
         const newBudget = (mhTon * rowTons).toFixed(2);
         // Only update if it actually changed to avoid unnecessary re-renders
-        if (row.budget_shop_hours === newBudget) return row;
+        if (row.budget_plant_hours === newBudget) return row;
         return {
           ...row,
-          budget_shop_hours: newBudget
+          budget_plant_hours: newBudget
         };
       }));
     }
@@ -117,10 +117,10 @@ export default function ProjectMaster() {
       category: '',
       scheduled_erection_date: initialErectionDate,
       ...calculated,
-      shop_lead_time_weeks: '0',
-      budget_shop_hours: '0',
+      plant_lead_time_weeks: '0',
+      budget_plant_hours: '0',
       budget_field_hours: '0',
-      actual_shop_hours: '0',
+      actual_plant_hours: '0',
       actual_field_hours: '0',
       detailer_vendor: projectData.detailer_name || '',
       dwg_status: '',
@@ -201,18 +201,18 @@ export default function ProjectMaster() {
       if (row.id !== id) return row;
       let updated = { ...row, [field]: value };
 
-      // Auto-calculate Budget Shop Hours when tons change
+      // Auto-calculate Budget plant Hours when tons change
       if (field === 'tons') {
         const mhTon = parseFloat(autocalculateManhourTon()) || 0;
         const rowTons = parseFloat(value) || 0;
-        updated.budget_shop_hours = (mhTon * rowTons).toFixed(2);
+        updated.budget_plant_hours = (mhTon * rowTons).toFixed(2);
       }
 
       if (field === 'scheduled_erection_date' && value) {
         const calculated = calculateDates(value, form.schedule_field_measure_required);
         updated = { ...updated, ...calculated };
       }
-      if (field === 'shop_lead_time_weeks') {
+      if (field === 'plant_lead_time_weeks') {
         const weeks = parseFloat(value) || 0;
         updated.num_days = Math.round(weeks * 7);
       }
@@ -239,10 +239,10 @@ export default function ProjectMaster() {
       category: '',
       scheduled_erection_date: initialErectionDate,
       ...calculated,
-      shop_lead_time_weeks: '0',
-      budget_shop_hours: '0',
+      plant_lead_time_weeks: '0',
+      budget_plant_hours: '0',
       budget_field_hours: '0',
-      actual_shop_hours: '0',
+      actual_plant_hours: '0',
       actual_field_hours: '0',
       detailer_vendor: form.detailer_name || '',
       dwg_status: '',
@@ -356,7 +356,7 @@ export default function ProjectMaster() {
     if (showFieldMeasure) {
       headersList.push("Sch Field Meas");
     }
-    headersList.push("RTS Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
+    headersList.push("RTS Date", "plant Lead (Wks)", "Sch Erection", "Bud. plant Hr", "Bud. Field Hr", "Act. plant Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
     const tableHeaders = [headersList];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
@@ -382,11 +382,11 @@ export default function ProjectMaster() {
       }
       row.push(
         s.rts_date,
-        s.shop_lead_time_weeks,
+        s.plant_lead_time_weeks,
         s.scheduled_erection_date,
-        s.budget_shop_hours,
+        s.budget_plant_hours,
         s.budget_field_hours,
-        s.actual_shop_hours,
+        s.actual_plant_hours,
         s.actual_field_hours,
         s.detailer_vendor,
         s.dwg_status,
@@ -410,11 +410,11 @@ export default function ProjectMaster() {
     }
     stylesMap.push(
       { cellWidth: 12, halign: 'center' },  // RTS Date
-      { cellWidth: 14, halign: 'center' },  // Shop Lead Time in WEEKS
+      { cellWidth: 14, halign: 'center' },  // plant Lead Time in WEEKS
       { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-      { cellWidth: 11, halign: 'center' }, // Budget Shop Hours
+      { cellWidth: 11, halign: 'center' }, // Budget plant Hours
       { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-      { cellWidth: 11, halign: 'center' }, // Shop Hours Actual
+      { cellWidth: 11, halign: 'center' }, // plant Hours Actual
       { cellWidth: 11, halign: 'center' }, // Field Hours Actual
       { cellWidth: 13 }, // Detailer / Vendor
       { cellWidth: 12 }, // Dwg Status
@@ -725,7 +725,7 @@ export default function ProjectMaster() {
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
             const barHeight = 4.5;
-            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks);
+            const seqStatus = calculateSeqStatus(s.rts_date, s.plant_lead_time_weeks);
             const [r, g, b] = seqStatus.color;
 
             // Draw schedule bar
@@ -953,11 +953,11 @@ export default function ProjectMaster() {
           actual_bfa_date: row.actual_bfa_date || null,
           scheduled_field_measure_date: row.scheduled_field_measure_date || null,
           rts_date: row.rts_date || null,
-          shop_lead_time_weeks: parseInt(row.shop_lead_time_weeks) || 0,
+          plant_lead_time_weeks: parseInt(row.plant_lead_time_weeks) || 0,
           scheduled_erection_date: row.scheduled_erection_date || null,
-          budget_shop_hours: parseFloat(row.budget_shop_hours) || 0,
+          budget_plant_hours: parseFloat(row.budget_plant_hours) || 0,
           budget_field_hours: parseFloat(row.budget_field_hours) || 0,
-          actual_shop_hours: parseFloat(row.actual_shop_hours) || 0,
+          actual_plant_hours: parseFloat(row.actual_plant_hours) || 0,
           actual_field_hours: parseFloat(row.actual_field_hours) || 0,
           detailer_vendor: row.detailer_vendor || '',
           dwg_status: row.dwg_status || '',
@@ -1003,7 +1003,7 @@ export default function ProjectMaster() {
       name: '', code: '', customer_name: '', detailer_name: '',
       project_manager_name: '', total_ton: '', total_manhours: '',
       erection_date: '', status: 'In Progress', priority: 'Medium',
-      shop_name: '', schedule_field_measure_required: 'Yes'
+      plant_name: '', schedule_field_measure_required: 'Yes'
     });
     setIsEditing(false);
     setInitialTab("basic");

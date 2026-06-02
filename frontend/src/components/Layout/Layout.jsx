@@ -44,7 +44,7 @@ export default function Layout() {
         <Header onMenuClick={() => setIsMobileOpen(true)} />
 
         <main className="min-h-[calc(100vh-72px)]">
-          <div className="p-4 sm:p-6 lg:p-8 page-enter">
+          <div className="p-4 sm:p-6 lg:p-8 page-enter">  
             <Outlet />
           </div>
         </main>

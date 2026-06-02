@@ -3,7 +3,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight } from 'lucide-react';
 import StructuralScheduleForm from './StructuralScheduleForm';
-import { customerAPI, detailerAPI, employeeAPI } from '../../services/api';
+import { customerAPI, detailerAPI, employeeAPI, rfqAPI } from '../../services/api';
 
 export default function ProjectForm({
   schedules,
@@ -27,6 +27,7 @@ export default function ProjectForm({
   const [customers, setCustomers] = useState([]);
   const [detailers, setDetailers] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [wonRfqs, setWonRfqs] = useState([]);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -41,6 +42,13 @@ export default function ProjectForm({
         setEmployees(empRes.data.results || empRes.data);
       } catch (err) {
         console.error('Failed to load masters', err);
+      }
+
+      try {
+        const rfqRes = await rfqAPI.getAll({ won_lost: 'Won' });
+        setWonRfqs(rfqRes.data.results || rfqRes.data);
+      } catch (err) {
+        console.error('Failed to load Won RFQs', err);
       }
     };
     fetchData();
@@ -84,7 +92,7 @@ export default function ProjectForm({
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.project_manager_name || 'N/A', 180, 38);
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "Shop Lead (Wks)", "Sch Erection", "Bud. Shop Hr", "Bud. Field Hr", "Act. Shop Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
+    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "plant Lead (Wks)", "Sch Erection", "Bud. plant Hr", "Bud. Field Hr", "Act. plant Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
 
     const sortedSchedules = [...schedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -105,11 +113,11 @@ export default function ProjectForm({
       s.scheduled_field_measure_date || '-',
       s.rts_date,
       s.ship_date || '-',
-      s.shop_lead_time_weeks,
+      s.plant_lead_time_weeks,
       s.scheduled_erection_date,
-      s.budget_shop_hours,
+      s.budget_plant_hours,
       s.budget_field_hours,
-      s.actual_shop_hours,
+      s.actual_plant_hours,
       s.actual_field_hours,
       s.detailer_vendor,
       s.dwg_status,
@@ -425,7 +433,7 @@ export default function ProjectForm({
             const barWidth = xEnd - xStart;
             const barY = yRow + 2.5;
             const barHeight = 4.5;
-            const seqStatus = calculateSeqStatus(s.rts_date, s.shop_lead_time_weeks);
+            const seqStatus = calculateSeqStatus(s.rts_date, s.plant_lead_time_weeks);
             const [r, g, b] = seqStatus.color;
 
             // Draw schedule bar
@@ -567,6 +575,29 @@ export default function ProjectForm({
     setActiveTab(initialTab);
   }, [initialTab]);
 
+  const handleRfqSelect = (e) => {
+    const rfqId = e.target.value;
+    if (!rfqId) return;
+
+    const rfq = wonRfqs.find(r => String(r.id) === String(rfqId));
+    if (rfq) {
+      const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
+      const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
+      const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
+      const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
+      const totalManhours = avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
+
+      setForm(prev => ({
+        ...prev,
+        name: rfq.project_name || '',
+        code: rfq.sfe_job_no ? String(rfq.sfe_job_no) : (rfq.quote_no || ''),
+        customer_name: rfq.customer_name || '',
+        total_ton: rfq.total_tonnage || rfq.ton_steel || '0',
+        total_manhours: String(totalManhours),
+      }));
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
       <div className={`bg-white rounded-3xl shadow-2xl w-full ${activeTab === 'structural' ? 'max-w-[98vw]' : 'max-w-6xl'} max-h-[95vh] flex flex-col overflow-hidden transition-all duration-300`}>
@@ -620,6 +651,27 @@ export default function ProjectForm({
                   </div>
                   <h4 className="font-bold text-slate-800">Basic Project Information</h4>
                 </div>
+
+                {!isEditing && mode !== 'view' && (
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h5 className="text-sm font-bold text-slate-800">Pre-fill Project from Won RFQs</h5>
+                      <p className="text-xs text-slate-500">Select an awarded RFQ to automatically populate project info and total tonnage/manhours.</p>
+                    </div>
+                    <select
+                      onChange={handleRfqSelect}
+                      className="w-full md:w-80 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all cursor-pointer"
+                      defaultValue=""
+                    >
+                      <option value="">-- Select a Won RFQ --</option>
+                      {wonRfqs.map(rfq => (
+                        <option key={rfq.id} value={rfq.id}>
+                          {rfq.sfe_job_no ? `[Job #${rfq.sfe_job_no}] ` : ''}{rfq.quote_no} — {rfq.project_name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
@@ -766,17 +818,17 @@ export default function ProjectForm({
                   </div>
                   <div className="lg:col-span-2 grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                     <div className="flex flex-col justify-between">
-                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Shop Name</label>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">plant Name</label>
                       <select
-                        value={form.shop_name || ''}
+                        value={form.plant_name || ''}
                         disabled={mode === 'view'}
-                        onChange={e => setForm({ ...form, shop_name: e.target.value })}
+                        onChange={e => setForm({ ...form, plant_name: e.target.value })}
                         className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
                       >
-                        <option value="">Select Shop</option>
-                        <option value="shop1">shop1</option>
-                        <option value="shop2">shop2</option>
-                        <option value="shop3">shop3</option>
+                        <option value="">Select plant</option>
+                        <option value="plant1">plant1</option>
+                        <option value="plant2">plant2</option>
+                        <option value="plant3">plant3</option>
                       </select>
                     </div>
                     <div className="flex flex-col justify-between">

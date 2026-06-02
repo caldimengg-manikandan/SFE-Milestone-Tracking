@@ -13,6 +13,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
     customer: '', decision_to_bid: 'Bid',
     primary_estimator: '', bid_amount: '', won_lost: 'Pending',
     quote_date: new Date().toISOString().slice(0, 10),
+    scope_of_work: '',
   })
 
   const mutation = useMutation({
@@ -36,7 +37,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
     e.preventDefault()
     const payload = { ...form }
     // Convert empty strings to null for optional numeric/fk fields
-    ;['bid_amount', 'customer', 'primary_estimator', 'distance_travel'].forEach(f => {
+    ;['bid_amount', 'customer', 'primary_estimator', 'distance_travel', 'scope_of_work'].forEach(f => {
       if (payload[f] === '' || payload[f] === null) payload[f] = null
     })
     ;['bid_due_time'].forEach(f => {
@@ -131,6 +132,16 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
               <select className="form-select" value={form.decision_to_bid}
                 onChange={e => set('decision_to_bid', e.target.value)}>
                 {['Yes','No','NoBid','Bid'].map(v => <option key={v}>{v}</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label className="form-label">Scope of work</label>
+              <select className="form-select" value={form.scope_of_work}
+                onChange={e => set('scope_of_work', e.target.value)}>
+                <option value="">None</option>
+                <option value="Detailing">Detailing</option>
+                <option value="Fabrication">Fabrication</option>
+                <option value="Erection">Erection</option>
               </select>
             </div>
 

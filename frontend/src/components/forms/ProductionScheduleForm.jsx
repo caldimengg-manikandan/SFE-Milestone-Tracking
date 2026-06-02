@@ -84,13 +84,13 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                 minRTSObj = rtsDateObj;
               }
 
-              // 3. Late RTS date -> add Shop Lead Time in WEEKS -> production end date
+              // 3. Late RTS date -> add plant Lead Time in WEEKS -> production end date
               if (!maxRTSObj || rtsDateObj > maxRTSObj) {
                 maxRTSObj = rtsDateObj;
-                leadWeeksForMaxRTS = parseFloat(item.shop_lead_time_weeks) || 0;
+                leadWeeksForMaxRTS = parseFloat(item.plant_lead_time_weeks) || 0;
               } else if (rtsDateObj.getTime() === maxRTSObj.getTime()) {
                 // If RTS dates are equal, take the one with the larger lead time
-                const weeks = parseFloat(item.shop_lead_time_weeks) || 0;
+                const weeks = parseFloat(item.plant_lead_time_weeks) || 0;
                 if (weeks > leadWeeksForMaxRTS) {
                   leadWeeksForMaxRTS = weeks;
                 }

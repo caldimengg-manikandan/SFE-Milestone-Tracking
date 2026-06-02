@@ -5,9 +5,88 @@ import {
   FileText,
   X,
   ChevronDown,
-  Loader2
+  Loader2,
+  BarChart3,
+  Save
 } from 'lucide-react';
 import { projectAPI } from '../services/api';
+import EstimationSummary from './EstimationSummary';
+import { toast } from 'react-hot-toast';
+
+const DEFAULT_PROJECT_INFO = {
+  projectId: '',
+  project: '',
+  location: '',
+  materialDate: '',
+  budgetPricing: 'N',
+  date: new Date().toISOString().split('T')[0],
+  salesman: '',
+  quoteNum: '',
+  startDate: ''
+};
+
+const DEFAULT_BID_ENQUIRY = {
+  millWeight: '',
+  millAmount: '',
+  warehouseWeight: '',
+  warehouseAmount: '',
+  scrapPercent: 5.0,
+  boltQty: '',
+  boltRate: '1.75',
+  paintQty: '',
+  paintRate: '22.20',
+  galvanizingWeight: '',
+  galvanizingRate: '0.40',
+  miscItems: [
+    { id: 1, name: 'Weld Wire', amount: '' },
+    { id: 2, name: 'anchor bolts', amount: '' },
+    { id: 3, name: '', amount: '' },
+    { id: 4, name: '', amount: '' },
+    { id: 5, name: '', amount: '' },
+    { id: 6, name: '', amount: '' },
+    { id: 7, name: '', amount: '' },
+  ],
+  taxPercent: 6.0
+};
+
+const DEFAULT_ESTIMATION_SECTIONS = {
+  plantFabricationHours: '',
+  miscLaborHours: '',
+  miscLaborOtherHours: '',
+  miscLaborOther2Hours: '',
+  totalPieces: '',
+  hourlyLaborRate: 60.0,
+  numTrucks: 3,
+  hoursPerTruck: 3,
+  galvanizingTrucks: 5,
+  galvHoursPerTruck: 5.0,
+  shippingRate: 195.0,
+  subletDetailingCost: '',
+  peStampCost: '',
+  otherDirectCosts: '',
+  overheadPercent: 12.0,
+  steelJoistTons: '',
+  steelJoistCost: '',
+  deckCost: '',
+  subletErectionCost: '',
+  miscMetalCost: '',
+  oshaLinearFeet: '',
+  additionalSafetyCosts: '',
+  ccipCosts: '',
+  leedSubmissionCost: '',
+  suppliedMaterialCost: '',
+  useTaxPercent: 6.0,
+  buyoutOverheadPercent: 12.0,
+  profitPercent: 10.0,
+  miscCharges: '',
+  miscellaneousLaborRate: 85.0,
+  miscellaneousErectionMultiplier: 1.12,
+  miscellaneousTaxMultiplier: 1.06,
+  miscellaneousJoistDeckMultiplier: 1.12,
+  miscellaneousOtherCostMultiplier: 1.12,
+  miscellaneousProfitPercent: 10.0,
+  miscellaneousMiscCharges: ''
+};
 
 export default function EstimationModel() {
   // --- State for Modal ---
@@ -25,114 +104,34 @@ export default function EstimationModel() {
   }, []);
 
 
+  // --- State for Saving ---
+  const [isSaving, setIsSaving] = useState(false);
+
   // --- State for Project Info ---
   const [projectInfo, setProjectInfo] = useState(() => {
     const saved = localStorage.getItem('sfe_est_project');
     const parsed = saved ? JSON.parse(saved) : null;
-    return parsed ? { projectId: '', ...parsed } : {
-      projectId: '',
-      project: '',
-      location: '',
-      materialDate: '',
-      budgetPricing: 'N',
-      date: new Date().toISOString().split('T')[0],
-      salesman: '',
-      quoteNum: '',
-      startDate: ''
-    };
+    return parsed ? { projectId: '', ...parsed } : DEFAULT_PROJECT_INFO;
   });
 
   // --- State for Bid Enquiry Sheet (Material Section) ---
   const [bidEnquiry, setBidEnquiry] = useState(() => {
     const saved = localStorage.getItem('sfe_est_bid_enquiry');
-    return saved ? JSON.parse(saved) : {
-      millWeight: '',
-      millAmount: '',
-      warehouseWeight: '',
-      warehouseAmount: '',
-      scrapPercent: 5.0,
-      boltQty: '',
-      boltRate: '1.75',
-      paintQty: '',
-      paintRate: '22.20',
-      galvanizingWeight: '',
-      galvanizingRate: '0.40',
-      miscItems: [
-        { id: 1, name: 'Weld Wire', amount: '' },
-        { id: 2, name: 'anchor bolts', amount: '' },
-        { id: 3, name: '', amount: '' },
-        { id: 4, name: '', amount: '' },
-        { id: 5, name: '', amount: '' },
-        { id: 6, name: '', amount: '' },
-        { id: 7, name: '', amount: '' },
-      ],
-      taxPercent: 6.0
-    };
+    return saved ? JSON.parse(saved) : DEFAULT_BID_ENQUIRY;
   });
 
   // --- State for all other 6 Estimation Sections ---
   const [estimationSections, setEstimationSections] = useState(() => {
     const saved = localStorage.getItem('sfe_est_sections');
-    const defaults = {
-      // Shop Labor
-      shopFabricationHours: '',
-      miscLaborHours: '',
-      miscLaborOtherHours: '',
-      miscLaborOther2Hours: '',
-      totalPieces: '',
-      hourlyLaborRate: 60.0,
-      numTrucks: 3,
-      hoursPerTruck: 3,
-      galvanizingTrucks: 5,
-      galvHoursPerTruck: 5.0,
-      shippingRate: 195.0,
-
-      // Drafting
-      subletDetailingCost: '',
-      peStampCost: '',
-      otherDirectCosts: '',
-
-      // Profit on Direct Costs
-      overheadPercent: 12.0,
-
-      // Buyouts
-      steelJoistTons: '',
-      steelJoistCost: '',
-      deckCost: '',
-      subletErectionCost: '',
-      miscMetalCost: '',
-      oshaLinearFeet: '',
-      additionalSafetyCosts: '',
-      ccipCosts: '',
-      leedSubmissionCost: '',
-      suppliedMaterialCost: '',
-      useTaxPercent: 6.0,
-
-      // Profit on Buyouts
-      buyoutOverheadPercent: 12.0,
-
-      // Final Totals
-      profitPercent: 10.0,
-      miscCharges: '',
-
-      // miscellaneous final summary multipliers
-      miscellaneousLaborRate: 85.0,
-      miscellaneousErectionMultiplier: 1.12,
-      miscellaneousTaxMultiplier: 1.06,
-      miscellaneousJoistDeckMultiplier: 1.12,
-      miscellaneousOtherCostMultiplier: 1.12,
-      miscellaneousProfitPercent: 10.0,
-      miscellaneousMiscCharges: '',
-    };
     if (saved) {
       const parsed = JSON.parse(saved);
       if (parsed.numTrucks === '') parsed.numTrucks = 3;
       if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
       if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
       if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
-      return { ...defaults, ...parsed };
+      return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
     }
-    return defaults;
+    return DEFAULT_ESTIMATION_SECTIONS;
   });
 
   // --- State and Effect for Project Master Dropdown ---
@@ -157,29 +156,114 @@ export default function EstimationModel() {
     fetchProjects();
   }, []);
 
-  const handleProjectChange = (e) => {
+  const handleProjectChange = async (e) => {
     const projId = e.target.value;
     if (!projId) {
-      setProjectInfo(prev => ({
-        ...prev,
-        projectId: '',
-        project: '',
-        quoteNum: '',
-        salesman: '',
-        startDate: ''
-      }));
+      setProjectInfo(DEFAULT_PROJECT_INFO);
+      setBidEnquiry(DEFAULT_BID_ENQUIRY);
+      setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      localStorage.removeItem('sfe_est_project');
+      localStorage.removeItem('sfe_est_bid_enquiry');
+      localStorage.removeItem('sfe_est_sections');
       return;
     }
-    const selected = projects.find(p => String(p.id) === String(projId));
-    if (selected) {
-      setProjectInfo(prev => ({
-        ...prev,
-        projectId: selected.id,
-        project: selected.name,
-        quoteNum: selected.code || '',
-        salesman: selected.project_manager_name || '',
-        startDate: selected.erection_date || ''
-      }));
+    
+    try {
+      setLoadingProjects(true);
+      const res = await projectAPI.getById(projId);
+      const selected = res.data;
+      if (selected) {
+        const nextProjectInfo = {
+          ...DEFAULT_PROJECT_INFO,
+          projectId: selected.id,
+          project: selected.name,
+          quoteNum: selected.code || '',
+          salesman: selected.project_manager_name || '',
+          startDate: selected.erection_date || ''
+        };
+        
+        const estData = selected.estimation_data || {};
+        if (estData.bidEnquiry && estData.estimationSections) {
+          setProjectInfo({
+            ...nextProjectInfo,
+            ...estData.projectInfo,
+            projectId: selected.id,
+            project: selected.name,
+            quoteNum: selected.code || '',
+            salesman: selected.project_manager_name || '',
+            startDate: selected.erection_date || ''
+          });
+          setBidEnquiry(estData.bidEnquiry);
+          setEstimationSections(estData.estimationSections);
+          toast.success(`Calculations loaded for ${selected.name}`);
+        } else {
+          setProjectInfo(nextProjectInfo);
+          setBidEnquiry(DEFAULT_BID_ENQUIRY);
+          setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+          toast.success(`Calculations reset for ${selected.name}`);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to fetch project details:', err);
+      toast.error('Failed to load project calculations');
+    } finally {
+      setLoadingProjects(false);
+    }
+  };
+
+  // Sync latest calculations from DB on mount if project is already selected
+  useEffect(() => {
+    const syncProjectOnMount = async () => {
+      if (projectInfo.projectId) {
+        try {
+          const res = await projectAPI.getById(projectInfo.projectId);
+          const selected = res.data;
+          if (selected && selected.estimation_data) {
+            const estData = selected.estimation_data;
+            if (estData.bidEnquiry && estData.estimationSections) {
+              setProjectInfo(prev => ({
+                ...prev,
+                ...estData.projectInfo,
+                projectId: selected.id,
+                project: selected.name,
+                quoteNum: selected.code || '',
+                salesman: selected.project_manager_name || '',
+                startDate: selected.erection_date || ''
+              }));
+              setBidEnquiry(estData.bidEnquiry);
+              setEstimationSections(estData.estimationSections);
+            }
+          }
+        } catch (err) {
+          console.error('Failed to sync project calculations on mount:', err);
+        }
+      }
+    };
+    syncProjectOnMount();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleSaveToDatabase = async () => {
+    if (!projectInfo.projectId) {
+      toast.error('Please select a project first');
+      return;
+    }
+    try {
+      setIsSaving(true);
+      const payload = {
+        estimation_data: {
+          projectInfo,
+          bidEnquiry,
+          estimationSections
+        }
+      };
+      await projectAPI.patch(projectInfo.projectId, payload);
+      toast.success('Calculations successfully saved');
+    } catch (err) {
+      console.error('Failed to save calculations:', err);
+      toast.error('Failed to save calculations');
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -225,7 +309,7 @@ export default function EstimationModel() {
   const scrapTons = millTons + warehouseTons;
   const scrapAmount = (millAmountVal + warehouseAmountVal) * scrapPercentVal / 100;
 
-  // 4. Shop & Field Bolts
+  // 4. plant & Field Bolts
   const boltQtyVal = Number(bidEnquiry.boltQty) || 0;
   const boltRateVal = Number(bidEnquiry.boltRate) || 0;
   const boltAmount = boltQtyVal * boltRateVal;
@@ -264,8 +348,8 @@ export default function EstimationModel() {
   // ── Grand Tonnage ──
   const totalTons = millTons + warehouseTons;
 
-  // ── Section 1: Shop Labor Calculations ──
-  const shopFabricationHoursVal = Number(estimationSections.shopFabricationHours) || 0;
+  // ── Section 1: plant Labor Calculations ──
+  const plantFabricationHoursVal = Number(estimationSections.plantFabricationHours) || 0;
   const miscLaborHoursVal = Number(estimationSections.miscLaborHours) || 0;
   const miscLaborOtherHoursVal = Number(estimationSections.miscLaborOtherHours) || 0;
   const miscLaborOther2HoursVal = Number(estimationSections.miscLaborOther2Hours) || 0;
@@ -277,10 +361,10 @@ export default function EstimationModel() {
   const galvHoursPerTruckVal = Number(estimationSections.galvHoursPerTruck) || 0;
   const shippingRateVal = Number(estimationSections.shippingRate) || 0;
 
-  const totalLaborHours = shopFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
+  const totalLaborHours = plantFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
   const manHoursPerTon = totalTons > 0 ? totalLaborHours / totalTons : 0;
   const piecesPerTon = totalTons > 0 ? totalPiecesVal / totalTons : 0;
-  const totalDirectShopCost = totalLaborHours * hourlyLaborRateVal;
+  const totalDirectplantCost = totalLaborHours * hourlyLaborRateVal;
 
   const freightOutCost = numTrucksVal * hoursPerTruckVal;
   const freightGalvanizingCost = galvanizingTrucksVal * galvHoursPerTruckVal;
@@ -297,7 +381,7 @@ export default function EstimationModel() {
   const totalDirectDraftingCost = subletDetailingCostVal + peStampCostVal;
 
   // Include material cost in direct costs
-  const totalDirectCosts = totalMaterialCost + totalDirectShopCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
+  const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
   const directCostPerTon = totalTons > 0 ? Math.round(totalDirectCosts) / totalTons : 0;
 
   // ── Section 3: Profit on Direct Costs ──
@@ -373,78 +457,12 @@ export default function EstimationModel() {
   // Clear Form handler
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear all fields?")) {
-      setProjectInfo({
-        projectId: '',
-        project: '',
-        location: '',
-        materialDate: '',
-        budgetPricing: 'N',
-        date: new Date().toISOString().split('T')[0],
-        salesman: '',
-        quoteNum: '',
-        startDate: ''
-      });
-      setBidEnquiry({
-        millWeight: '',
-        millAmount: '',
-        warehouseWeight: '',
-        warehouseAmount: '',
-        scrapPercent: 5.0,
-        boltQty: '',
-        boltRate: '1.75',
-        paintQty: '',
-        paintRate: '22.20',
-        galvanizingWeight: '',
-        galvanizingRate: '0.40',
-        miscItems: [
-          { id: 1, name: 'Weld Wire', amount: '' },
-          { id: 2, name: 'anchor bolts', amount: '' },
-          { id: 3, name: '', amount: '' },
-          { id: 4, name: '', amount: '' },
-          { id: 5, name: '', amount: '' },
-          { id: 6, name: '', amount: '' },
-          { id: 7, name: '', amount: '' },
-        ],
-        taxPercent: 6.0
-      });
-      setEstimationSections({
-        shopFabricationHours: '',
-        miscLaborHours: '',
-        miscLaborOtherHours: '',
-        miscLaborOther2Hours: '',
-        totalPieces: '',
-        hourlyLaborRate: 60.0,
-        numTrucks: 3,
-        hoursPerTruck: 3,
-        galvanizingTrucks: 5,
-        galvHoursPerTruck: 5.0,
-        shippingRate: 195.0,
-        subletDetailingCost: '',
-        peStampCost: '',
-        otherDirectCosts: '',
-        overheadPercent: 12.0,
-        steelJoistTons: '',
-        steelJoistCost: '',
-        deckCost: '',
-        subletErectionCost: '',
-        miscMetalCost: '',
-        oshaLinearFeet: '',
-        additionalSafetyCosts: '',
-        ccipCosts: '',
-        leedSubmissionCost: '',
-        suppliedMaterialCost: '',
-        useTaxPercent: 6.0,
-        buyoutOverheadPercent: 12.0,
-        profitPercent: 10.0,
-        miscCharges: '',
-        miscellaneousLaborRate: 85.0,
-        miscellaneousErectionMultiplier: 1.12,
-        miscellaneousTaxMultiplier: 1.06,
-        miscellaneousJoistDeckMultiplier: 1.12,
-        miscellaneousOtherCostMultiplier: 1.12,
-        miscellaneousProfitPercent: 10.0,
-        miscellaneousMiscCharges: ''
-      });
+      setProjectInfo(DEFAULT_PROJECT_INFO);
+      setBidEnquiry(DEFAULT_BID_ENQUIRY);
+      setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      localStorage.removeItem('sfe_est_project');
+      localStorage.removeItem('sfe_est_bid_enquiry');
+      localStorage.removeItem('sfe_est_sections');
     }
   };
 
@@ -601,10 +619,10 @@ export default function EstimationModel() {
               </td>
             </tr>
 
-            {/* 4. Shop & Field Bolts */}
+            {/* 4. plant & Field Bolts */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">4</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Shop & Field Bolts</td>
+              <td className="py-4 px-4 font-bold text-slate-800">plant & Field Bolts</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
                   <span className="w-16"></span>
@@ -800,7 +818,7 @@ export default function EstimationModel() {
     );
   };
 
-  const renderShopLaborSection = () => {
+  const renderplantLaborSection = () => {
     return (
       <div className="overflow-x-auto border border-slate-200 rounded-[1.5rem]">
         <table className="w-full text-left border-collapse min-w-[700px] text-xs">
@@ -814,18 +832,18 @@ export default function EstimationModel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-150">
-            {/* 1. Shop Fabrication */}
+            {/* 1. plant Fabrication */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">1</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Shop Fabrication Hours</td>
+              <td className="py-4 px-4 font-bold text-slate-800">plant Fabrication Hours</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="0"
-                    value={estimationSections.shopFabricationHours}
+                    value={estimationSections.plantFabricationHours}
                     placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, shopFabricationHours: e.target.value })}
+                    onChange={(e) => setEstimationSections({ ...estimationSections, plantFabricationHours: e.target.value })}
                     className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                   />
                   <span className="font-bold text-slate-400">Hrs</span>
@@ -906,10 +924,10 @@ export default function EstimationModel() {
               </td>
             </tr>
 
-            {/* 3. Total Direct Shop Cost */}
+            {/* 3. Total Direct plant Cost */}
             <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/30">
               <td className="py-4 px-4 font-bold text-slate-400">3</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Total Direct Shop Cost</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Total Direct plant Cost</td>
               <td className="py-4 px-4">
                 <span className="font-bold text-slate-500">{totalLaborHours} Total Hrs</span>
               </td>
@@ -924,7 +942,7 @@ export default function EstimationModel() {
               </td>
               <td className="py-4 px-4 text-right pr-6">
                 <span className="font-bold text-slate-800">
-                  =${totalDirectShopCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  =${totalDirectplantCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </td>
             </tr>
@@ -1864,6 +1882,21 @@ export default function EstimationModel() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {projectInfo.projectId && (
+            <button
+              onClick={handleSaveToDatabase}
+              disabled={isSaving}
+              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+              title="Save calculations"
+            >
+              {isSaving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Save className="w-4 h-4" />
+              )}
+              {isSaving ? 'Saving...' : 'Save'}
+            </button>
+          )}
           <button
             onClick={handleClear}
             className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition-all border border-slate-200"
@@ -2057,16 +2090,16 @@ export default function EstimationModel() {
                 <span className={`${activeSection === 'material' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
-              {/* Button 2: Shop Labor */}
+              {/* Button 2: plant Labor */}
               <button
-                onClick={() => setActiveSection('shopLabor')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'shopLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                onClick={() => setActiveSection('plantLabor')}
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'plantLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className={`w-5 h-5 ${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>Shop Labor</span>
+                  <Calculator className={`w-5 h-5 ${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>plant Labor</span>
                 </div>
-                <span className={`${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+                <span className={`${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 3: Drafting */}
@@ -2140,6 +2173,18 @@ export default function EstimationModel() {
                 </div>
                 <span className={`${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
+
+              {/* Button 9: Summary */}
+              <button
+                onClick={() => setActiveSection('summary')}
+                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'summary' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <BarChart3 className={`w-5 h-5 ${activeSection === 'summary' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>Estimation Summary</span>
+                </div>
+                <span className={`${activeSection === 'summary' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+              </button>
             </div>
           </div>
         </div>
@@ -2158,23 +2203,25 @@ export default function EstimationModel() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
                     {activeSection === 'material' && 'Material Section'}
-                    {activeSection === 'shopLabor' && 'Shop Labor Section'}
+                    {activeSection === 'plantLabor' && 'plant Labor Section'}
                     {activeSection === 'drafting' && 'Drafting & Direct Costs'}
                     {activeSection === 'profitDirect' && 'Profit on Direct Costs'}
                     {activeSection === 'buyouts' && 'Buyouts Section'}
                     {activeSection === 'profitBuyouts' && 'Profit on Buyouts'}
                     {activeSection === 'finalTotals' && 'Final Totals Section'}
                     {activeSection === 'miscellaneous' && 'miscellaneous Section'}
+                    {activeSection === 'summary' && 'Estimation Summary'}
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     {activeSection === 'material' && 'Perform calculations for mill, warehouse, and scrap materials.'}
-                    {activeSection === 'shopLabor' && 'Perform calculations for shop fabrication hours and shipping costs.'}
+                    {activeSection === 'plantLabor' && 'Perform calculations for plant fabrication hours and shipping costs.'}
                     {activeSection === 'drafting' && 'Perform calculations for sublet detailing, PE stamps, and total direct costs.'}
                     {activeSection === 'profitDirect' && 'Apply overhead percentage to total direct costs.'}
                     {activeSection === 'buyouts' && 'Calculate buyout material and erection expenses.'}
                     {activeSection === 'profitBuyouts' && 'Apply overhead percentage to buyout costs.'}
                     {activeSection === 'finalTotals' && 'Review totals, apply profit percentage, and calculate final bid amount.'}
                     {activeSection === 'miscellaneous' && 'Review Row 66-77 Final Summary, apply multipliers, tax, and profit percentages to calculate miscellaneous final price.'}
+                    {activeSection === 'summary' && 'Review the visual summary and KPI analysis of all bid sections.'}
                   </p>
                 </div>
               </div>
@@ -2189,27 +2236,32 @@ export default function EstimationModel() {
             {/* Modal Content */}
             <div className="p-6 overflow-y-auto space-y-6 scrollbar-thin">
               {/* Legend */}
-              <div className="flex flex-wrap items-center gap-5 text-xs font-semibold text-slate-500 bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
-                <span>Legend:</span>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 bg-[#fef9c3] border border-amber-300 rounded-sm" />
-                  <span>Yellow Fields = Editable Input Fields</span>
+              {activeSection !== 'summary' && (
+                <div className="flex flex-wrap items-center gap-5 text-xs font-semibold text-slate-500 bg-slate-50 px-4 py-3 rounded-2xl border border-slate-100">
+                  <span>Legend:</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 bg-[#fef9c3] border border-amber-300 rounded-sm" />
+                    <span>Yellow Fields = Editable Input Fields</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-4 h-4 bg-white border border-slate-200 rounded-sm" />
+                    <span>White Fields = Formula Calculated (Read-only)</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="w-4 h-4 bg-white border border-slate-200 rounded-sm" />
-                  <span>White Fields = Formula Calculated (Read-only)</span>
-                </div>
-              </div>
+              )}
 
               {/* Render dynamic section */}
               {activeSection === 'material' && renderMaterialSection()}
-              {activeSection === 'shopLabor' && renderShopLaborSection()}
+              {activeSection === 'plantLabor' && renderplantLaborSection()}
               {activeSection === 'drafting' && renderDraftingSection()}
               {activeSection === 'profitDirect' && renderProfitDirectSection()}
               {activeSection === 'buyouts' && renderBuyoutsSection()}
               {activeSection === 'profitBuyouts' && renderProfitBuyoutsSection()}
               {activeSection === 'finalTotals' && renderFinalTotalsSection()}
               {activeSection === 'miscellaneous' && rendermiscellaneousSection()}
+              {activeSection === 'summary' && (
+                <EstimationSummary isEmbedded={true} onEditSection={setActiveSection} />
+              )}
             </div>
 
             {/* Modal Footer */}

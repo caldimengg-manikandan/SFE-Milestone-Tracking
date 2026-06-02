@@ -191,11 +191,11 @@ export default function StructuralScheduleForm({
                   <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
                 )}
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Shop Lead Time in WEEKS</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">plant Lead Time in WEEKS</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Shop Hours</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget plant Hours</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Field Hours</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">Shop Hours actual</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">plant Hours actual</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">Field Hours Actual</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Detailer / Vendor</th>
                 <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Dwg Status</th>
@@ -317,8 +317,8 @@ export default function StructuralScheduleForm({
                       type="number"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-center text-[10px] font-black text-amber-700 focus:border-amber-400 bg-transparent transition-all"
-                      value={row.shop_lead_time_weeks}
-                      onChange={e => handleRowChange(row.id, 'shop_lead_time_weeks', e.target.value)}
+                      value={row.plant_lead_time_weeks}
+                      onChange={e => handleRowChange(row.id, 'plant_lead_time_weeks', e.target.value)}
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200">
@@ -334,8 +334,8 @@ export default function StructuralScheduleForm({
                       type="number"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-center text-[10px] font-bold text-slate-600 focus:border-amber-400 bg-transparent transition-all"
-                      value={row.budget_shop_hours}
-                      onChange={e => handleRowChange(row.id, 'budget_shop_hours', e.target.value)}
+                      value={row.budget_plant_hours}
+                      onChange={e => handleRowChange(row.id, 'budget_plant_hours', e.target.value)}
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200">
@@ -352,8 +352,8 @@ export default function StructuralScheduleForm({
                       type="number"
                       readOnly={isViewOnly}
                       className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-center text-[10px] font-bold text-slate-600 focus:border-amber-400 bg-transparent transition-all"
-                      value={row.actual_shop_hours}
-                      onChange={e => handleRowChange(row.id, 'actual_shop_hours', e.target.value)}
+                      value={row.actual_plant_hours}
+                      onChange={e => handleRowChange(row.id, 'actual_plant_hours', e.target.value)}
                     />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-slate-50/50">

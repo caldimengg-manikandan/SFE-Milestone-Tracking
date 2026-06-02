@@ -66,6 +66,9 @@ export const rfqAPI = {
   sebwSync: (id, data) => api.patch(`/rfq/rfq/${id}/sebw-sync/`, data),
   // Duplicate — clone as Rebid with auto R-suffix quote_no
   duplicate: (id) => api.post(`/rfq/rfq/${id}/duplicate/`),
+  // Send email notifications
+  sendEmail: (id) => api.post(`/rfq/rfq/${id}/send-email/`),
+  sendBulkEmails: () => api.post('/rfq/rfq/send-bulk-emails/'),
   // Excel Upload — preview or commit import
   uploadExcel: (formData) => api.post('/rfq/rfq/upload-excel/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

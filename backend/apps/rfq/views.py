@@ -18,6 +18,9 @@ from .serializers import (
     CustomerSerializer, EstimatorSerializer, MonthlyBidGoalSerializer,
 )
 from .permissions import CanEditRFQ, IsManagerOrReadOnly
+import threading
+from django.core.mail import send_mail
+from django.conf import settings
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -43,6 +46,60 @@ class RFQFilter(df_filters.FilterSet):
 # ─────────────────────────────────────────────────────────────────────────────
 # RFQ MASTER VIEWSET
 # ─────────────────────────────────────────────────────────────────────────────
+
+def send_rfq_email_async(rfq_id):
+    """Function to run in a background thread to send the email."""
+    try:
+        rfq = RFQMaster.objects.select_related('customer', 'primary_estimator').get(id=rfq_id)
+        if not rfq.scope_of_work:
+            return
+            
+        recipient_name = None
+        recipient_email = None
+        
+        scope = rfq.scope_of_work
+        if scope == 'Detailing':
+            recipient_name = 'namrutha'
+            recipient_email = 'namrutha@caldimengg.in'
+        elif scope in ['Fabrication', 'Erection']:
+            recipient_name = 'divya'
+            recipient_email = 'divya@caldimengg.in'
+            
+        if not recipient_email:
+            return
+            
+        subject = f"Project Details: {rfq.quote_no} - {rfq.project_name}"
+        
+        body = f"Dear {recipient_name},\n\nPlease find the below details of the project:\n\n"
+        body += f"Quote No: {rfq.quote_no}\n"
+        body += f"Project Name: {rfq.project_name}\n"
+        body += f"Scope of Work: {rfq.scope_of_work}\n"
+        if rfq.customer:
+            body += f"Customer: {rfq.customer.name}\n"
+        if rfq.primary_estimator:
+            body += f"Primary Estimator: {rfq.primary_estimator.initials}\n"
+        if rfq.bid_due_date:
+            body += f"Bid Due Date: {rfq.bid_due_date}\n"
+        if rfq.bid_amount:
+            body += f"Bid Amount: ${rfq.bid_amount:,.2f}\n"
+        if rfq.location:
+            body += f"Location: {rfq.location}\n"
+        if rfq.project_comments:
+            body += f"Comments: {rfq.project_comments}\n"
+            
+        body += "\nBest Regards,\nSFE Team"
+        
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[recipient_email],
+            fail_silently=False
+        )
+        rfq.email_sent = True
+        rfq.save(update_fields=['email_sent'])
+    except Exception as e:
+        print(f"Error sending email for RFQ {rfq_id}: {str(e)}")
 
 class RFQMasterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanEditRFQ]
@@ -197,6 +254,39 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         source.updated_by = request.user.username
         source.save()
         return Response(RFQMasterSerializer(source).data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'], url_path='send-email',
+            permission_classes=[IsAuthenticated, CanEditRFQ])
+    def send_email(self, request, pk=None):
+        """Send email for a single RFQ master record."""
+        rfq = self.get_object()
+        if not rfq.scope_of_work:
+            return Response({'detail': 'Scope of Work is not selected for this project.'}, status=400)
+            
+        thread = threading.Thread(target=send_rfq_email_async, args=(rfq.id,))
+        thread.start()
+        
+        return Response({'detail': 'Email sending initiated.'})
+
+    @action(detail=False, methods=['post'], url_path='send-bulk-emails',
+            permission_classes=[IsAuthenticated, CanEditRFQ])
+    def send_bulk_emails(self, request):
+        """Send pending emails for all non-deleted RFQs with a scope of work."""
+        pending_rfqs = RFQMaster.objects.filter(
+            deleted_at__isnull=True,
+            scope_of_work__isnull=False,
+            email_sent=False
+        ).exclude(scope_of_work='')
+        
+        count = pending_rfqs.count()
+        if count == 0:
+            return Response({'detail': 'No pending emails to send.'}, status=400)
+            
+        for rfq in pending_rfqs:
+            thread = threading.Thread(target=send_rfq_email_async, args=(rfq.id,))
+            thread.start()
+            
+        return Response({'detail': f'Bulk sending initiated for {count} project(s).'})
 
     @action(detail=False, methods=['post'], url_path='upload-excel',
             permission_classes=[IsAuthenticated, CanEditRFQ],

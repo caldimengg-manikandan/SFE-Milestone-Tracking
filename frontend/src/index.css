@@ -88,6 +88,30 @@
   background: linear-gradient(180deg, #0c1222 0%, #0f172a 40%, #0a0f1d 100%);
 }
 
+/* Custom sidebar scrollbar to make it clearly visible */
+.sidebar-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(251, 191, 36, 0.35); /* clearly visible amber color */
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(251, 191, 36, 0.6);
+}
+
+.sidebar-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(251, 191, 36, 0.35) transparent;
+}
+
 .sidebar-nav-item {
   position: relative;
   display: flex;
@@ -96,14 +120,14 @@
   padding: 0.625rem 0.75rem;
   border-radius: 0.75rem;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  color: #94a3b8;
+  color: #cbd5e1; /* Brighter text color for better visibility */
   text-decoration: none;
   cursor: pointer;
 }
 
 .sidebar-nav-item:hover {
-  color: #e2e8f0;
-  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff; /* pure white text on hover */
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .sidebar-nav-item.active {

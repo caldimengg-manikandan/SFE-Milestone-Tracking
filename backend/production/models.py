@@ -85,11 +85,28 @@ class Manpower(models.Model):
         ('Medium', 'Medium'),
         ('Low', 'Low'),
     ]
+    MONTH_CHOICES = [
+        ('January', 'January'),
+        ('February', 'February'),
+        ('March', 'March'),
+        ('April', 'April'),
+        ('May', 'May'),
+        ('June', 'June'),
+        ('July', 'July'),
+        ('August', 'August'),
+        ('September', 'September'),
+        ('October', 'October'),
+        ('November', 'November'),
+        ('December', 'December'),
+    ]
     employee_name = models.CharField(max_length=200)
     skill_level = models.CharField(max_length=20, choices=SKILL_CHOICES)
     process = models.CharField(max_length=200)
     productivity_rate_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     rate_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    manhours = models.DecimalField(max_digits=5, decimal_places=2, default=8.00)
+    overtime = models.DecimalField(max_digits=5, decimal_places=2, default=0.00)
+    month = models.CharField(max_length=20, choices=MONTH_CHOICES, default='June')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { rfqAPI, customersAPI, estimatorsAPI } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
-import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase } from 'lucide-react'
+import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase, Mail } from 'lucide-react'
 import RFQFormModal from './RFQFormModal'
 import ExcelUploadModal from './ExcelUploadModal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
@@ -87,7 +87,7 @@ function getRowClass({ data }) {
 function ActionsRenderer(params) {
   const { data, context } = params
   if (!data) return null
-  const { canEdit, isManager, onDuplicate, onDelete, onSetJobNo, queryClient } = context
+  const { canEdit, isManager, onDuplicate, onDelete, onSetJobNo, onSendEmail, queryClient } = context
 
   const isWonNoJob = data.won_lost === 'Won' && !data.sfe_job_no
   const isAwarded  = data.won_lost === 'Won' && data.sfe_job_no
@@ -111,6 +111,38 @@ function ActionsRenderer(params) {
           }}
         >
           <Copy style={{ width: 11, height: 11 }} />
+        </button>
+      )}
+
+      {/* Send Email */}
+      {canEdit && (
+        <button
+          title={
+            !data.scope_of_work
+              ? "Please select a Scope of Work first"
+              : data.email_sent
+              ? "Resend Project Details Email"
+              : "Send Project Details Email"
+          }
+          disabled={!data.scope_of_work}
+          onClick={() => onSendEmail(data)}
+          style={{
+            background: data.email_sent ? 'var(--success-muted)' : 'var(--bg-elevated)',
+            border: `1px solid ${data.email_sent ? 'var(--success-border)' : 'var(--border-default)'}`,
+            borderRadius: 4,
+            padding: '2px 5px',
+            cursor: data.scope_of_work ? 'pointer' : 'not-allowed',
+            color: data.email_sent
+              ? 'var(--success)'
+              : data.scope_of_work
+              ? 'var(--text-secondary)'
+              : 'var(--text-muted)',
+            opacity: data.scope_of_work ? 1 : 0.5,
+            display: 'flex',
+            alignItems: 'center',
+          }}
+        >
+          <Mail style={{ width: 11, height: 11 }} />
         </button>
       )}
 
@@ -309,6 +341,25 @@ function buildColumnDefs(customers, estimators, canEdit) {
           editable: false,
           cellRenderer: BidAgeRenderer,
           headerTooltip: 'Days since this record was created',
+        },
+        {
+          field: 'scope_of_work',
+          headerName: 'Scope of work',
+          width: 130,
+          cellEditor: 'agSelectCellEditor',
+          cellEditorParams: { values: ['None', 'Detailing', 'Fabrication', 'Erection'] },
+          valueGetter: (params) => {
+            return params.data?.scope_of_work || 'None'
+          },
+          valueSetter: (params) => {
+            if (params.data) {
+              const val = (params.newValue === 'None' || !params.newValue) ? null : params.newValue
+              params.data.scope_of_work = val
+              return true
+            }
+            return false
+          },
+          ...editableIf,
         },
         {
           field: 'is_rebid', headerName: 'Rebid?', width: 85,
@@ -551,6 +602,8 @@ export default function DataEntryPage() {
   const [showExcelUpload, setShowExcelUpload]  = useState(false)
   const [searchText,      setSearchText]       = useState('')
   const [wonLostFilter,   setWonLostFilter]    = useState('all')
+  const [emailTarget,     setEmailTarget]      = useState(null)
+  const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
 
   // Fetch data
   const { data: rfqData, isLoading, refetch } = useQuery({
@@ -615,6 +668,30 @@ export default function DataEntryPage() {
     onError: () => toast.error('Delete failed'),
   })
 
+  // Send single email mutation
+  const sendEmailMutation = useMutation({
+    mutationFn: (id) => rfqAPI.sendEmail(id),
+    onSuccess: () => {
+      toast.success('Email triggered successfully')
+      queryClient.invalidateQueries({ queryKey: ['rfq'] })
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.detail || 'Failed to trigger email')
+    }
+  })
+
+  // Send bulk emails mutation
+  const sendBulkEmailsMutation = useMutation({
+    mutationFn: () => rfqAPI.sendBulkEmails(),
+    onSuccess: (res) => {
+      toast.success(res.data?.detail || 'Bulk emails triggered successfully')
+      queryClient.invalidateQueries({ queryKey: ['rfq'] })
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.detail || 'Failed to trigger bulk emails')
+    }
+  })
+
   const onCellValueChanged = useCallback((params) => {
     const { data, colDef, newValue } = params
     if (!data?.id) return
@@ -622,7 +699,9 @@ export default function DataEntryPage() {
     if (colDef.field?.startsWith('__')) return
 
     let finalValue = newValue
-    if (newValue === null || newValue === undefined) {
+    if (colDef.field === 'scope_of_work' && (newValue === 'None' || !newValue)) {
+      finalValue = ''
+    } else if (newValue === null || newValue === undefined) {
       // If the field is a numeric or date/time/FK field, keep it as null.
       // Otherwise, convert it to an empty string "" to satisfy Django DRF's CharField validation!
       const numericAndDateFields = [
@@ -663,6 +742,10 @@ export default function DataEntryPage() {
   const lostCount    = rowData.filter(r => r.won_lost === 'Lost').length
   const pendingCount = rowData.filter(r => r.won_lost === 'Pending').length
 
+  const pendingEmailsCount = useMemo(() => {
+    return rowData.filter(r => r.scope_of_work && !r.email_sent).length
+  }, [rowData])
+
   // AG Grid context — passes callbacks into cell renderers without re-rendering columns
   const gridContext = useMemo(() => ({
     canEdit,
@@ -670,6 +753,7 @@ export default function DataEntryPage() {
     onDuplicate: (rfq) => duplicateMutation.mutate(rfq.id),
     onDelete:    (rfq) => handleDelete(rfq),
     onSetJobNo:  (rfq) => setJobNoTarget(rfq),
+    onSendEmail: (rfq) => setEmailTarget(rfq),
     queryClient,
   }), [canEdit, isManager, queryClient])
 
@@ -697,6 +781,23 @@ export default function DataEntryPage() {
           {canEdit && (
             <button className="btn btn-primary" onClick={() => setShowModal(true)}>
               <Plus /> New RFQ
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowBulkEmailConfirm(true)}
+              disabled={pendingEmailsCount === 0 || sendBulkEmailsMutation.isPending}
+              title="Send pending project details emails to team"
+              style={{ gap: 6 }}
+            >
+              <Mail style={{ width: 13, height: 13 }} />
+              Send Emails
+              {pendingEmailsCount > 0 && (
+                <span className="badge badge-primary" style={{ height: 16, width: 'auto', minWidth: 16, padding: '0 5px', fontSize: '0.62rem', marginLeft: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {pendingEmailsCount}
+                </span>
+              )}
             </button>
           )}
           { (isManager || canEdit) && (
@@ -816,6 +917,56 @@ export default function DataEntryPage() {
           onClose={() => setShowExcelUpload(false)}
           onImported={() => setShowExcelUpload(false)}
         />
+      )}
+
+      {/* Send Single Email Confirmation Modal */}
+      {emailTarget && (
+        <div className="modal-overlay" onClick={() => setEmailTarget(null)}>
+          <div className="modal animate-slide-up" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Confirm Send Email</h2>
+              <button className="modal-close" onClick={() => setEmailTarget(null)}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+              Are you sure you want to send the project details email for <strong style={{ color: 'var(--text-primary)' }}>{emailTarget.quote_no} — {emailTarget.project_name}</strong> to the designated account?
+              <br/><br/>
+              <strong>Recipient:</strong> {emailTarget.scope_of_work === 'Detailing' ? 'namrutha@caldimengg.in' : 'divya@caldimengg.in'} ({emailTarget.scope_of_work})
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setEmailTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => {
+                sendEmailMutation.mutate(emailTarget.id)
+                setEmailTarget(null)
+              }}>
+                Send Email
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Send Bulk Emails Confirmation Modal */}
+      {showBulkEmailConfirm && (
+        <div className="modal-overlay" onClick={() => setShowBulkEmailConfirm(false)}>
+          <div className="modal animate-slide-up" style={{ maxWidth: 420 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Confirm Bulk Send Emails</h2>
+              <button className="modal-close" onClick={() => setShowBulkEmailConfirm(false)}>✕</button>
+            </div>
+            <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
+              Are you sure you want to send project details emails for all <strong style={{ color: 'var(--text-primary)' }}>{pendingEmailsCount} pending</strong> project(s) to their respective team members?
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+              <button className="btn btn-ghost" onClick={() => setShowBulkEmailConfirm(false)}>Cancel</button>
+              <button className="btn btn-primary" onClick={() => {
+                sendBulkEmailsMutation.mutate()
+                setShowBulkEmailConfirm(false)
+              }} disabled={sendBulkEmailsMutation.isPending}>
+                Send All
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

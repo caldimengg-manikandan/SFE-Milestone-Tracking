@@ -112,7 +112,7 @@ class RFQMasterSerializer(serializers.ModelSerializer):
             'primary_estimator', 'primary_estimator_initials',
             'outsourced_estimator', 'sent_to_jd', 'sent_to_detailing', 'sent_to_erection',
             # Scope
-            'est_sqft_ton',
+            'scope_of_work', 'email_sent', 'est_sqft_ton',
             # Pricing
             'price_structure', 'price_erection', 'price_misc', 'price_misc_erection',
             'bid_amount', 'quoted_profit',
@@ -262,7 +262,7 @@ class RFQListSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'quote_no', 'is_rebid', 'budget_type',
             'bid_reference', 'project_name', 'bid_due_date', 'bid_due_time',
-            'location', 'customer', 'customer_name', 'decision_to_bid',
+            'location', 'scope_of_work', 'email_sent', 'customer', 'customer_name', 'decision_to_bid',
             'primary_estimator', 'primary_estimator_initials',
             'tax_status', 'aisc_fab', 'aisc_erect',
             'sent_to_jd', 'sent_to_detailing', 'sent_to_erection',
@@ -292,5 +292,5 @@ class PrintSetupSerializer(serializers.ModelSerializer):
             'bid_due_date', 'bid_due_time', 'location', 'distance_travel',
             'aisc_fab', 'aisc_erect', 'customer_name', 'decision_to_bid',
             'primary_estimator_initials', 'sent_to_jd', 'sent_to_detailing',
-            'sent_to_erection', 'est_sqft_ton',
+            'sent_to_erection', 'scope_of_work', 'est_sqft_ton',
         ]

@@ -179,6 +179,20 @@ class RFQMaster(models.Model):
     # ═════════════════════════════════════════════════════════════════════════
     # SCOPE / SIZE  (Excel col AG)
     # ═════════════════════════════════════════════════════════════════════════
+    class ScopeOfWork(models.TextChoices):
+        DETAILING = 'Detailing', 'Detailing'
+        FABRICATION = 'Fabrication', 'Fabrication'
+        ERECTION = 'Erection', 'Erection'
+
+    scope_of_work = models.CharField(
+        max_length=50,
+        choices=ScopeOfWork.choices,
+        blank=True,
+        null=True,
+    )
+
+    email_sent = models.BooleanField(default=False)
+
     est_sqft_ton = models.CharField(
         max_length=100, blank=True, default='',
         verbose_name='Est. Sq-Ft / Tons'

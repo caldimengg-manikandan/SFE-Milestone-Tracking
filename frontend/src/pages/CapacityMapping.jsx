@@ -17,7 +17,8 @@ import {
   Box,
   MapPin,
   Clock,
-  Briefcase
+  Briefcase,
+  AlertCircle
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -34,7 +35,7 @@ import {
   AreaChart,
   Area
 } from 'recharts';
-import { machineAPI, manpowerAPI, capacityAPI } from '../services/api';
+import { machineAPI, manpowerAPI, capacityAPI, projectAPI, rfqAPI } from '../services/api';
 
 export default function CapacityMapping() {
   const { tab } = useParams();
@@ -42,6 +43,7 @@ export default function CapacityMapping() {
   const [activeTab, setActiveTab] = useState(tab || 'summary');
   const [loading, setLoading] = useState(true);
   const [filterShop, setFilterShop] = useState('All');
+  const [filterMonth, setFilterMonth] = useState('All');
 
   // Sync activeTab with URL param
   useEffect(() => {
@@ -55,19 +57,25 @@ export default function CapacityMapping() {
   const [machines, setMachines] = useState([]);
   const [manpower, setManpower] = useState([]);
   const [capacities, setCapacities] = useState([]);
+  const [projects, setProjects] = useState([]);
+  const [rfqs, setRfqs] = useState([]);
 
   // Fetch all data
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [macRes, manRes, capRes] = await Promise.all([
+      const [macRes, manRes, capRes, projRes, rfqRes] = await Promise.all([
         machineAPI.getAll(),
         manpowerAPI.getAll(),
-        capacityAPI.getAll()
+        capacityAPI.getAll(),
+        projectAPI.getAll(),
+        rfqAPI.getAll({ won_lost: 'Won' })
       ]);
       setMachines(macRes.data.results || macRes.data);
       setManpower(manRes.data.results || manRes.data);
       setCapacities(capRes.data.results || capRes.data);
+      setProjects(projRes.data.results || projRes.data);
+      setRfqs(rfqRes.data.results || rfqRes.data);
     } catch (error) {
       console.error('Error fetching capacity mapping data:', error);
     } finally {
@@ -80,6 +88,10 @@ export default function CapacityMapping() {
   }, []);
 
 
+  const filteredManpower = filterMonth === 'All' 
+    ? manpower 
+    : manpower.filter(m => (m.month || 'June').toLowerCase() === filterMonth.toLowerCase());
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Summary Cards - Always Visible */}
@@ -87,58 +99,145 @@ export default function CapacityMapping() {
         capacities={capacities} 
         machines={machines} 
         manpower={manpower} 
+        projects={projects}
+        rfqs={rfqs}
         filterShop={filterShop}
         setFilterShop={setFilterShop}
+        filterMonth={filterMonth}
+        setFilterMonth={setFilterMonth}
       />
 
 
       {/* Content */}
       <div className="mt-6">
-        {activeTab === 'summary' && <SummaryChartsView capacities={capacities} machines={machines} manpower={manpower} />}
+        {activeTab === 'summary' && <SummaryChartsView capacities={capacities} machines={machines} manpower={filteredManpower} />}
         {activeTab === 'capacity' && <CapacityView data={capacities} machines={machines} refresh={fetchData} />}
         {activeTab === 'machine' && <MachineView data={machines} refresh={fetchData} />}
-        {activeTab === 'manpower' && <ManpowerView data={manpower} refresh={fetchData} />}
+        {activeTab === 'manpower' && <ManpowerView data={filteredManpower} refresh={fetchData} />}
       </div>
     </div>
   );
 }
 
 /* ── Summary Cards Component (Header) ── */
-function SummaryView({ capacities, machines, manpower, filterShop, setFilterShop }) {
+function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [], filterShop, setFilterShop, filterMonth, setFilterMonth }) {
   const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
 
   const filteredCapacities = filterShop === 'All' ? capacities : capacities.filter(c => c.shop === filterShop);
   const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => m.shop === filterShop);
   
   const totalCapacity = filteredCapacities.reduce((sum, c) => sum + parseFloat(c.rate_per_day || 0), 0);
-  const shopsCount = filterShop === 'All' ? Array.from(new Set(capacities.map(c => c.shop))).length : 1;
   const machineCount = filteredMachines.length;
-  const skilledManpower = manpower.length;
+
+  const filteredManpower = filterMonth === 'All' 
+    ? manpower 
+    : manpower.filter(m => (m.month || 'June').toLowerCase() === filterMonth.toLowerCase());
+
+  const skilledManpower = filteredManpower.length;
+
+  const totalMonthlyManhours = filteredManpower.reduce((sum, item) => {
+    const mh = item.manhours !== null && item.manhours !== undefined && item.manhours !== '' ? Number(item.manhours) : 8;
+    const ot = item.overtime !== null && item.overtime !== undefined && item.overtime !== '' ? Number(item.overtime) : 0;
+    return sum + (mh + ot) * 20;
+  }, 0);
+
+  const isScheduleActiveInMonth = (startMonthStr, durationMonths, targetMonthName, targetYear = 2026) => {
+    if (!startMonthStr || !durationMonths || durationMonths < 1) return false;
+    const start = new Date(startMonthStr);
+    if (isNaN(start.getTime())) return false;
+
+    const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const targetMonthIdx = months.indexOf(targetMonthName);
+    if (targetMonthIdx === -1) return false;
+
+    const startYear = start.getFullYear();
+    const startMonthIdx = start.getMonth();
+
+    const startTotalMonths = startYear * 12 + startMonthIdx;
+    const targetTotalMonths = targetYear * 12 + targetMonthIdx;
+
+    return targetTotalMonths >= startTotalMonths && targetTotalMonths < startTotalMonths + durationMonths;
+  };
+
+  // Filter won RFQs by the current/active year (2026)
+  const won2026Rfqs = rfqs.filter(r => {
+    if (!r.awarded_job_date) return false;
+    const year = new Date(r.awarded_job_date).getFullYear();
+    return year === 2026;
+  });
+
+  const totalRequiredHours = Math.round(won2026Rfqs.reduce((sum, r) => {
+    let structFab = 0;
+    let miscFab = 0;
+    let structErect = 0;
+    let miscErect = 0;
+
+    const bidYear = r.awarded_job_date ? new Date(r.awarded_job_date).getFullYear() : 2026;
+
+    if (filterMonth === 'All' || isScheduleActiveInMonth(r.struct_fab_start_month, Number(r.struct_fab_duration_months || 0), filterMonth, bidYear)) {
+      structFab = Number(r.avg_monthly_struct_fab || 0);
+    }
+    if (filterMonth === 'All' || isScheduleActiveInMonth(r.misc_fab_start_month, Number(r.misc_fab_duration_months || 0), filterMonth, bidYear)) {
+      miscFab = Number(r.avg_monthly_misc_fab || 0);
+    }
+    if (filterMonth === 'All' || isScheduleActiveInMonth(r.struct_erect_start_month, Number(r.struct_erect_duration_months || 0), filterMonth, bidYear)) {
+      structErect = Number(r.avg_monthly_struct_erect || 0);
+    }
+    if (filterMonth === 'All' || isScheduleActiveInMonth(r.misc_erect_start_month, Number(r.misc_erect_duration_months || 0), filterMonth, bidYear)) {
+      miscErect = Number(r.avg_monthly_misc_erect || 0);
+    }
+
+    return sum + structFab + miscFab + structErect + miscErect;
+  }, 0));
+
+  const manhoursVariance = totalMonthlyManhours - totalRequiredHours;
+  const varianceValue = Math.abs(manhoursVariance);
+  const varianceLabel = manhoursVariance >= 0 ? 'Surplus Manhours' : 'Shortage of Manhours';
+  const varianceSub = manhoursVariance >= 0 ? 'We has more manhours than required' : 'We need more manhours';
+  const varianceColor = manhoursVariance >= 0 ? 'text-emerald-600' : 'text-rose-600';
+  const varianceBg = manhoursVariance >= 0 ? 'bg-emerald-50' : 'bg-rose-50';
 
   const stats = [
     { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: filterShop === 'All' ? 'Per Day (Global)' : `Per Day (${filterShop})`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Active Shops', value: shopsCount, sub: filterShop === 'All' ? 'Operating Locations' : 'Selected Shop', icon: MapPin, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Manhours Available', value: `${totalMonthlyManhours} Hours`, sub: filterMonth === 'All' ? 'Per Month (Workforce Master)' : `Per Month (${filterMonth} - Workforce Master)`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Manhours Required', value: `${totalRequiredHours} Hours`, sub: filterMonth === 'All' ? 'All Won Bids Total (2026)' : `Won Bids active in ${filterMonth} (2026)`, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: varianceLabel, value: `${varianceValue} Hours`, sub: varianceSub, icon: AlertCircle, color: varianceColor, bg: varianceBg },
     { label: 'Total Machinery', value: machineCount, sub: 'Production Equipment', icon: Cpu, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Total Manpower', value: skilledManpower, sub: 'Production Personnel', icon: Users2, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Total Manpower', value: skilledManpower, sub: 'Production Personnel', icon: Users2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
   ];
 
   return (
     <div className="space-y-4 animate-fade-in">
       <div className="flex items-center justify-between mb-2">
         <h2 className="text-lg font-black text-slate-800 tracking-tight">Performance Overview</h2>
-        <div className="flex items-center gap-3">
-          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Shop:</label>
-          <select 
-            className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
-            value={filterShop}
-            onChange={(e) => setFilterShop(e.target.value)}
-          >
-            <option value="All">All Shops</option>
-            {uniqueShops.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Month:</label>
+            <select 
+              className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
+              value={filterMonth}
+              onChange={(e) => setFilterMonth(e.target.value)}
+            >
+              <option value="All">All Months</option>
+              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Shop:</label>
+            <select 
+              className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
+              value={filterShop}
+              onChange={(e) => setFilterShop(e.target.value)}
+            >
+              <option value="All">All Shops</option>
+              {uniqueShops.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
         </div>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-fade-in">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 animate-fade-in">
       {stats.map((s, idx) => (
         <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
           <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4`}>
@@ -630,15 +729,20 @@ function ManpowerView({ data, refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '' });
+  const [form, setForm] = useState({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '', manhours: 8, overtime: 0, month: 'June' });
 
   const handleOpen = (item = null) => {
     if (item) {
       setEditItem(item);
-      setForm({ ...item });
+      setForm({ 
+        ...item,
+        manhours: item.manhours !== undefined && item.manhours !== null ? item.manhours : 8,
+        overtime: item.overtime !== undefined && item.overtime !== null ? item.overtime : 0,
+        month: item.month !== undefined && item.month !== null ? item.month : 'June'
+      });
     } else {
       setEditItem(null);
-      setForm({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '' });
+      setForm({ employee_name: '', skill_level: 'Medium', process: '', rate_per_day: '', manhours: 8, overtime: 0, month: 'June' });
     }
     setShowModal(true);
   };
@@ -673,6 +777,10 @@ function ManpowerView({ data, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Employee Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Skill Level</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process / Trade</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Month</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Man Hours</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Overtime</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Per Week</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate / Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
@@ -691,6 +799,17 @@ function ManpowerView({ data, refresh }) {
                   </span>
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-600">{item.process}</td>
+                <td className="px-6 py-4 text-center">
+                  <span className="px-2.5 py-1 rounded-full text-[10px] font-black tracking-wider uppercase bg-blue-50 text-blue-600 border border-blue-200">
+                    {item.month || 'June'}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right font-semibold text-slate-700">{item.manhours !== null && item.manhours !== undefined ? Number(item.manhours) : 8} hrs</td>
+                <td className="px-6 py-4 text-right font-semibold text-slate-700">{item.overtime !== null && item.overtime !== undefined ? Number(item.overtime) : 0} hrs</td>
+                <td className="px-6 py-4 text-right font-bold text-blue-600">
+                  {((item.manhours !== null && item.manhours !== undefined ? Number(item.manhours) : 8) + 
+                    (item.overtime !== null && item.overtime !== undefined ? Number(item.overtime) : 0)) * 5} hrs
+                </td>
                 <td className="px-6 py-4 text-right font-bold text-emerald-600">{item.rate_per_day} T</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1">
@@ -716,17 +835,41 @@ function ManpowerView({ data, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Employee Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.employee_name} onChange={e => setForm({...form, employee_name: e.target.value})} placeholder="e.g. Robert Smith" />
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Skill Level</label>
-                <select className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" value={form.skill_level} onChange={e => setForm({...form, skill_level: e.target.value})}>
-                  <option value="High">High</option>
-                  <option value="Medium">Medium</option>
-                  <option value="Low">Low</option>
-                </select>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Skill Level</label>
+                  <select className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" value={form.skill_level} onChange={e => setForm({...form, skill_level: e.target.value})}>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Month</label>
+                  <select className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50" value={form.month} onChange={e => setForm({...form, month: e.target.value})}>
+                    {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
+                      <option key={m} value={m}>{m}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process / Trade</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({...form, process: e.target.value})} placeholder="e.g. Senior Welder" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Man Hours (Daily)</label>
+                  <input type="number" step="0.5" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.manhours} onChange={e => setForm({...form, manhours: e.target.value})} placeholder="8" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Overtime (Daily)</label>
+                  <input type="number" step="0.5" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.overtime} onChange={e => setForm({...form, overtime: e.target.value})} placeholder="0" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Per Week Man Hours (Calculated)</label>
+                <input type="text" disabled className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-400 outline-none bg-slate-50" value={((Number(form.manhours) || 0) + (Number(form.overtime) || 0)) * 5} />
               </div>
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Rate / Day (Tonnes)</label>

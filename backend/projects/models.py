@@ -18,6 +18,7 @@ class Project(models.Model):
     total_manhours = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     manhour_ton = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     steel_budget_worksheet = models.JSONField(default=dict, blank=True, null=True)
+    estimation_data = models.JSONField(default=dict, blank=True, null=True)
     erection_date = models.DateField(null=True, blank=True)
     shop_name = models.CharField(max_length=100, blank=True, null=True)
     schedule_field_measure_required = models.CharField(max_length=10, default='Yes')

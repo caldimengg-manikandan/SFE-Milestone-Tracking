@@ -57,6 +57,7 @@ export const projectAPI = {
   getById: (id) => api.get(`/projects/${id}/`),
   create: (data) => api.post('/projects/', data),
   update: (id, data) => api.put(`/projects/${id}/`, data),
+  patch: (id, data) => api.patch(`/projects/${id}/`, data),
   delete: (id) => api.delete(`/projects/${id}/`),
 };
 
@@ -163,4 +164,9 @@ export const bidEnquiryAPI = {
   create: (data) => api.post('/bids/enquiries/', data),
   update: (id, data) => api.put(`/bids/enquiries/${id}/`, data),
   delete: (id) => api.delete(`/bids/enquiries/${id}/`),
+};
+
+/* ── RFQ API ── */
+export const rfqAPI = {
+  getAll: (params = {}) => api.get('/rfq/rfq/', { params }),
 };

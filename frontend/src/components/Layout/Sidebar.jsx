@@ -43,13 +43,12 @@ const navSections = [
       { name: 'Bid Enquiry', path: '/bids/enquiry', icon: FolderInput },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
       { name: 'Estimation Model', path: '/estimation', icon: Calculator },
-      { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
     ],
   },
   {
     label: 'RFQ MODULE',
     items: [
-      { name: 'RFQ Module', path: '/rfq', icon: FileSpreadsheet },
+      { name: 'RFQ Master', path: '/rfq', icon: FileSpreadsheet },
     ],
   },
   {
@@ -150,7 +149,7 @@ export default function Sidebar({
           flex flex-col
           transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
           ${isCollapsed ? 'lg:w-[78px]' : 'lg:w-[240px]'}
-          w-[240px]
+          w-[270px]
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full'}
           lg:translate-x-0
         `}
@@ -193,13 +192,13 @@ export default function Sidebar({
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 scrollbar-thin">
+        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 sidebar-scrollbar">
           {navSections.map((section, sIdx) => (
             <div key={section.label} className={sIdx > 0 ? 'mt-6' : ''}>
               {/* Section Label */}
               {!isCollapsed && (
                 <div className="px-3 mb-2 animate-fade-in">
-                  <span className="text-[10px] font-semibold tracking-[0.15em] text-slate-500/80 uppercase select-none">
+                  <span className="text-[10px] font-bold tracking-[0.15em] text-slate-400 uppercase select-none">
                     {section.label}
                   </span>
                 </div>
