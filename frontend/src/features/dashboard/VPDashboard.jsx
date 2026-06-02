@@ -9,7 +9,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
-import { projectAPI, scheduleAPI, bidEnquiryAPI, manpowerAPI, capacityAPI } from '../../services/api';
+import { projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../../services/api';
 
 /* ─────────────────────────────────────────────────────────
    CONSTANTS & HELPERS
@@ -35,6 +35,10 @@ const fmtMoney = (v) => {
 
 const parseMonthYear = (str) => {
   if (!str) return null;
+  if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
+    const parts = str.split('-');
+    return { month: parseInt(parts[1]) - 1, year: parseInt(parts[0]) };
+  }
   const lower = str.toLowerCase().trim();
   let month = null;
   for (let i = 0; i < MONTHS_FULL.length; i++) {
@@ -175,7 +179,7 @@ export default function VPDashboard() {
         const [a,b,c,d,e] = await Promise.allSettled([
           projectAPI.getAll(),
           scheduleAPI.getAll({ page_size:1000 }),
-          bidEnquiryAPI.getAll({ page_size:1000 }),
+          rfqAPI.getAll(),
           manpowerAPI.getAll(),
           capacityAPI.getAll(),
         ]);
@@ -206,7 +210,7 @@ export default function VPDashboard() {
 
   /* ── Derived ── */
   const wonBids = useMemo(() => bids.filter(b=>b.won_lost==='Won'), [bids]);
-  const latestWins = useMemo(() => [...wonBids].sort((a,b)=>new Date(b.awarded_job_no_date||b.created_at)-new Date(a.awarded_job_no_date||a.created_at)).slice(0,6), [wonBids]);
+  const latestWins = useMemo(() => [...wonBids].sort((a,b)=>new Date(b.awarded_job_date||b.created_at)-new Date(a.awarded_job_date||a.created_at)).slice(0,6), [wonBids]);
 
   const kpi = useMemo(() => {
     const pending  = bids.filter(b=>b.won_lost==='Pending');
@@ -232,7 +236,7 @@ export default function VPDashboard() {
     if (bidView==='yoy') {
       const m={};
       bids.forEach(b => {
-        const yr = new Date(b.awarded_job_no_date||b.created_at).getFullYear();
+        const yr = new Date(b.awarded_job_date||b.created_at).getFullYear();
         if (!m[yr]) m[yr]={year:String(yr),quoted:0,won:0,quotedCount:0,wonCount:0};
         m[yr].quoted += parseFloat(b.bid_amount||0);
         m[yr].quotedCount += 1;
@@ -242,7 +246,7 @@ export default function VPDashboard() {
     }
     const rows = MONTHS.map(m=>({month:m,quoted:0,won:0,quotedCount:0,wonCount:0}));
     bids.forEach(b => {
-      const dt=new Date(b.awarded_job_no_date||b.created_at);
+      const dt=new Date(b.awarded_job_date||b.created_at);
       if (dt.getFullYear()!==bidYear) return;
       const mi=dt.getMonth();
       rows[mi].quoted+=parseFloat(b.bid_amount||0); rows[mi].quotedCount+=1;
@@ -258,7 +262,7 @@ export default function VPDashboard() {
       const p=parseMonthYear(b.struct_fab_start_month);
       if (!p || p.year!==capYear) return;
       const hrs=parseFloat(b.struct_fab_hours||0);
-      const dur=Math.max(1,parseInt(b.struct_fab_duration||1));
+      const dur=Math.max(1,parseInt(b.struct_fab_duration_months||1));
       for (let d=0;d<dur;d++) rows[(p.month+d)%12].required+=hrs/dur;
     });
     manpower.forEach(mp => {
@@ -313,17 +317,17 @@ export default function VPDashboard() {
         type:'quote_date',
         label:`Quote Submitted: ${b.project_name||b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
-        details: `Bid Amount: ${fmtMoney(b.bid_amount)} · Primary Estimator: ${b.primary_estimator?.initials || b.primary_estimator || 'N/A'}`,
+        details: `Bid Amount: ${fmtMoney(b.bid_amount)} · Primary Estimator: ${b.primary_estimator_initials || 'N/A'}`,
         extra: `Status: ${b.won_lost}`
       });
-      add(b.estimator_followup_date,{
+      add(b.follow_up_date,{
         type:'follow_up',
         label:`Estimator Follow-up: ${b.project_name||b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
-        details: `Follow-up Notes: ${b.estimator_followup_notes || 'N/A'}`,
+        details: `Follow-up Notes: ${b.follow_up_notes || 'N/A'}`,
         extra: `Follow-up`
       });
-      add(b.awarded_job_no_date,{
+      add(b.awarded_job_date,{
         type:'awarded_date',
         label:`Bid Awarded: ${b.project_name||b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
