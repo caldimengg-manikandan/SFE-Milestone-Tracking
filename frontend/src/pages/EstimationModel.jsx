@@ -142,7 +142,7 @@ export default function EstimationModel() {
     const fetchProjects = async () => {
       try {
         setLoadingProjects(true);
-        const res = await projectAPI.getAll();
+        const res = await projectAPI.getAll({ won_rfq: 'true' });
         const data = res.data.results || res.data;
         if (Array.isArray(data)) {
           setProjects(data);

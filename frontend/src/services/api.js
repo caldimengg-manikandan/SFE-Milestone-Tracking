@@ -53,7 +53,7 @@ export const employeeAPI = {
 
 /* ── Project API ── */
 export const projectAPI = {
-  getAll: () => api.get('/projects/'),
+  getAll: (params = {}) => api.get('/projects/', { params }),
   getById: (id) => api.get(`/projects/${id}/`),
   create: (data) => api.post('/projects/', data),
   update: (id, data) => api.put(`/projects/${id}/`, data),
