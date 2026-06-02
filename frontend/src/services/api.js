@@ -169,4 +169,5 @@ export const bidEnquiryAPI = {
 /* ── RFQ API ── */
 export const rfqAPI = {
   getAll: (params = {}) => api.get('/rfq/rfq/', { params }),
+  getEstimators: () => api.get('/rfq/estimators/'),
 };
