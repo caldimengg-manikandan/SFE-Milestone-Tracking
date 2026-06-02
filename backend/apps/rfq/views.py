@@ -19,8 +19,11 @@ from .serializers import (
 )
 from .permissions import CanEditRFQ, IsManagerOrReadOnly
 import threading
+import logging
 from django.core.mail import send_mail
 from django.conf import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -99,7 +102,7 @@ def send_rfq_email_async(rfq_id):
         rfq.email_sent = True
         rfq.save(update_fields=['email_sent'])
     except Exception as e:
-        print(f"Error sending email for RFQ {rfq_id}: {str(e)}")
+        logger.error(f"Error sending email for RFQ {rfq_id}: {str(e)}", exc_info=True)
 
 class RFQMasterViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated, CanEditRFQ]
@@ -287,6 +290,41 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
             thread.start()
             
         return Response({'detail': f'Bulk sending initiated for {count} project(s).'})
+
+    @action(detail=False, methods=['post'], url_path='test-smtp',
+            permission_classes=[IsAuthenticated, CanEditRFQ])
+    def test_smtp(self, request):
+        """Diagnose SMTP configurations by sending a test email synchronously."""
+        try:
+            recipient = request.data.get('email', 'support@caldimengg.in')
+            subject = "SFE SMTP Diagnostics Test"
+            body = "This is a synchronous test email to verify SMTP configuration on the SFE Milestone server."
+            
+            send_mail(
+                subject=subject,
+                message=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[recipient],
+                fail_silently=False
+            )
+            return Response({
+                'success': True,
+                'detail': f'Test email sent successfully to {recipient}.',
+                'smtp_host': settings.EMAIL_HOST,
+                'smtp_port': settings.EMAIL_PORT,
+                'from_email': settings.DEFAULT_FROM_EMAIL
+            })
+        except Exception as e:
+            import traceback
+            error_trace = traceback.format_exc()
+            return Response({
+                'success': False,
+                'detail': str(e),
+                'traceback': error_trace,
+                'smtp_host': getattr(settings, 'EMAIL_HOST', None),
+                'smtp_port': getattr(settings, 'EMAIL_PORT', None),
+                'from_email': getattr(settings, 'DEFAULT_FROM_EMAIL', None)
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], url_path='upload-excel',
             permission_classes=[IsAuthenticated, CanEditRFQ],

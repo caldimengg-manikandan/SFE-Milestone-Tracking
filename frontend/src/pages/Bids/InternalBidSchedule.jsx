@@ -4,7 +4,7 @@ import {
   AlertTriangle, CheckCircle2, Calendar, Clock, Columns,
   FileSpreadsheet, AlertCircle, X, Inbox
 } from 'lucide-react';
-import { bidEnquiryAPI, customerAPI, employeeAPI } from '../../services/api';
+import { rfqAPI, customerAPI } from '../../services/api';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -209,12 +209,12 @@ export default function InternalBidSchedule() {
     try {
       setLoading(true);
       const params = {};
-      if (filterEstimator) params.primary_estimator = filterEstimator;
+      if (filterEstimator) params.estimator = filterEstimator;
       if (filterDecision) params.decision_to_bid = filterDecision;
 
       const [bidsRes, empRes] = await Promise.all([
-        bidEnquiryAPI.getAll(params),
-        employeeAPI.getAll(),
+        rfqAPI.getAll(params),
+        rfqAPI.getEstimators(),
       ]);
       setBids(bidsRes.data.results || bidsRes.data);
       setEstimators(empRes.data.results || empRes.data);
@@ -237,8 +237,8 @@ export default function InternalBidSchedule() {
     const matchSearch = !term || (
       bid.quote_no?.toLowerCase().includes(term) ||
       bid.project_name?.toLowerCase().includes(term) ||
-      bid.customer_name_str?.toLowerCase().includes(term) ||
-      bid.primary_estimator_name?.toLowerCase().includes(term)
+      bid.customer_name?.toLowerCase().includes(term) ||
+      bid.primary_estimator_initials?.toLowerCase().includes(term)
     );
     const matchStatus = !filterStatus || getBidStatus(bid) === filterStatus;
     return matchSearch && matchStatus;
@@ -248,9 +248,6 @@ export default function InternalBidSchedule() {
   const getDayBids = (dateStr) => {
     return filteredBids.filter(bid => bid.bid_due_date === dateStr);
   };
-
-  // Unscheduled bids (no due date)
-  const unscheduledBids = filteredBids.filter(bid => !bid.bid_due_date);
 
   // Grouped weeks
   const weeks = getCalendarWeeks(visibleMonth.year, visibleMonth.month);
@@ -267,8 +264,8 @@ export default function InternalBidSchedule() {
     const rows = filteredBids.map(bid => [
       bid.quote_no || '',
       bid.project_name || '',
-      bid.customer_name_str || '',
-      bid.primary_estimator_name || '',
+      bid.customer_name || '',
+      bid.primary_estimator_initials || '',
       bid.bid_due_date || '',
       bid.bid_due_time || '',
       bid.bid_amount || '0',
@@ -341,7 +338,7 @@ export default function InternalBidSchedule() {
                   className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-slate-50 text-xs font-bold text-slate-700 outline-none focus:border-amber-400 focus:bg-white transition-all cursor-pointer appearance-none"
                 >
                   <option value="">All Estimators</option>
-                  {estimators.map(e => <option key={e.id} value={e.id}>{e.name}</option>)}
+                  {estimators.map(e => <option key={e.id} value={e.id}>{e.full_name || e.initials}</option>)}
                 </select>
                 <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
                   <ChevronDown className="w-3 h-3" />
@@ -532,15 +529,14 @@ export default function InternalBidSchedule() {
                                     <div
                                       key={bid.id}
                                       onClick={() => setSelectedBid(bid)}
-                                      className={`rounded border ${cfg.border} ${cfg.bg} ${cfg.text} text-[8px] font-bold px-1 py-0.5 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight flex items-center gap-1`}
+                                      className={`rounded border ${cfg.border} ${cfg.bg} ${cfg.text} text-[11px] font-bold px-1.5 py-1 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight flex items-center gap-1.5`}
                                       title={`${bid.quote_no} — ${bid.project_name}`}
                                     >
-                                      {status === 'overdue' && <span className="w-1 h-1 shrink-0 rounded-full bg-rose-500 inline-block" title="Overdue" />}
-                                      {status === 'due-today' && <span className="w-1 h-1 shrink-0 rounded-full bg-orange-400 inline-block" title="Due Today" />}
-                                      {bid.won_lost === 'Won' && <span className="text-[6px] shrink-0 bg-emerald-500 text-white px-0.5 rounded leading-none" title="Won">W</span>}
-                                      {bid.won_lost === 'Lost' && <span className="text-[6px] shrink-0 bg-rose-500 text-white px-0.5 rounded leading-none" title="Lost">L</span>}
+                                      {status === 'overdue' && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-rose-500 inline-block" title="Overdue" />}
+                                      {status === 'due-today' && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-orange-400 inline-block" title="Due Today" />}
+                                      {bid.won_lost === 'Won' && <span className="text-[8px] shrink-0 bg-emerald-500 text-white px-1 rounded leading-none font-black" title="Won">W</span>}
+                                      {bid.won_lost === 'Lost' && <span className="text-[8px] shrink-0 bg-rose-500 text-white px-1 rounded leading-none font-black" title="Lost">L</span>}
                                       
-                                      <span className="font-mono opacity-60 shrink-0">{bid.quote_no}</span>
                                       <span className="truncate">{bid.project_name}</span>
                                     </div>
                                   );
@@ -554,42 +550,6 @@ export default function InternalBidSchedule() {
                   ))}
                 </tbody>
               </table>
-            </div>
-          </div>
-        )}
-
-        {/* Unscheduled Bids Drawer */}
-        {!loading && unscheduledBids.length > 0 && (
-          <div className="mt-3 bg-white rounded-2xl border border-amber-200 overflow-hidden flex-none shadow-md">
-            <div className="bg-amber-50 px-4 py-2 flex items-center justify-between border-b border-amber-200 select-none">
-              <div className="flex items-center gap-2">
-                <Inbox className="w-4 h-4 text-amber-500" />
-                <span className="text-[10px] font-black text-amber-700 uppercase tracking-widest">Unscheduled — No Bid Due Date</span>
-              </div>
-              <span className="w-6 h-6 rounded-full bg-amber-100 text-amber-600 text-[10px] font-black flex items-center justify-center border border-amber-200">
-                {unscheduledBids.length}
-              </span>
-            </div>
-            <div className="p-3 bg-slate-50/50 max-h-[160px] overflow-y-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {unscheduledBids.map(bid => {
-                const cat = getBidCategory(bid);
-                const cfg = CATEGORY_CONFIG[cat];
-                return (
-                  <div
-                    key={bid.id}
-                    onClick={() => setSelectedBid(bid)}
-                    className={`rounded-lg border ${cfg.border} ${cfg.bg} ${cfg.text} text-[10px] font-bold p-2 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight`}
-                    title={bid.project_name}
-                  >
-                    <div className="flex items-start justify-between gap-1 mb-1">
-                      <span className="font-mono text-[9px] opacity-75">{bid.quote_no}</span>
-                      {bid.won_lost === 'Won' && <span className="text-[8px] bg-emerald-500 text-white px-0.5 rounded leading-none">W</span>}
-                    </div>
-                    <p className="line-clamp-2">{bid.project_name}</p>
-                    <p className="text-[8px] mt-1 opacity-75 truncate">{bid.primary_estimator_name || 'No Estimator'}</p>
-                  </div>
-                );
-              })}
             </div>
           </div>
         )}
@@ -629,14 +589,14 @@ export default function InternalBidSchedule() {
                   {selectedBid.project_name}
                 </h3>
                 <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider mt-0.5">
-                  Customer: {selectedBid.customer_name_str || '—'}
+                  Customer: {selectedBid.customer_name || '—'}
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 pt-3 border-t border-slate-100">
                 <div>
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Estimator</span>
-                  <span className="text-slate-700 font-bold">{selectedBid.primary_estimator_name || '—'}</span>
+                  <span className="text-slate-700 font-bold">{selectedBid.primary_estimator_initials || '—'}</span>
                 </div>
                 <div>
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Bid Due Date</span>
@@ -666,14 +626,14 @@ export default function InternalBidSchedule() {
                 </div>
                 <div>
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Awarded Date</span>
-                  <span className="text-slate-700 font-bold">{formatDate(selectedBid.awarded_job_no_date) || '—'}</span>
+                  <span className="text-slate-700 font-bold">{formatDate(selectedBid.awarded_job_date) || '—'}</span>
                 </div>
               </div>
 
               {selectedBid.location && (
                 <div className="pt-2 border-t border-slate-100">
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Location</span>
-                  <span className="text-slate-700 font-semibold">{selectedBid.location} {selectedBid.distance ? `(${selectedBid.distance})` : ''}</span>
+                  <span className="text-slate-700 font-semibold">{selectedBid.location} {selectedBid.distance_travel ? `(${selectedBid.distance_travel})` : ''}</span>
                 </div>
               )}
 
@@ -686,11 +646,11 @@ export default function InternalBidSchedule() {
                 </div>
               )}
 
-              {selectedBid.estimator_followup_notes && (
+              {selectedBid.follow_up_notes && (
                 <div className="pt-2 border-t border-slate-100">
                   <span className="block text-[9px] font-black text-slate-400 uppercase tracking-widest">Estimator Followup Notes</span>
                   <p className="text-slate-600 bg-slate-50 p-2 rounded-lg mt-1 border border-slate-100 leading-normal max-h-24 overflow-y-auto">
-                    {selectedBid.estimator_followup_notes}
+                    {selectedBid.follow_up_notes}
                   </p>
                 </div>
               )}
