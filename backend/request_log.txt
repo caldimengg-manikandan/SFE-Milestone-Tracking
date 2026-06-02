@@ -110,3 +110,11 @@ Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWN
 Status: 200
 Content: {"count":2,"next":null,"previous":null,"results":[{"id":7,"title":"Announcement 2","message":"asd","from_date":"2026-05-21","to_date":"2026-05-30","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:27:42.012329+05:30"},{"id":6,"title":"Safety audit scheduled for May 15","message":"mm","from_date":"2026-05-23","to_date":"2026-05-24","is_active":true,"created_by_name":"Tamilarasu V","created_at":"2026-05-23T15:26:59.589078+05:30"}]}
 
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgwNDc2ODc5LCJpYXQiOjE3ODAzOTA0NzksImp0aSI6IjQyZGZlOTcxMDk2NzQwYjdhMzI1MjM3ZmM2MDExOTM3IiwidXNlcl9pZCI6IjEifQ.M8aIVoZTFuUvtfKW64fZOvta24HpGwYnHqoAYzUGU2I
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+
