@@ -24,7 +24,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Logic for session timeout could go here
+      sessionStorage.clear();
+      window.location.href = '/login';
     }
     return Promise.reject(error);
   }

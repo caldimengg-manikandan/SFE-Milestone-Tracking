@@ -79,6 +79,7 @@ export default function StructuralScheduleForm({
     return `${m}-${d}-${y}`;
   };
 
+
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-white">
       {/* Spreadsheet Header Metrics */}
@@ -161,7 +162,7 @@ export default function StructuralScheduleForm({
       {/* Table Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/30 p-4">
         <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-auto h-max max-h-full relative [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-100/50 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-white [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-900">
-          <table className="w-full text-left min-w-[2350px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <table className="w-full text-left min-w-[2450px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr className="text-white text-[9px] font-bold uppercase tracking-wider bg-slate-800">
                 <th

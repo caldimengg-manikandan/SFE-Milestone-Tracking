@@ -5,6 +5,7 @@ class StructuralScheduleItemSerializer(serializers.ModelSerializer):
     plant_lead_time_weeks = serializers.IntegerField(source='shop_lead_time_weeks', required=False, default=0)
     budget_plant_hours = serializers.DecimalField(source='budget_shop_hours', max_digits=12, decimal_places=2, required=False, default=0)
     actual_plant_hours = serializers.DecimalField(source='actual_shop_hours', max_digits=12, decimal_places=2, required=False, default=0)
+    outlook_completion_date = serializers.SerializerMethodField()
 
     class Meta:
         model = StructuralScheduleItem
@@ -12,12 +13,19 @@ class StructuralScheduleItemSerializer(serializers.ModelSerializer):
             'id', 'project', 'seq_no', 'tons', 'item_description', 'category',
             'scheduled_ofa_date', 'actual_ofa_date', 'scheduled_bfa_date', 'actual_bfa_date',
             'scheduled_field_measure_date', 'rts_date', 'actual_rts_date', 'ship_date', 'actual_ship_date', 
-            'shop_lead_time_weeks', 'plant_lead_time_weeks',
+            'shop_lead_time_weeks', 'plant_lead_time_weeks', 'outlook_completion_date',
             'scheduled_erection_date', 'budget_shop_hours', 'budget_plant_hours', 'budget_field_hours',
             'actual_shop_hours', 'actual_plant_hours', 'actual_field_hours', 'detailer_vendor',
             'dwg_status', 'tracking_status', 'notes', 'fabrication_details', 'created_at', 'updated_at'
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
+
+    def get_outlook_completion_date(self, obj):
+        from datetime import timedelta
+        if obj.rts_date:
+            weeks = obj.shop_lead_time_weeks or 0
+            return (obj.rts_date + timedelta(days=weeks * 7)).isoformat()
+        return None
 
 
 class ProjectSerializer(serializers.ModelSerializer):

@@ -1,7 +1,52 @@
 import React, { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList, ChevronDown, ArrowLeft, Edit2 } from 'lucide-react';
+import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList, ArrowLeft, Edit2, Calendar } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../../services/api';
+import TrackingGanttChart from '../../components/TrackingGanttChart';
+
+const FormattedDateInput = ({ value, onChange, readOnly, className, max }) => {
+  const getDisplayValue = (val) => {
+    if (!val) return '';
+    const parts = val.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[1]}-${parts[2]}-${parts[0]}`;
+    }
+    return val;
+  };
+
+  if (readOnly) {
+    return (
+      <div className="relative w-full flex items-center">
+        <input
+          type="text"
+          readOnly
+          className={`${className} pointer-events-none pr-6`}
+          value={getDisplayValue(value)}
+        />
+        <Calendar className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none opacity-60" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative w-full flex items-center">
+      <input
+        type="text"
+        readOnly
+        placeholder="mm-dd-yyyy"
+        className={`${className} pr-6 bg-white`}
+        value={getDisplayValue(value)}
+      />
+      <Calendar className="w-3 h-3 text-slate-400 absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+      <input
+        type="date"
+        value={value || ''}
+        onChange={onChange}
+        max={max}
+        className="absolute inset-0 opacity-0 cursor-pointer z-10 w-full h-full"
+      />
+    </div>
+  );
+};
 
 export default function PlanTracking() {
   const [projects, setProjects] = useState([]);
@@ -34,24 +79,37 @@ export default function PlanTracking() {
     }
   };
 
-  const calculateStatus = (rtsDateStr, leadWeeks) => {
+  const calculateStatus = (rtsDateStr, leadWeeks, actualRtsStr) => {
     if (!rtsDateStr) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
 
     const now = new Date();
     const rtsDate = new Date(rtsDateStr);
+    if (isNaN(rtsDate.getTime())) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
+
     const weeks = parseFloat(leadWeeks) || 0;
     const leadDays = weeks * 7;
     const completionDate = new Date(rtsDate.getTime() + leadDays * 24 * 60 * 60 * 1000);
 
-    const twoDaysFromNow = new Date();
-    twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+    const compDateOnly = new Date(completionDate.getFullYear(), completionDate.getMonth(), completionDate.getDate());
 
-    if (rtsDate > twoDaysFromNow) {
-      return { label: 'Yet to Start', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500', icon: AlertCircle };
-    } else if (now >= completionDate) {
-      return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
+    if (actualRtsStr) {
+      const actualRts = new Date(actualRtsStr);
+      if (!isNaN(actualRts.getTime())) {
+        const actDateOnly = new Date(actualRts.getFullYear(), actualRts.getMonth(), actualRts.getDate());
+        if (actDateOnly <= compDateOnly) {
+          return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
+        } else {
+          return { label: 'Completed with delay', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
+        }
+      }
+    }
+
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    if (today <= compDateOnly) {
+      return { label: 'InProgress', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500', icon: Clock };
     } else {
-      return { label: 'In Progress', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500', icon: Clock };
+      return { label: 'Lightly delayed', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500', icon: Clock };
     }
   };
 
@@ -65,7 +123,7 @@ export default function PlanTracking() {
     return `${month}-${day}-${year}`;
   };
 
-  const getExpectedCompletion = (rtsDateStr, leadWeeks) => {
+  const getOutlookCompletionDate = (rtsDateStr, leadWeeks) => {
     if (!rtsDateStr) return '-';
     const rtsDate = new Date(rtsDateStr);
     const weeks = parseFloat(leadWeeks) || 0;
@@ -109,21 +167,19 @@ export default function PlanTracking() {
     );
   };
 
-  const [openDropdownId, setOpenDropdownId] = useState(null);
-  const [dropdownPosition, setDropdownPosition] = useState({ top: 0, left: 0 });
 
-  const handleStatusUpdate = async (itemId, subStatus) => {
-    try {
-      await scheduleAPI.update(itemId, { tracking_status: subStatus });
-      setAllSchedules(prev => prev.map(s => s.id === itemId ? { ...s, tracking_status: subStatus } : s));
-      setOpenDropdownId(null);
-    } catch (err) {
-      console.error('Failed to update status:', err);
-      alert('Failed to update status');
-    }
-  };
 
   const handleDateUpdate = async (itemId, field, value) => {
+    if (field.startsWith('actual_') && value) {
+      const selectedDate = new Date(value);
+      const today = new Date();
+      const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const selectedOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+      if (selectedOnly > todayOnly) {
+        alert('Actual dates cannot be set in the future.');
+        return;
+      }
+    }
     try {
       await scheduleAPI.update(itemId, { [field]: value || null });
       setAllSchedules(prev => prev.map(s => s.id === itemId ? { ...s, [field]: value || null } : s));
@@ -209,10 +265,10 @@ export default function PlanTracking() {
                           <td colSpan="4" className="p-0">
                             <div className="overflow-hidden animate-fade-in">
                               <div className="w-full overflow-x-auto">
-                                <table className="w-full text-left border-collapse table-fixed min-w-[1400px]">
+                                <table className="w-full text-left border-collapse table-fixed min-w-[1500px]">
                                   <thead>
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
-                                      <th className="px-2 py-3 border-r border-white/10 w-[8%]">Sequence</th>
+                                      <th className="px-2 py-3 border-r border-white/10 w-[7%]">Sequence</th>
                                       <th className="px-2 py-3 border-r border-white/10 w-[11%]">Item Description</th>
                                       <th className="px-2 py-3 border-r border-white/10 w-[6%]">Material</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[5%]">Weight</th>
@@ -220,127 +276,79 @@ export default function PlanTracking() {
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. RTS</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Ship date</th>
                                       <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. Ship</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Status</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Lead Time</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Exp. Completion</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Shop Lead Time (Weeks)</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Outlook Completion Date</th>
+                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[11%]">Status</th>
                                       <th className="px-2 py-3 text-center w-[7%]">Notes</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100 bg-white">
                                     {projectSchedules.length > 0 ? (
                                       projectSchedules.map((item) => {
-                                        const status = calculateStatus(item.rts_date, item.plant_lead_time_weeks);
-                                        const leadDays = (parseFloat(item.plant_lead_time_weeks) || 0) * 7;
-                                        const isUnderProgress = status.label === 'In Progress';
+                                        const status = calculateStatus(item.rts_date, item.plant_lead_time_weeks, item.actual_rts_date);
                                         const isNotInScope = item.notes?.toLowerCase() === 'not in scope';
 
                                         return (
                                           <tr key={item.id} className={`${isNotInScope ? 'bg-slate-200/60' : 'hover:bg-slate-50/50'} transition-colors`}>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-semibold border-r border-slate-100 truncate" title={item.seq_no}> {item.seq_no} </td>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}> {item.item_description || '-'} </td>
+                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-semibold border-r border-slate-100 truncate" title={item.seq_no}>{item.seq_no}</td>
+                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}>{item.item_description || '-'}</td>
                                             <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.rts_date)}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
-                                              <input
-                                                type="date"
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
+                                              <FormattedDateInput
                                                 value={item.actual_rts_date || ''}
                                                 onChange={(e) => handleDateUpdate(item.id, 'actual_rts_date', e.target.value)}
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                                               />
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
-                                              <input
-                                                type="date"
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
+                                              <FormattedDateInput
                                                 value={item.ship_date || ''}
                                                 onChange={(e) => handleDateUpdate(item.id, 'ship_date', e.target.value)}
                                                 className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                                               />
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">
-                                              <input
-                                                type="date"
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
+                                              <FormattedDateInput
                                                 value={item.actual_ship_date || ''}
                                                 onChange={(e) => handleDateUpdate(item.id, 'actual_ship_date', e.target.value)}
+                                                max={new Date().toISOString().split('T')[0]}
                                                 className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                                               />
                                             </td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{item.plant_lead_time_weeks}</td>
+                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{getOutlookCompletionDate(item.rts_date, item.plant_lead_time_weeks)}</td>
                                             <td className="px-2 py-2.5 border-r border-slate-100">
-                                              <div className="flex flex-col items-center gap-1">
-                                                <button
-                                                  onClick={(e) => {
-                                                    if (!isUnderProgress) return;
-                                                    const rect = e.currentTarget.getBoundingClientRect();
-                                                    setDropdownPosition({
-                                                      top: rect.bottom,
-                                                      left: rect.left + rect.width / 2
-                                                    });
-                                                    setOpenDropdownId(openDropdownId === item.id ? null : item.id);
-                                                  }}
-                                                  className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm transition-all border ${status.bg} ${status.color} border-current/10 ${isUnderProgress ? 'hover:scale-105 active:scale-95' : 'cursor-default'}`}
-                                                >
+                                              <div className="flex flex-col items-center">
+                                                <span className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm border ${status.bg} ${status.color} border-current/10`}>
                                                   <div className={`w-1 h-1 rounded-full ${status.dot} shadow-[0_0_4px_rgba(0,0,0,0.1)]`} />
                                                   {status.label}
-                                                  {isUnderProgress && <ChevronDown className={`w-2.5 h-2.5 ml-0.5 transition-transform ${openDropdownId === item.id ? 'rotate-180' : ''}`} />}
-                                                </button>
-
-                                                {item.tracking_status && (
-                                                  <div className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-white border border-slate-100 shadow-sm">
-                                                    <span className="text-[8px] font-bold uppercase text-slate-600 tracking-tight">
-                                                      {item.tracking_status}
-                                                    </span>
-                                                  </div>
-                                                )}
-
-                                                {openDropdownId === item.id && createPortal(
-                                                  <>
-                                                    <div className="fixed inset-0 z-40" onClick={() => setOpenDropdownId(null)} />
-                                                    <div
-                                                      className="fixed z-50 bg-white shadow-2xl border border-slate-200 rounded-xl py-1.5 min-w-[125px] mt-2 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200"
-                                                      style={{ top: `${dropdownPosition.top}px`, left: `${dropdownPosition.left}px`, transform: 'translateX(-50%)' }}
-                                                    >
-                                                      <div className="px-3 py-1 border-b border-slate-100 mb-1">
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Select Status</span>
-                                                      </div>
-                                                      {['Erected', 'Half Erected', 'In Fabrication', 'On Hold'].map((option) => (
-                                                        <button
-                                                          key={option}
-                                                          onClick={() => handleStatusUpdate(item.id, option)}
-                                                          className={`w-full text-left px-3 py-2 text-[9px] font-bold uppercase transition-all flex items-center justify-between ${item.tracking_status === option ? 'bg-amber-50 text-amber-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'}`}
-                                                        >
-                                                          {option}
-                                                          {item.tracking_status === option && <div className="w-1 h-1 rounded-full bg-amber-500" />}
-                                                        </button>
-                                                      ))}
-                                                      <div className="mt-1 pt-1 border-t border-slate-100">
-                                                        <button
-                                                          onClick={() => handleStatusUpdate(item.id, null)}
-                                                          className="w-full text-left px-3 py-2 text-[9px] font-bold uppercase text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all"
-                                                        >
-                                                          Reset to Default
-                                                        </button>
-                                                      </div>
-                                                    </div>
-                                                  </>,
-                                                  document.body
-                                                )}
+                                                </span>
                                               </div>
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{leadDays}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{getExpectedCompletion(item.rts_date, item.plant_lead_time_weeks)}</td>
                                             <td className="px-2 py-2.5 text-center text-slate-600 italic text-[11px] truncate" title={item.notes}>{item.notes || '-'}</td>
                                           </tr>
                                         );
                                       })
                                     ) : (
                                       <tr>
-                                        <td colSpan="10" className="px-6 py-12 text-center text-slate-400">
+                                        <td colSpan="12" className="px-6 py-12 text-center text-slate-400">
                                           No tracking sequences found matching search or project.
                                         </td>
                                       </tr>
                                     )}
                                   </tbody>
                                 </table>
+                              </div>
+
+                              <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/40">
+                                <div className="mb-4">
+                                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-[0.2em]">Project Gantt Chart</h4>
+                                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Visual schedule tracker & sequence status timeline</p>
+                                </div>
+                                <TrackingGanttChart project={proj} allSchedules={allSchedules} />
                               </div>
                             </div>
                           </td>

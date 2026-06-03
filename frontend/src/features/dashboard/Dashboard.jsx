@@ -291,7 +291,7 @@ export default function Dashboard() {
       {/* ─── Premium Mode Switcher ──────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
         {/* Tab Switcher Pill */}
-        <div className="relative flex items-center bg-slate-100 rounded-2xl p-1 self-start shadow-inner">
+        <div className="relative grid grid-cols-2 bg-slate-100 rounded-2xl p-1 self-start shadow-inner w-full max-w-[420px]">
           {/* Sliding background */}
           <div
             className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
@@ -302,21 +302,21 @@ export default function Dashboard() {
           />
           <button
             onClick={() => setDashboardMode('operations')}
-            className={`relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
               dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            Operations
+            Bid and Estimation
           </button>
           <button
             onClick={() => setDashboardMode('executive')}
-            className={`relative z-10 flex items-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
               dashboardMode === 'executive' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
             <Crown className="w-3.5 h-3.5" />
-            Executive VP Suite
+            Operations
           </button>
         </div>
 

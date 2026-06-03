@@ -320,26 +320,12 @@ export default function VPDashboard() {
         details: `Bid Amount: ${fmtMoney(b.bid_amount)} · Primary Estimator: ${b.primary_estimator_initials || 'N/A'}`,
         extra: `Status: ${b.won_lost}`
       });
-      add(b.follow_up_date,{
-        type:'follow_up',
-        label:`Estimator Follow-up: ${b.project_name||b.quote_no}`,
-        projectCode: b.quote_no || 'N/A',
-        details: `Follow-up Notes: ${b.follow_up_notes || 'N/A'}`,
-        extra: `Follow-up`
-      });
       add(b.awarded_job_date,{
         type:'awarded_date',
         label:`Bid Awarded: ${b.project_name||b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
         details: `Awarded Amount: ${fmtMoney(b.awarded_amount)} · SFE Job No: ${b.sfe_job_no || 'N/A'}`,
         extra: `Awarded`
-      });
-      add(b.contract_executed_date,{
-        type:'contract',
-        label:`Contract Executed: ${b.project_name||b.quote_no}`,
-        projectCode: b.quote_no || 'N/A',
-        details: `SFE Job No: ${b.sfe_job_no || 'N/A'}`,
-        extra: `Executed`
       });
       add(b.fab_start_date || b.fabrication_start_date,{
         type:'fab_start',
@@ -349,91 +335,8 @@ export default function VPDashboard() {
         extra: `Fab Start`
       });
     });
-    schedules.forEach(s=>{
-      const proj = projects.find(p => String(p.id) === String(s.project?.id || s.project)) || {};
-      const pCode = proj.code || 'N/A';
-      const pName = proj.name || 'N/A';
-      
-      add(s.rts_date,{
-        type:'rts',
-        label:`Ready to Ship (RTS): Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `${s.item_description || 'No description'} · Project: ${pName}`,
-        extra: `${parseFloat(s.tons || 0).toFixed(1)} tons`
-      });
-      add(s.ship_date,{
-        type:'ship',
-        label:`Shipment Date: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `${s.item_description || 'No description'} · Project: ${pName}`,
-        extra: `${parseFloat(s.tons || 0).toFixed(1)} tons`
-      });
-      add(s.scheduled_ofa_date,{
-        type:'ofa_sched',
-        label:`OFA Scheduled: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Drawing Out for Approval · Project: ${pName}`,
-        extra: `OFA Sched`
-      });
-      add(s.actual_ofa_date,{
-        type:'ofa_act',
-        label:`OFA Actual: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Drawing sent Out for Approval · Project: ${pName}`,
-        extra: `OFA Actual`
-      });
-      add(s.scheduled_bfa_date,{
-        type:'bfa_sched',
-        label:`BFA Scheduled: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Drawing Back for Approval · Project: ${pName}`,
-        extra: `BFA Sched`
-      });
-      add(s.actual_bfa_date,{
-        type:'bfa_act',
-        label:`BFA Actual: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Drawing returned Back for Approval · Project: ${pName}`,
-        extra: `BFA Actual`
-      });
-      add(s.scheduled_field_measure_date,{
-        type:'field_measure',
-        label:`Field Measure Scheduled: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Field measurement for layout · Project: ${pName}`,
-        extra: `Field Measure`
-      });
-      add(s.actual_rts_date,{
-        type:'rts_act',
-        label:`Actual RTS: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Sequence completed in shop · Project: ${pName}`,
-        extra: `Actual RTS`
-      });
-      add(s.actual_ship_date,{
-        type:'ship_act',
-        label:`Actual Ship: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Sequence departed shop · Project: ${pName}`,
-        extra: `Actual Ship`
-      });
-      add(s.scheduled_erection_date,{
-        type:'erection_sched',
-        label:`Seq Erection Scheduled: Seq ${s.seq_no}`,
-        projectCode: pCode,
-        details: `Site steel erection begins · Project: ${pName}`,
-        extra: `Erect Sched`
-      });
-    });
-    projects.forEach(p=>add(p.erection_date,{
-      type:'erection',
-      label:`Site Erection Milestone: ${p.name}`,
-      projectCode: p.code || 'N/A',
-      details: `Customer: ${p.customer_name || 'N/A'}`,
-      extra: `Status: ${p.status}`
-    }));
     return ev;
-  },[bids,schedules,projects]);
+  },[bids]);
 
   // Selected date based on feedFilter
   const activeDate = useMemo(() => {
@@ -451,7 +354,7 @@ export default function VPDashboard() {
 
   // Overall monthly stats (for the current month)
   const monthEventCounts = useMemo(()=>{
-    const c={bid_due:0,rts:0,ship:0,erection:0};
+    const c={bid_due:0,quote_date:0,awarded_date:0,fab_start:0};
     const curYear = TODAY.getFullYear();
     const curMonth = TODAY.getMonth();
     Object.entries(calEvents).forEach(([k,arr])=>{
@@ -463,23 +366,10 @@ export default function VPDashboard() {
 
   /* ── Event type style ── */
   const EVT = {
-    bid_due:       {label:'Bid Due',         dot:'bg-red-500',     badge:'bg-red-50 text-red-700 border border-red-100'},
-    rts:           {label:'RTS Target',      dot:'bg-blue-500',    badge:'bg-blue-50 text-blue-700 border border-blue-100'},
-    ship:          {label:'Ship Target',     dot:'bg-emerald-500', badge:'bg-emerald-50 text-emerald-700 border border-emerald-100'},
-    erection:      {label:'Erection Target', dot:'bg-amber-500',   badge:'bg-amber-50 text-amber-700 border border-amber-100'},
-    ofa_sched:     {label:'OFA Scheduled',   dot:'bg-slate-400',   badge:'bg-slate-50 text-slate-600 border border-slate-200'},
-    ofa_act:       {label:'OFA Actual',      dot:'bg-slate-700',   badge:'bg-slate-100 text-slate-800 border border-slate-300'},
-    bfa_sched:     {label:'BFA Scheduled',   dot:'bg-indigo-400',  badge:'bg-indigo-50 text-indigo-600 border border-indigo-200'},
-    bfa_act:       {label:'BFA Actual',      dot:'bg-indigo-700',  badge:'bg-indigo-100 text-indigo-800 border border-indigo-300'},
-    field_measure: {label:'Field Measure',   dot:'bg-cyan-500',    badge:'bg-cyan-50 text-cyan-700 border border-cyan-100'},
-    rts_act:       {label:'Actual RTS',      dot:'bg-blue-800',    badge:'bg-blue-100 text-blue-850 border border-blue-200'},
-    ship_act:      {label:'Actual Ship',     dot:'bg-emerald-800', badge:'bg-emerald-100 text-emerald-850 border border-emerald-250'},
-    erection_sched:{label:'Seq Erection',    dot:'bg-amber-700',   badge:'bg-amber-100 text-amber-800 border border-amber-200'},
-    quote_date:    {label:'Quote Submitted', dot:'bg-rose-500',     badge:'bg-rose-50 text-rose-700 border border-rose-100'},
-    follow_up:     {label:'Follow-up Date',  dot:'bg-violet-500',  badge:'bg-violet-50 text-violet-700 border border-violet-100'},
-    awarded_date:  {label:'Award Date',      dot:'bg-yellow-600',  badge:'bg-yellow-50 text-yellow-750 border border-yellow-200'},
-    contract:      {label:'Contract Executed',dot:'bg-teal-500',   badge:'bg-teal-50 text-teal-700 border border-teal-100'},
-    fab_start:     {label:'Fab Start Date',  dot:'bg-fuchsia-500', badge:'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100'},
+    bid_due:       {label:'Bid Due Date',         dot:'bg-red-500',     badge:'bg-red-50 text-red-700 border border-red-100'},
+    quote_date:    {label:'Quote Submitted Date', dot:'bg-rose-500',     badge:'bg-rose-50 text-rose-700 border border-rose-100'},
+    awarded_date:  {label:'Awarded Date',         dot:'bg-yellow-600',  badge:'bg-yellow-50 text-yellow-750 border border-yellow-200'},
+    fab_start:     {label:'Fab Start Date',       dot:'bg-fuchsia-500', badge:'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100'},
   };
 
   /* ── Loading ── */
@@ -831,15 +721,9 @@ export default function VPDashboard() {
 
                 return (
                   <div key={i} className={`flex items-start gap-4 p-4 border rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-md transition-shadow duration-200 bg-white border-l-4 ${
-                    ev.type === 'bid_due' || ev.type === 'quote_date' ? 'border-l-red-500' :
-                    ev.type === 'rts' || ev.type === 'rts_act' ? 'border-l-blue-500' :
-                    ev.type === 'ship' || ev.type === 'ship_act' ? 'border-l-emerald-500' :
-                    ev.type === 'ofa_sched' || ev.type === 'ofa_act' ? 'border-l-slate-500' :
-                    ev.type === 'bfa_sched' || ev.type === 'bfa_act' ? 'border-l-indigo-500' :
-                    ev.type === 'field_measure' ? 'border-l-cyan-500' :
-                    ev.type === 'follow_up' ? 'border-l-violet-500' :
+                    ev.type === 'bid_due' ? 'border-l-red-500' :
+                    ev.type === 'quote_date' ? 'border-l-rose-500' :
                     ev.type === 'awarded_date' ? 'border-l-yellow-500' :
-                    ev.type === 'contract' ? 'border-l-teal-500' :
                     ev.type === 'fab_start' ? 'border-l-fuchsia-500' :
                     'border-l-amber-500'
                   }`}>
@@ -899,9 +783,9 @@ export default function VPDashboard() {
                 <div className="flex items-center gap-3">
                   {[
                     { label: "Bids Due", k: 'bid_due', dot: 'bg-red-500' },
-                    { label: "RTS", k: 'rts', dot: 'bg-blue-500' },
-                    { label: "Shipments", k: 'ship', dot: 'bg-emerald-500' },
-                    { label: "Erections", k: 'erection', dot: 'bg-amber-500' },
+                    { label: "Quotes Submitted", k: 'quote_date', dot: 'bg-rose-500' },
+                    { label: "Awarded", k: 'awarded_date', dot: 'bg-yellow-600' },
+                    { label: "Fab Starts", k: 'fab_start', dot: 'bg-fuchsia-500' },
                   ].map((s, i) => (
                     <span key={i} className="inline-flex items-center gap-1 text-[9px] font-black text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
                       <span className={`w-1 h-1 rounded-full ${s.dot}`}/>
