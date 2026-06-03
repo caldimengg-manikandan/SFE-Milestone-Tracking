@@ -177,7 +177,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
         <div>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Active Project</span>
           <h3 className="text-lg font-black text-slate-800 mt-1">
-            {projectInfo.project ? `${projectInfo.quoteNum || 'SFE'} — ${projectInfo.project}` : 'No project selected'}
+            {projectInfo.project ? `#${projectInfo.quoteNum || 'SFE'}-${projectInfo.project}` : 'No project selected'}
           </h3>
           <div className="flex flex-wrap gap-x-6 gap-y-1.5 mt-2 text-xs text-slate-500 font-medium">
             {projectInfo.location && <span>Location: <strong className="text-slate-700">{projectInfo.location}</strong></span>}

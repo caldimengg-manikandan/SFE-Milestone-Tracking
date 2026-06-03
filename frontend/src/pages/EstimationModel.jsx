@@ -9,7 +9,7 @@ import {
   BarChart3,
   Save
 } from 'lucide-react';
-import { projectAPI } from '../services/api';
+import { projectAPI, rfqAPI } from '../services/api';
 import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
 
@@ -136,24 +136,39 @@ export default function EstimationModel() {
 
   // --- State and Effect for Project Master Dropdown ---
   const [projects, setProjects] = useState([]);
+  const [wonRfqs, setWonRfqs] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
 
   useEffect(() => {
-    const fetchProjects = async () => {
+    const fetchDropdownData = async () => {
       try {
         setLoadingProjects(true);
-        const res = await projectAPI.getAll({ won_rfq: 'true' });
-        const data = res.data.results || res.data;
-        if (Array.isArray(data)) {
-          setProjects(data);
+        const [projRes, rfqRes] = await Promise.all([
+          projectAPI.getAll({ won_rfq: 'true' }),
+          rfqAPI.getAll({ won_lost: 'Won' })
+        ]);
+        
+        const projData = projRes.data.results || projRes.data;
+        if (Array.isArray(projData)) {
+          setProjects(projData);
+        }
+        
+        const rfqData = rfqRes.data.results || rfqRes.data;
+        if (Array.isArray(rfqData)) {
+          const sortedRfqs = [...rfqData].sort((a, b) => {
+            const aNo = a.sfe_job_no || 0;
+            const bNo = b.sfe_job_no || 0;
+            return bNo - aNo;
+          });
+          setWonRfqs(sortedRfqs);
         }
       } catch (err) {
-        console.error('Failed to fetch project master list:', err);
+        console.error('Failed to fetch dropdown data:', err);
       } finally {
         setLoadingProjects(false);
       }
     };
-    fetchProjects();
+    fetchDropdownData();
   }, []);
 
   const handleProjectChange = async (e) => {
@@ -1958,9 +1973,16 @@ export default function EstimationModel() {
                       className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none cursor-pointer"
                     >
                       <option value="">Select Project</option>
-                      {projects.map(p => (
-                        <option key={p.id} value={p.id}>{p.code} — {p.name}</option>
-                      ))}
+                      {wonRfqs.map(rfq => {
+                        const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+                        const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+                        const projId = matchedProj ? matchedProj.id : '';
+                        return (
+                          <option key={rfq.id} value={projId}>
+                            #{code}-{rfq.project_name}
+                          </option>
+                        );
+                      })}
                     </select>
                     <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
                       {loadingProjects ? (
