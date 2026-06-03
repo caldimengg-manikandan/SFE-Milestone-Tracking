@@ -746,7 +746,7 @@ export default function DataEntryPage() {
   })
 
   function handleDelete(data) {
-    if (!window.confirm(`Delete ${data.quote_no} — ${data.project_name}? This cannot be undone.`)) return
+    if (!window.confirm(`Delete ${data.quote_no} — ${data.project_name}? This will permanently delete this project's record.`)) return
     deleteMutation.mutate(data.id)
   }
 

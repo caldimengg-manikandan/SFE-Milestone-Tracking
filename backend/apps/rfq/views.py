@@ -135,12 +135,9 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         serializer.save(updated_by=self.request.user.username)
 
     def destroy(self, request, *args, **kwargs):
-        """Soft delete — set deleted_at timestamp."""
-        from django.utils import timezone
+        """Hard delete — permanently delete from DB."""
         instance = self.get_object()
-        instance.deleted_at = timezone.now()
-        instance.updated_by = request.user.username
-        instance.save()
+        instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
     @action(detail=False, methods=['get'], url_path='print')

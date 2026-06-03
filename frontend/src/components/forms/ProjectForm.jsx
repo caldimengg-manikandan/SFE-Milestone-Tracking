@@ -45,10 +45,10 @@ export default function ProjectForm({
       }
 
       try {
-        const rfqRes = await rfqAPI.getAll();
+        const rfqRes = await rfqAPI.getAll({ won_lost: 'Won' });
         setWonRfqs(rfqRes.data.results || rfqRes.data);
       } catch (err) {
-        console.error('Failed to load RFQs', err);
+        console.error('Failed to load Won RFQs', err);
       }
     };
     fetchData();
@@ -575,53 +575,20 @@ export default function ProjectForm({
     setActiveTab(initialTab);
   }, [initialTab]);
 
-  const getRfqTotalManhours = (rfq) => {
-    if (!rfq) return 0;
-    const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
-    const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
-    const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
-    const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
-    return avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
-  };
-
-  useEffect(() => {
-    if ((form.code || form.name) && wonRfqs.length > 0 && !form.rfq_id) {
-      const matched = wonRfqs.find(r => 
-        String(r.sfe_job_no) === String(form.code) || 
-        r.quote_no === form.code || 
-        (form.name && r.project_name && form.name.toLowerCase().trim() === r.project_name.toLowerCase().trim())
-      );
-      if (matched) {
-        setForm(prev => ({ ...prev, rfq_id: matched.id }));
-      }
-    }
-  }, [form.code, form.name, wonRfqs]);
-
-  const selectedRfqId = form.rfq_id || '';
-  const selectedRfq = wonRfqs.find(r => String(r.id) === String(selectedRfqId));
-
   const handleRfqSelect = (e) => {
     const rfqId = e.target.value;
-    if (!rfqId) {
-      setForm(prev => ({
-        ...prev,
-        rfq_id: '',
-        name: '',
-        code: '',
-        customer_name: '',
-        total_ton: '0',
-        total_manhours: '0',
-      }));
-      return;
-    }
+    if (!rfqId) return;
 
     const rfq = wonRfqs.find(r => String(r.id) === String(rfqId));
     if (rfq) {
-      const totalManhours = getRfqTotalManhours(rfq);
+      const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
+      const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
+      const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
+      const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
+      const totalManhours = avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
 
       setForm(prev => ({
         ...prev,
-        rfq_id: rfq.id,
         name: rfq.project_name || '',
         code: rfq.sfe_job_no ? String(rfq.sfe_job_no) : (rfq.quote_no || ''),
         customer_name: rfq.customer_name || '',
@@ -685,17 +652,18 @@ export default function ProjectForm({
                   <h4 className="font-bold text-slate-800">Basic Project Information</h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {/* Select Project Dropdown - spans full width */}
-                  <div className="lg:col-span-4">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Select Project (RFQ)</label>
+                {!isEditing && mode !== 'view' && (
+                  <div className="bg-slate-50 p-5 rounded-2xl border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="space-y-1">
+                      <h5 className="text-sm font-bold text-slate-800">Pre-fill Project from Won RFQs</h5>
+                      <p className="text-xs text-slate-500">Select an awarded RFQ to automatically populate project info and total tonnage/manhours.</p>
+                    </div>
                     <select
-                      value={selectedRfqId}
-                      disabled={isEditing || mode === 'view'}
                       onChange={handleRfqSelect}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all cursor-pointer disabled:bg-slate-50 disabled:cursor-not-allowed"
+                      className="w-full md:w-80 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all cursor-pointer"
+                      defaultValue=""
                     >
-                      <option value="">-- Select Project from RFQ Master --</option>
+                      <option value="">-- Select a Won RFQ --</option>
                       {wonRfqs.map(rfq => (
                         <option key={rfq.id} value={rfq.id}>
                           {rfq.sfe_job_no ? `[Job #${rfq.sfe_job_no}] ` : ''}{rfq.quote_no} — {rfq.project_name}
@@ -703,134 +671,173 @@ export default function ProjectForm({
                       ))}
                     </select>
                   </div>
+                )}
 
-                  {/* Project Name */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Name</label>
                     <input
-                      value={selectedRfq ? selectedRfq.project_name : (form.name || '')}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Quote Number */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Quote Number</label>
-                    <input
-                      value={selectedRfq ? selectedRfq.quote_no : (form.code || '')}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Bid Reference */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Bid Reference</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.bid_reference || 'N/A') : 'N/A'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Location */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Location</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.location || 'N/A') : 'N/A'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Scope of Work */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Scope of Work</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.scope_of_work || 'None') : 'None'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Customer */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.customer_name || 'N/A') : (form.customer_name || 'N/A')}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Estimator */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Estimator</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.primary_estimator_initials || 'N/A') : 'N/A'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Won / Lost / Pending */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Won / Lost / Pending</label>
-                    <input
-                      value={selectedRfq ? (selectedRfq.won_lost || 'Pending') : 'Pending'}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="N/A"
-                    />
-                  </div>
-
-                  {/* Total Manhours */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Total Manhours</label>
-                    <input
-                      value={selectedRfq ? getRfqTotalManhours(selectedRfq).toFixed(2) : (parseFloat(form.total_manhours) || 0).toFixed(2)}
-                      disabled
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm font-semibold cursor-not-allowed"
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  {/* Plant Name (Shop Name) */}
-                  <div>
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Plant Name</label>
-                    <select
-                      value={form.plant_name || ''}
+                      value={form.name}
                       disabled={mode === 'view'}
-                      onChange={e => setForm({ ...form, plant_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+                      onChange={e => setForm({ ...form, name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      placeholder="e.g. Skyline Tower"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Code</label>
+                    <input
+                      value={form.code}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, code: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      placeholder="e.g. PRJ-001"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer Name</label>
+                    <input
+                      type="text"
+                      value={form.customer_name || ''}
+                      disabled={true}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm outline-none cursor-not-allowed"
+                      placeholder="Synced from RFQ"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
+                    <select
+                      value={form.detailer_name || ''}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, detailer_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
                     >
-                      <option value="">Select Plant</option>
-                      <option value="plant1">plant1</option>
-                      <option value="plant2">plant2</option>
-                      <option value="plant3">plant3</option>
+                      <option value="">Select Detailer</option>
+                      {detailers.map(d => (
+                        <option key={d.id} value={d.name}>{d.name}</option>
+                      ))}
                     </select>
                   </div>
-
-                  {/* Is Scheduled Field Measure Date Required? */}
-                  <div className="lg:col-span-2">
-                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Is Scheduled Field Measure Date Required?</label>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>
                     <select
-                      value={form.schedule_field_measure_required || 'Yes'}
+                      value={form.project_manager_name || ''}
                       disabled={mode === 'view'}
-                      onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-semibold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
+                      onChange={e => setForm({ ...form, project_manager_name: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
                     >
-                      <option value="Yes">Yes</option>
-                      <option value="No">No</option>
+                      <option value="">Select PM</option>
+                      {employees
+                        .filter(emp => emp.designation === 'Project Manager')
+                        .map((emp) => (
+                          <option key={emp.id} value={emp.name}>{emp.name}</option>
+                        ))}
                     </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
+                    {mode === 'view' ? (
+                      <p className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm">
+                        {(() => {
+                          if (!form.erection_date) return 'N/A';
+                          const date = new Date(form.erection_date);
+                          if (isNaN(date.getTime())) return 'N/A';
+                          const d = date.getDate().toString().padStart(2, '0');
+                          const m = (date.getMonth() + 1).toString().padStart(2, '0');
+                          const y = date.getFullYear();
+                          return `${m}-${d}-${y}`;
+                        })()}
+                      </p>
+                    ) : (
+                      <input
+                        type="date"
+                        value={form.erection_date || ''}
+                        onChange={e => setForm({ ...form, erection_date: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Priority</label>
+                    <select
+                      value={form.priority}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, priority: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
+                    <select
+                      value={form.status}
+                      disabled={mode === 'view'}
+                      onChange={e => setForm({ ...form, status: e.target.value })}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
+                    >
+                      <option value="In Progress">In Progress</option>
+                      <option value="Yet to Start">Yet to Start</option>
+                      <option value="Completed">Completed</option>
+                    </select>
+                  </div>
+                  <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>
+                      <input
+                        type="number"
+                        value={form.total_ton}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, total_ton: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Manhours</label>
+                      <input
+                        type="number"
+                        value={form.total_manhours}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, total_manhours: e.target.value })}
+                        className="w-full px-3 py-2 rounded-lg border border-amber-200 bg-white text-sm outline-none focus:border-amber-400"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Manhour / Ton</label>
+                      <div className="w-full px-3 py-2 rounded-lg bg-amber-100/50 text-amber-900 font-bold text-sm border border-amber-200 text-center">
+                        {autocalculateManhourTon()}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="lg:col-span-2 grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
+                    <div className="flex flex-col justify-between">
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">plant Name</label>
+                      <select
+                        value={form.plant_name || ''}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, plant_name: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                      >
+                        <option value="">Select plant</option>
+                        <option value="plant1">plant1</option>
+                        <option value="plant2">plant2</option>
+                        <option value="plant3">plant3</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col justify-between">
+                      <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Is Scheduled Field Measure Date Required?</label>
+                      <select
+                        value={form.schedule_field_measure_required || 'Yes'}
+                        disabled={mode === 'view'}
+                        onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
+                      >
+                        <option value="Yes">Yes</option>
+                        <option value="No">No</option>
+                      </select>
+                    </div>
                   </div>
                 </div>
               </section>
