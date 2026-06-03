@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, FileText, Loader2, AlertCircle } from 'lucide-react';
-import { projectAPI, scheduleAPI } from '../services/api';
+import { projectAPI, scheduleAPI, rfqAPI } from '../services/api';
 import ProjectForm from '../components/forms/ProjectForm';
 
 export default function ProjectMaster() {
   const [projects, setProjects] = useState([]);
+  const [rfqs, setRfqs] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [allSchedules, setAllSchedules] = useState([]);
   const [search, setSearch] = useState('');
@@ -260,11 +261,23 @@ export default function ProjectMaster() {
     setSchedules(schedules.filter(s => s.id !== id));
   };
 
+  const getCustomerNameForProject = (p) => {
+    const matched = rfqs.find(r => 
+      (r.sfe_job_no && String(r.sfe_job_no) === p.code) || 
+      (r.quote_no && String(r.quote_no) === p.code) || 
+      (r.project_name && r.project_name.toLowerCase().trim() === p.name.toLowerCase().trim())
+    );
+    return matched ? matched.customer_name : (p.customer_name || 'N/A');
+  };
+
   const fetchProjects = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await projectAPI.getAll();
+      const [res, rfqRes] = await Promise.all([
+        projectAPI.getAll(),
+        rfqAPI.getAll()
+      ]);
 
       // Handle both { results: [] } and directly []
       const data = res.data.results || res.data;
@@ -276,6 +289,11 @@ export default function ProjectMaster() {
         setProjects([data]);
       } else {
         setProjects([]);
+      }
+
+      const rfqData = rfqRes.data.results || rfqRes.data;
+      if (Array.isArray(rfqData)) {
+        setRfqs(rfqData);
       }
     } catch (err) {
       console.error('Failed to fetch projects:', err);
@@ -337,7 +355,7 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.name || 'N/A', 45, 32);
 
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("CUSTOMER:", 14, 38);
-    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.customer_name || 'N/A', 45, 38);
+    doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(getCustomerNameForProject(project) || 'N/A', 45, 38);
 
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("DETAILER:", 14, 44);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.detailer_name || 'N/A', 45, 44);
@@ -868,7 +886,7 @@ export default function ProjectMaster() {
       ...project,
       name: project.name || '',
       code: project.code || '',
-      customer_name: project.customer_name || '',
+      customer_name: getCustomerNameForProject(project),
       detailer_name: project.detailer_name || '',
       project_manager_name: project.project_manager_name || '',
       total_ton: project.total_ton || '',
@@ -995,7 +1013,7 @@ export default function ProjectMaster() {
   const autocalculateManhourTon = () => {
     const ton = parseFloat(form.total_ton) || 0;
     const hours = parseFloat(form.total_manhours) || 0;
-    return ton > 0 ? (hours / ton).toFixed(2) : '0.00';
+    return ton > 0 ? (hours / ton).toFixed(2) : '0';
   };
 
   const resetForm = () => {
@@ -1026,7 +1044,7 @@ export default function ProjectMaster() {
     const rows = filtered.map(p => [
       p.code,
       p.name,
-      p.customer_name,
+      getCustomerNameForProject(p),
       p.project_manager_name,
       p.priority,
       p.status,
@@ -1046,9 +1064,10 @@ export default function ProjectMaster() {
   };
 
   const filtered = projects.filter(p => {
+    const customerName = getCustomerNameForProject(p);
     const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
       (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase());
+      (customerName?.toLowerCase() || '').includes(search.toLowerCase());
 
     const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
 
@@ -1105,9 +1124,6 @@ export default function ProjectMaster() {
               <option value="Yet to Start">Yet to Start</option>
               <option value="Completed">Completed</option>
             </select>
-            <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
-              <Filter className="w-4 h-4" /> Filters
-            </button>
             <button
               onClick={exportToCSV}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"
@@ -1158,7 +1174,7 @@ export default function ProjectMaster() {
                   <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100">
                     <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{p.name}</td>
                     <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{p.code}</td>
-                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{p.customer_name || 'N/A'}</td>
+                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{getCustomerNameForProject(p)}</td>
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
                     <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
@@ -1175,7 +1191,11 @@ export default function ProjectMaster() {
                     <td className="px-2 py-3 font-bold text-slate-700 border-r border-slate-100 text-center">{p.total_ton}</td>
                     <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">{p.total_manhours}</td>
                     <td className="px-2 py-3 border-r border-slate-100 text-center font-bold text-amber-600">
-                      {p.total_ton > 0 ? (p.total_manhours / p.total_ton).toFixed(1) : '0.0'}
+                      {(() => {
+                        const ton = parseFloat(p.total_ton) || 0;
+                        const hours = parseFloat(p.total_manhours) || 0;
+                        return ton > 0 ? (hours / ton).toFixed(2) : '0';
+                      })()}
                     </td>
                     <td className="px-2 py-3 text-right">
                       <div className="flex items-center justify-end gap-0.5">

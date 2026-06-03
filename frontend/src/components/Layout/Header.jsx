@@ -20,6 +20,7 @@ const pageTitles = {
   '/management': 'Detailer Master',
   '/detailers': 'Detailer Master',
   '/estimation': 'Estimation Model',
+  '/estimation-summary': 'Estimation Summary',
   '/steel-budget/input': 'Design Inputs',
   '/steel-budget/result': 'Estimation Result',
   '/projects': 'Project Master',

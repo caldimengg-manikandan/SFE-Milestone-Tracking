@@ -581,11 +581,11 @@ export default function ProjectForm({
 
     const rfq = wonRfqs.find(r => String(r.id) === String(rfqId));
     if (rfq) {
-      const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
-      const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
-      const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
-      const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
-      const totalManhours = avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
+      const structFab = Number(rfq.struct_fab_hours) || 0;
+      const miscFab = Number(rfq.misc_fab_hours) || 0;
+      const structErect = Number(rfq.struct_erect_hours) || 0;
+      const miscErect = Number(rfq.misc_erect_hours) || 0;
+      const totalManhours = structFab + miscFab + structErect + miscErect;
 
       setForm(prev => ({
         ...prev,
@@ -696,17 +696,13 @@ export default function ProjectForm({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Customer Name</label>
-                    <select
+                    <input
+                      type="text"
                       value={form.customer_name || ''}
-                      disabled={mode === 'view'}
-                      onChange={e => setForm({ ...form, customer_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                    >
-                      <option value="">Select Customer</option>
-                      {customers.map(c => (
-                        <option key={c.id} value={c.name}>{c.name}</option>
-                      ))}
-                    </select>
+                      disabled={true}
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-500 text-sm outline-none cursor-not-allowed"
+                      placeholder="Synced from RFQ"
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
@@ -787,7 +783,6 @@ export default function ProjectForm({
                       <option value="Completed">Completed</option>
                     </select>
                   </div>
-
                   <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                     <div>
                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Total Ton</label>

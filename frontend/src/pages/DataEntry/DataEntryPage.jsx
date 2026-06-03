@@ -601,6 +601,7 @@ export default function DataEntryPage() {
   const [jobNoTarget,     setJobNoTarget]      = useState(null)   // rfq record for Set Job #
   const [showExcelUpload, setShowExcelUpload]  = useState(false)
   const [searchText,      setSearchText]       = useState('')
+  const [appliedSearchText, setAppliedSearchText] = useState('')
   const [wonLostFilter,   setWonLostFilter]    = useState('all')
   const [emailTarget,     setEmailTarget]      = useState(null)
   const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
@@ -722,10 +723,22 @@ export default function DataEntryPage() {
     updateMutation.mutate({ id: data.id, data: { [colDef.field]: finalValue } })
   }, [updateMutation])
 
-  // Quick search
-  const onSearch = (e) => {
-    setSearchText(e.target.value)
-    gridRef.current?.api?.setQuickFilter(e.target.value)
+  // Quick search handlers
+  const handleApplySearch = () => {
+    setAppliedSearchText(searchText)
+  }
+
+  const handleClearSearch = () => {
+    setSearchText('')
+    setAppliedSearchText('')
+  }
+
+  const handleSearchInputChange = (e) => {
+    const val = e.target.value
+    setSearchText(val)
+    if (!val) {
+      setAppliedSearchText('')
+    }
   }
 
   const exportCSV = () => gridRef.current?.api?.exportDataAsCsv({
@@ -733,7 +746,7 @@ export default function DataEntryPage() {
   })
 
   function handleDelete(data) {
-    if (!window.confirm(`Delete ${data.quote_no} — ${data.project_name}? This cannot be undone.`)) return
+    if (!window.confirm(`Delete ${data.quote_no} — ${data.project_name}? This will permanently delete this project's record.`)) return
     deleteMutation.mutate(data.id)
   }
 
@@ -819,17 +832,54 @@ export default function DataEntryPage() {
       </div>
 
       {/* Toolbar */}
-      <div className="toolbar">
-        <div className="toolbar-search">
-          <Search className="search-icon" />
-          <input
-            id="rfq-search"
-            type="text"
-            className="form-input"
-            placeholder="Search quote, project, customer…"
-            value={searchText}
-            onChange={onSearch}
-          />
+      <div className="toolbar" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', width: '100%' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: '1', maxWidth: '520px' }}>
+          <div className="toolbar-search" style={{ flex: '1', maxWidth: 'none', marginBottom: 0 }}>
+            <Search className="search-icon" />
+            <input
+              id="rfq-search"
+              type="text"
+              className="form-input"
+              placeholder="Search quote, project, customer…"
+              value={searchText}
+              onChange={handleSearchInputChange}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleApplySearch()
+                }
+              }}
+            />
+          </div>
+          <button
+            onClick={handleApplySearch}
+            className="btn btn-primary"
+            style={{
+              padding: '8px 16px',
+              height: '38px',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer'
+            }}
+          >
+            Search
+          </button>
+          <button
+            onClick={handleClearSearch}
+            className="btn btn-secondary"
+            style={{
+              padding: '8px 16px',
+              height: '38px',
+              fontSize: '0.8rem',
+              fontWeight: '600',
+              whiteSpace: 'nowrap',
+              borderRadius: 'var(--radius-md)',
+              cursor: 'pointer'
+            }}
+          >
+            Clear
+          </button>
         </div>
 
         <div className="filter-group">
@@ -855,6 +905,7 @@ export default function DataEntryPage() {
             rowData={rowData}
             columnDefs={columnDefs}
             context={gridContext}
+            quickFilterText={appliedSearchText}
             getRowClass={getRowClass}
             rowSelection="single"
             suppressRowClickSelection
