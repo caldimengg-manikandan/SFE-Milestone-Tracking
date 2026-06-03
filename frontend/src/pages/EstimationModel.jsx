@@ -1978,8 +1978,8 @@ export default function EstimationModel() {
                         const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
                         const projId = matchedProj ? matchedProj.id : '';
                         return (
-                          <option key={rfq.id} value={projId}>
-                            #{code}-{rfq.project_name}
+                          <option key={rfq.id} value={projId} disabled={!projId}>
+                            #{code}-{rfq.project_name}{!projId ? ' (Unsynced)' : ''}
                           </option>
                         );
                       })}

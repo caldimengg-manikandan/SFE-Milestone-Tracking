@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Calculator,
@@ -9,137 +10,149 @@ import {
   FileSpreadsheet,
   Settings,
   ArrowUpRight,
-  Sparkles
+  Sparkles,
+  Search,
+  Download,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
+import { projectAPI, rfqAPI } from '../services/api';
 
 export default function EstimationSummary({ isEmbedded = false, onEditSection }) {
   const navigate = useNavigate();
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // EMBEDDED SINGLE-PROJECT SUMMARY VIEW (Existing Logic)
+  // ───────────────────────────────────────────────────────────────────────────
+  
   // --- Load localStorage values ---
-  const projectInfo = JSON.parse(localStorage.getItem('sfe_est_project') || '{}');
-  const bidEnquiry = JSON.parse(localStorage.getItem('sfe_est_bid_enquiry') || '{}');
-  const estimationSections = JSON.parse(localStorage.getItem('sfe_est_sections') || '{}');
+  const activeProjectInfo = JSON.parse(localStorage.getItem('sfe_est_project') || '{}');
+  const activeBidEnquiry = JSON.parse(localStorage.getItem('sfe_est_bid_enquiry') || '{}');
+  const activeEstimationSections = JSON.parse(localStorage.getItem('sfe_est_sections') || '{}');
 
-  // --- Calculations mirroring EstimationModel ---
-  const millWeightVal = Number(bidEnquiry.millWeight) || 0;
-  const millAmountVal = Number(bidEnquiry.millAmount) || 0;
-  const millTons = millWeightVal / 2000;
+  // --- Calculations for Single Project ---
+  const activeMillWeightVal = Number(activeBidEnquiry.millWeight) || 0;
+  const activeMillAmountVal = Number(activeBidEnquiry.millAmount) || 0;
+  const activeMillTons = activeMillWeightVal / 2000;
 
-  const warehouseWeightVal = Number(bidEnquiry.warehouseWeight) || 0;
-  const warehouseAmountVal = Number(bidEnquiry.warehouseAmount) || 0;
-  const warehouseTons = warehouseWeightVal / 2000;
+  const activeWarehouseWeightVal = Number(activeBidEnquiry.warehouseWeight) || 0;
+  const activeWarehouseAmountVal = Number(activeBidEnquiry.warehouseAmount) || 0;
+  const activeWarehouseTons = activeWarehouseWeightVal / 2000;
 
-  const totalTons = millTons + warehouseTons;
+  const activeTotalTons = activeMillTons + activeWarehouseTons;
 
-  const scrapPercentVal = Number(bidEnquiry.scrapPercent) !== undefined && bidEnquiry.scrapPercent !== '' ? Number(bidEnquiry.scrapPercent) : 5.0;
-  const scrapAmount = (millAmountVal + warehouseAmountVal) * scrapPercentVal / 100;
+  const activeScrapPercentVal = Number(activeBidEnquiry.scrapPercent) !== undefined && activeBidEnquiry.scrapPercent !== '' ? Number(activeBidEnquiry.scrapPercent) : 5.0;
+  const activeScrapAmount = (activeMillAmountVal + activeWarehouseAmountVal) * activeScrapPercentVal / 100;
 
-  const boltQtyVal = Number(bidEnquiry.boltQty) || 0;
-  const boltRateVal = Number(bidEnquiry.boltRate) !== undefined && bidEnquiry.boltRate !== '' ? Number(bidEnquiry.boltRate) : 1.75;
-  const boltAmount = boltQtyVal * boltRateVal;
+  const activeBoltQtyVal = Number(activeBidEnquiry.boltQty) || 0;
+  const activeBoltRateVal = Number(activeBidEnquiry.boltRate) !== undefined && activeBidEnquiry.boltRate !== '' ? Number(activeBidEnquiry.boltRate) : 1.75;
+  const activeBoltAmount = activeBoltQtyVal * activeBoltRateVal;
 
-  const paintQtyVal = Number(bidEnquiry.paintQty) || 0;
-  const paintRateVal = Number(bidEnquiry.paintRate) !== undefined && bidEnquiry.paintRate !== '' ? Number(bidEnquiry.paintRate) : 22.20;
-  const paintAmount = paintQtyVal * paintRateVal;
+  const activePaintQtyVal = Number(activeBidEnquiry.paintQty) || 0;
+  const activePaintRateVal = Number(activeBidEnquiry.paintRate) !== undefined && activeBidEnquiry.paintRate !== '' ? Number(activeBidEnquiry.paintRate) : 22.20;
+  const activePaintAmount = activePaintQtyVal * activePaintRateVal;
 
-  const galvanizingWeightVal = Number(bidEnquiry.galvanizingWeight) || 0;
-  const galvanizingRateVal = Number(bidEnquiry.galvanizingRate) !== undefined && bidEnquiry.galvanizingRate !== '' ? Number(bidEnquiry.galvanizingRate) : 0.40;
-  const adjustedGalvanizedWeight = galvanizingWeightVal * 1.05;
-  const galvanizingAmount = adjustedGalvanizedWeight * galvanizingRateVal;
+  const activeGalvanizingWeightVal = Number(activeBidEnquiry.galvanizingWeight) || 0;
+  const activeGalvanizingRateVal = Number(activeBidEnquiry.galvanizingRate) !== undefined && activeBidEnquiry.galvanizingRate !== '' ? Number(activeBidEnquiry.galvanizingRate) : 0.40;
+  const activeAdjustedGalvanizedWeight = activeGalvanizingWeightVal * 1.05;
+  const activeGalvanizingAmount = activeAdjustedGalvanizedWeight * activeGalvanizingRateVal;
 
-  const miscSubtotal = Array.isArray(bidEnquiry.miscItems) 
-    ? bidEnquiry.miscItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+  const activeMiscSubtotal = Array.isArray(activeBidEnquiry.miscItems) 
+    ? activeBidEnquiry.miscItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
     : 0;
 
-  const totalMaterialDirectCosts = millAmountVal + warehouseAmountVal + scrapAmount + boltAmount + paintAmount + galvanizingAmount + miscSubtotal;
-  const taxPercentVal = Number(bidEnquiry.taxPercent) !== undefined && bidEnquiry.taxPercent !== '' ? Number(bidEnquiry.taxPercent) : 6.0;
-  const materialUseTaxAmount = totalMaterialDirectCosts * (taxPercentVal / 100);
-  const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
+  const activeTotalMaterialDirectCosts = activeMillAmountVal + activeWarehouseAmountVal + activeScrapAmount + activeBoltAmount + activePaintAmount + activeGalvanizingAmount + activeMiscSubtotal;
+  const activeTaxPercentVal = Number(activeBidEnquiry.taxPercent) !== undefined && activeBidEnquiry.taxPercent !== '' ? Number(activeBidEnquiry.taxPercent) : 6.0;
+  const activeMaterialUseTaxAmount = activeTotalMaterialDirectCosts * (activeTaxPercentVal / 100);
+  const activeTotalMaterialCost = activeTotalMaterialDirectCosts + activeMaterialUseTaxAmount;
 
-  const plantFabricationHoursVal = Number(estimationSections.plantFabricationHours) || 0;
-  const miscLaborHoursVal = Number(estimationSections.miscLaborHours) || 0;
-  const miscLaborOtherHoursVal = Number(estimationSections.miscLaborOtherHours) || 0;
-  const miscLaborOther2HoursVal = Number(estimationSections.miscLaborOther2Hours) || 0;
-  const totalLaborHours = plantFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
-  const hourlyLaborRateVal = Number(estimationSections.hourlyLaborRate) !== undefined && estimationSections.hourlyLaborRate !== '' ? Number(estimationSections.hourlyLaborRate) : 60.0;
-  const totalDirectplantCost = totalLaborHours * hourlyLaborRateVal;
+  const activePlantFabricationHoursVal = Number(activeEstimationSections.plantFabricationHours) || 0;
+  const activeMiscLaborHoursVal = Number(activeEstimationSections.miscLaborHours) || 0;
+  const activeMiscLaborOtherHoursVal = Number(activeEstimationSections.miscLaborOtherHours) || 0;
+  const activeMiscLaborOther2HoursVal = Number(activeEstimationSections.miscLaborOther2Hours) || 0;
+  const activeTotalLaborHours = activePlantFabricationHoursVal + activeMiscLaborHoursVal + activeMiscLaborOtherHoursVal + activeMiscLaborOther2HoursVal;
+  const activeHourlyLaborRateVal = Number(activeEstimationSections.hourlyLaborRate) !== undefined && activeEstimationSections.hourlyLaborRate !== '' ? Number(activeEstimationSections.hourlyLaborRate) : 60.0;
+  const activeTotalDirectplantCost = activeTotalLaborHours * activeHourlyLaborRateVal;
 
-  const numTrucksVal = Number(estimationSections.numTrucks) !== undefined && estimationSections.numTrucks !== '' ? Number(estimationSections.numTrucks) : 3;
-  const hoursPerTruckVal = Number(estimationSections.hoursPerTruck) !== undefined && estimationSections.hoursPerTruck !== '' ? Number(estimationSections.hoursPerTruck) : 3;
-  const galvanizingTrucksVal = Number(estimationSections.galvanizingTrucks) !== undefined && estimationSections.galvanizingTrucks !== '' ? Number(estimationSections.galvanizingTrucks) : 5;
-  const galvHoursPerTruckVal = Number(estimationSections.galvHoursPerTruck) !== undefined && estimationSections.galvHoursPerTruck !== '' ? Number(estimationSections.galvHoursPerTruck) : 5.0;
-  const shippingRateVal = Number(estimationSections.shippingRate) !== undefined && estimationSections.shippingRate !== '' ? Number(estimationSections.shippingRate) : 195.0;
+  const activeNumTrucksVal = Number(activeEstimationSections.numTrucks) !== undefined && activeEstimationSections.numTrucks !== '' ? Number(activeEstimationSections.numTrucks) : 3;
+  const activeHoursPerTruckVal = Number(activeEstimationSections.hoursPerTruck) !== undefined && activeEstimationSections.hoursPerTruck !== '' ? Number(activeEstimationSections.hoursPerTruck) : 3;
+  const activeGalvanizingTrucksVal = Number(activeEstimationSections.galvanizingTrucks) !== undefined && activeEstimationSections.galvanizingTrucks !== '' ? Number(activeEstimationSections.galvanizingTrucks) : 5;
+  const activeGalvHoursPerTruckVal = Number(activeEstimationSections.galvHoursPerTruck) !== undefined && activeEstimationSections.galvHoursPerTruck !== '' ? Number(activeEstimationSections.galvHoursPerTruck) : 5.0;
+  const activeShippingRateVal = Number(activeEstimationSections.shippingRate) !== undefined && activeEstimationSections.shippingRate !== '' ? Number(activeEstimationSections.shippingRate) : 195.0;
 
-  const freightOutCost = numTrucksVal * hoursPerTruckVal;
-  const freightGalvanizingCost = galvanizingTrucksVal * galvHoursPerTruckVal;
-  const totalShippingHours = freightOutCost + freightGalvanizingCost;
-  const totalShippingCost = totalShippingHours * shippingRateVal;
+  const activeFreightOutCost = activeNumTrucksVal * activeHoursPerTruckVal;
+  const activeFreightGalvanizingCost = activeGalvanizingTrucksVal * activeGalvHoursPerTruckVal;
+  const activeTotalShippingHours = activeFreightOutCost + activeFreightGalvanizingCost;
+  const activeTotalShippingCost = activeTotalShippingHours * activeShippingRateVal;
 
-  const subletDetailingCostVal = Number(estimationSections.subletDetailingCost) || 0;
-  const peStampCostVal = Number(estimationSections.peStampCost) || 0;
-  const otherDirectCostsVal = Number(estimationSections.otherDirectCosts) || 0;
-  const totalDirectDraftingCost = subletDetailingCostVal + peStampCostVal;
+  const activeSubletDetailingCostVal = Number(activeEstimationSections.subletDetailingCost) || 0;
+  const activePeStampCostVal = Number(activeEstimationSections.peStampCost) || 0;
+  const activeOtherDirectCostsVal = Number(activeEstimationSections.otherDirectCosts) || 0;
+  const activeTotalDirectDraftingCost = activeSubletDetailingCostVal + activePeStampCostVal;
 
-  const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
+  const activeTotalDirectCosts = activeTotalMaterialCost + activeTotalDirectplantCost + activeTotalShippingCost + activeTotalDirectDraftingCost + activeOtherDirectCostsVal;
 
-  const overheadPercentVal = Number(estimationSections.overheadPercent) !== undefined && estimationSections.overheadPercent !== '' ? Number(estimationSections.overheadPercent) : 12.0;
-  const directCostOverhead = Math.round(totalDirectCosts * (overheadPercentVal / 100) * 100) / 100;
-  const bidAmountOnDirectCosts = Math.round(totalDirectCosts) + directCostOverhead;
+  const activeOverheadPercentVal = Number(activeEstimationSections.overheadPercent) !== undefined && activeEstimationSections.overheadPercent !== '' ? Number(activeEstimationSections.overheadPercent) : 12.0;
+  const activeDirectCostOverhead = Math.round(activeTotalDirectCosts * (activeOverheadPercentVal / 100) * 100) / 100;
+  const activeBidAmountOnDirectCosts = Math.round(activeTotalDirectCosts) + activeDirectCostOverhead;
 
-  const steelJoistCostVal = Number(estimationSections.steelJoistCost) || 0;
-  const deckCostVal = Number(estimationSections.deckCost) || 0;
-  const subletErectionCostVal = Number(estimationSections.subletErectionCost) || 0;
-  const miscMetalCostVal = Number(estimationSections.miscMetalCost) || 0;
-  const oshaLinearFeetVal = Number(estimationSections.oshaLinearFeet) || 0;
-  const oshaPostsCost = (oshaLinearFeetVal / 5) * 50;
-  const additionalSafetyCostsVal = Number(estimationSections.additionalSafetyCosts) || 0;
-  const ccipCostsVal = Number(estimationSections.ccipCosts) || 0;
-  const safetyCost = additionalSafetyCostsVal + ccipCostsVal;
-  const leedSubmissionCostVal = Number(estimationSections.leedSubmissionCost) || 0;
-  const suppliedMaterialCostVal = Number(estimationSections.suppliedMaterialCost) || 0;
-  const useTaxPercentVal = Number(estimationSections.useTaxPercent) !== undefined && estimationSections.useTaxPercent !== '' ? Number(estimationSections.useTaxPercent) : 6.0;
+  const activeSteelJoistCostVal = Number(activeEstimationSections.steelJoistCost) || 0;
+  const activeDeckCostVal = Number(activeEstimationSections.deckCost) || 0;
+  const activeSubletErectionCostVal = Number(activeEstimationSections.subletErectionCost) || 0;
+  const activeMiscMetalCostVal = Number(activeEstimationSections.miscMetalCost) || 0;
+  const activeOshaLinearFeetVal = Number(activeEstimationSections.oshaLinearFeet) || 0;
+  const activeOshaPostsCost = (activeOshaLinearFeetVal / 5) * 50;
+  const activeAdditionalSafetyCostsVal = Number(activeEstimationSections.additionalSafetyCosts) || 0;
+  const activeCcipCostsVal = Number(activeEstimationSections.ccipCosts) || 0;
+  const activeSafetyCost = activeAdditionalSafetyCostsVal + activeCcipCostsVal;
+  const activeLeedSubmissionCostVal = Number(activeEstimationSections.leedSubmissionCost) || 0;
+  const activeSuppliedMaterialCostVal = Number(activeEstimationSections.suppliedMaterialCost) || 0;
+  const activeUseTaxPercentVal = Number(activeEstimationSections.useTaxPercent) !== undefined && activeEstimationSections.useTaxPercent !== '' ? Number(activeEstimationSections.useTaxPercent) : 6.0;
 
-  const totalDirectBuyoutCosts = steelJoistCostVal + deckCostVal + subletErectionCostVal + miscMetalCostVal + oshaPostsCost + safetyCost + leedSubmissionCostVal;
-  const useTax = suppliedMaterialCostVal * (useTaxPercentVal / 100);
-  const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
+  const activeTotalDirectBuyoutCosts = activeSteelJoistCostVal + activeDeckCostVal + activeSubletErectionCostVal + activeMiscMetalCostVal + activeOshaPostsCost + activeSafetyCost + activeLeedSubmissionCostVal;
+  const activeUseTax = activeSuppliedMaterialCostVal * (activeUseTaxPercentVal / 100);
+  const activeTotalBuyoutCosts = activeTotalDirectBuyoutCosts + activeUseTax;
 
-  const buyoutOverheadPercentVal = Number(estimationSections.buyoutOverheadPercent) !== undefined && estimationSections.buyoutOverheadPercent !== '' ? Number(estimationSections.buyoutOverheadPercent) : 12.0;
-  const buyoutOverhead = Math.round(totalBuyoutCosts) * (buyoutOverheadPercentVal / 100);
-  const bidAmountOnBuyouts = Math.round(totalBuyoutCosts) + buyoutOverhead;
+  const activeBuyoutOverheadPercentVal = Number(activeEstimationSections.buyoutOverheadPercent) !== undefined && activeEstimationSections.buyoutOverheadPercent !== '' ? Number(activeEstimationSections.buyoutOverheadPercent) : 12.0;
+  const activeBuyoutOverhead = Math.round(activeTotalBuyoutCosts) * (activeBuyoutOverheadPercentVal / 100);
+  const activeBidAmountOnBuyouts = Math.round(activeTotalBuyoutCosts) + activeBuyoutOverhead;
 
-  const profitPercentVal = Number(estimationSections.profitPercent) !== undefined && estimationSections.profitPercent !== '' ? Number(estimationSections.profitPercent) : 10.0;
-  const miscChargesVal = Number(estimationSections.miscCharges) || 0;
+  const activeProfitPercentVal = Number(activeEstimationSections.profitPercent) !== undefined && activeEstimationSections.profitPercent !== '' ? Number(activeEstimationSections.profitPercent) : 10.0;
+  const activeMiscChargesVal = Number(activeEstimationSections.miscCharges) || 0;
 
-  const totalAmountBeforeProfit = Math.round(bidAmountOnDirectCosts) + Math.round(bidAmountOnBuyouts);
-  const profitAmount = totalAmountBeforeProfit * (profitPercentVal / 100);
-  const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
-  const finalBidAmount = finalAmountBeforeMisc + miscChargesVal;
+  const activeTotalAmountBeforeProfit = Math.round(activeBidAmountOnDirectCosts) + Math.round(activeBidAmountOnBuyouts);
+  const activeProfitAmount = activeTotalAmountBeforeProfit * (activeProfitPercentVal / 100);
+  const activeFinalAmountBeforeMisc = activeTotalAmountBeforeProfit + activeProfitAmount;
+  const activeFinalBidAmount = activeFinalAmountBeforeMisc + activeMiscChargesVal;
 
-  // --- miscellaneous Calculations ---
-  const miscellaneousLaborRateVal = Number(estimationSections.miscellaneousLaborRate) !== undefined && estimationSections.miscellaneousLaborRate !== '' ? Number(estimationSections.miscellaneousLaborRate) : 85.0;
-  const miscellaneousErectionMultiplierVal = Number(estimationSections.miscellaneousErectionMultiplier) !== undefined && estimationSections.miscellaneousErectionMultiplier !== '' ? Number(estimationSections.miscellaneousErectionMultiplier) : 1.12;
-  const miscellaneousJoistDeckMultiplierVal = Number(estimationSections.miscellaneousJoistDeckMultiplier) !== undefined && estimationSections.miscellaneousJoistDeckMultiplier !== '' ? Number(estimationSections.miscellaneousJoistDeckMultiplier) : 1.12;
-  const miscellaneousOtherCostMultiplierVal = Number(estimationSections.miscellaneousOtherCostMultiplier) !== undefined && estimationSections.miscellaneousOtherCostMultiplier !== '' ? Number(estimationSections.miscellaneousOtherCostMultiplier) : 1.12;
+  // --- active miscellaneous Calculations ---
+  const activeMiscellaneousLaborRateVal = Number(activeEstimationSections.miscellaneousLaborRate) !== undefined && activeEstimationSections.miscellaneousLaborRate !== '' ? Number(activeEstimationSections.miscellaneousLaborRate) : 85.0;
+  const activeMiscellaneousErectionMultiplierVal = Number(activeEstimationSections.miscellaneousErectionMultiplier) !== undefined && activeEstimationSections.miscellaneousErectionMultiplier !== '' ? Number(activeEstimationSections.miscellaneousErectionMultiplier) : 1.12;
+  const activeMiscellaneousJoistDeckMultiplierVal = Number(activeEstimationSections.miscellaneousJoistDeckMultiplier) !== undefined && activeEstimationSections.miscellaneousJoistDeckMultiplier !== '' ? Number(activeEstimationSections.miscellaneousJoistDeckMultiplier) : 1.12;
+  const activeMiscellaneousOtherCostMultiplierVal = Number(activeEstimationSections.miscellaneousOtherCostMultiplier) !== undefined && activeEstimationSections.miscellaneousOtherCostMultiplier !== '' ? Number(activeEstimationSections.miscellaneousOtherCostMultiplier) : 1.12;
 
-  const miscellaneousLaborCost = totalLaborHours * miscellaneousLaborRateVal;
-  const miscellaneousMaterialTotal = totalMaterialCost;
-  const miscellaneousTruckingTotal = totalShippingCost;
-  const miscellaneousDetailingEngineeringTotal = totalDirectDraftingCost;
-  const miscellaneousSubTotal = miscellaneousLaborCost + miscellaneousMaterialTotal + miscellaneousTruckingTotal + miscellaneousDetailingEngineeringTotal;
+  const activeMiscellaneousLaborCost = activeTotalLaborHours * activeMiscellaneousLaborRateVal;
+  const activeMiscellaneousMaterialTotal = activeTotalMaterialCost;
+  const activeMiscellaneousTruckingTotal = activeTotalShippingCost;
+  const activeMiscellaneousDetailingEngineeringTotal = activeTotalDirectDraftingCost;
+  const activeMiscellaneousSubTotal = activeMiscellaneousLaborCost + activeMiscellaneousMaterialTotal + activeMiscellaneousTruckingTotal + activeMiscellaneousDetailingEngineeringTotal;
 
-  const miscellaneousErectionTotal = subletErectionCostVal * miscellaneousErectionMultiplierVal;
+  const activeMiscellaneousErectionTotal = activeSubletErectionCostVal * activeMiscellaneousErectionMultiplierVal;
 
-  const miscellaneousJoistDeckCost = steelJoistCostVal + deckCostVal;
-  const taxMultiplier = 1 + useTaxPercentVal / 100;
-  const miscellaneousJoistDeckTotal = (miscellaneousJoistDeckCost * taxMultiplier) * miscellaneousJoistDeckMultiplierVal;
+  const activeMiscellaneousJoistDeckCost = activeSteelJoistCostVal + activeDeckCostVal;
+  const activeTaxMultiplier = 1 + activeUseTaxPercentVal / 100;
+  const activeMiscellaneousJoistDeckTotal = (activeMiscellaneousJoistDeckCost * activeTaxMultiplier) * activeMiscellaneousJoistDeckMultiplierVal;
 
-  const miscellaneousOtherCostsSum = miscMetalCostVal + safetyCost + leedSubmissionCostVal;
-  const miscellaneousOtherCostsTotal = miscellaneousOtherCostsSum * miscellaneousOtherCostMultiplierVal;
+  const activeMiscellaneousOtherCostsSum = activeMiscMetalCostVal + activeSafetyCost + activeLeedSubmissionCostVal;
+  const activeMiscellaneousOtherCostsTotal = activeMiscellaneousOtherCostsSum * activeMiscellaneousOtherCostMultiplierVal;
 
-  const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
-  const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercentVal / 100);
-  const miscellaneousMiscellaneousTotal = miscChargesVal;
-  const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscellaneousMiscellaneousTotal;
+  const activeMiscellaneousTotalBeforeProfit = activeMiscellaneousSubTotal + activeMiscellaneousErectionTotal + activeMiscellaneousJoistDeckTotal + activeMiscellaneousOtherCostsTotal;
+  const activeMiscellaneousProfitAmount = activeMiscellaneousTotalBeforeProfit * (activeProfitPercentVal / 100);
+  const activeMiscellaneousMiscellaneousTotal = activeMiscChargesVal;
+  const activeMiscellaneousFinalPrice = activeMiscellaneousTotalBeforeProfit + activeMiscellaneousProfitAmount + activeMiscellaneousMiscellaneousTotal;
 
   const handleEditSection = (sectionKey) => {
     if (isEmbedded && onEditSection) {
@@ -149,54 +162,492 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     }
   };
 
-  const hasTons = totalTons > 0;
+  const activeHasTons = activeTotalTons > 0;
 
+  // ───────────────────────────────────────────────────────────────────────────
+  // ALL-PROJECTS REPORT TABLE VIEW (Standalone Module)
+  // ───────────────────────────────────────────────────────────────────────────
+  const [projects, setProjects] = useState([]);
+  const [wonRfqs, setWonRfqs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
+  useEffect(() => {
+    if (isEmbedded) return; // Skip loading if embedded in modal
+
+    const fetchAllData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        const [projRes, rfqRes] = await Promise.all([
+          projectAPI.getAll({ won_rfq: 'true' }),
+          rfqAPI.getAll({ won_lost: 'Won' })
+        ]);
+
+        const projData = projRes.data.results || projRes.data;
+        const rfqData = rfqRes.data.results || rfqRes.data;
+
+        if (Array.isArray(projData)) setProjects(projData);
+        if (Array.isArray(rfqData)) {
+          // Sort RFQs descending by job number
+          const sorted = [...rfqData].sort((a, b) => (b.sfe_job_no || 0) - (a.sfe_job_no || 0));
+          setWonRfqs(sorted);
+        }
+      } catch (err) {
+        console.error('Failed to fetch estimation summary data:', err);
+        setError('Failed to load projects. Please verify backend service connectivity.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAllData();
+  }, [isEmbedded]);
+
+  // Helper to compute all 9 required estimation totals for a given project record
+  const calculateEstimationValues = (project) => {
+    const estData = project.estimation_data || {};
+    const bidEnquiry = estData.bidEnquiry || {};
+    const estimationSections = estData.estimationSections || {};
+
+    // 1. Material Section Calculations
+    const millWeight = Number(bidEnquiry.millWeight) || 0;
+    const millAmount = Number(bidEnquiry.millAmount) || 0;
+    const warehouseWeight = Number(bidEnquiry.warehouseWeight) || 0;
+    const warehouseAmount = Number(bidEnquiry.warehouseAmount) || 0;
+    
+    const scrapPercent = Number(bidEnquiry.scrapPercent) !== undefined && bidEnquiry.scrapPercent !== '' ? Number(bidEnquiry.scrapPercent) : 5.0;
+    const scrapAmount = (millAmount + warehouseAmount) * scrapPercent / 100;
+
+    const boltQty = Number(bidEnquiry.boltQty) || 0;
+    const boltRate = Number(bidEnquiry.boltRate) !== undefined && bidEnquiry.boltRate !== '' ? Number(bidEnquiry.boltRate) : 1.75;
+    const boltAmount = boltQty * boltRate;
+
+    const paintQty = Number(bidEnquiry.paintQty) || 0;
+    const paintRate = Number(bidEnquiry.paintRate) !== undefined && bidEnquiry.paintRate !== '' ? Number(bidEnquiry.paintRate) : 22.20;
+    const paintAmount = paintQty * paintRate;
+
+    const galvanizingWeight = Number(bidEnquiry.galvanizingWeight) || 0;
+    const galvanizingRate = Number(bidEnquiry.galvanizingRate) !== undefined && bidEnquiry.galvanizingRate !== '' ? Number(bidEnquiry.galvanizingRate) : 0.40;
+    const galvanizingAmount = (galvanizingWeight * 1.05) * galvanizingRate;
+
+    const miscSubtotal = Array.isArray(bidEnquiry.miscItems) 
+      ? bidEnquiry.miscItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+      : 0;
+
+    const totalMaterialDirectCosts = millAmount + warehouseAmount + scrapAmount + boltAmount + paintAmount + galvanizingAmount + miscSubtotal;
+    const taxPercent = Number(bidEnquiry.taxPercent) !== undefined && bidEnquiry.taxPercent !== '' ? Number(bidEnquiry.taxPercent) : 6.0;
+    const materialUseTaxAmount = totalMaterialDirectCosts * (taxPercent / 100);
+    const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
+
+    // 2. plant Labor & Shipping Calculations
+    const plantFabricationHours = Number(estimationSections.plantFabricationHours) || 0;
+    const miscLaborHours = Number(estimationSections.miscLaborHours) || 0;
+    const miscLaborOtherHours = Number(estimationSections.miscLaborOtherHours) || 0;
+    const miscLaborOther2Hours = Number(estimationSections.miscLaborOther2Hours) || 0;
+    const totalLaborHours = plantFabricationHours + miscLaborHours + miscLaborOtherHours + miscLaborOther2Hours;
+    const hourlyLaborRate = Number(estimationSections.hourlyLaborRate) !== undefined && estimationSections.hourlyLaborRate !== '' ? Number(estimationSections.hourlyLaborRate) : 60.0;
+    const totalDirectplantCost = totalLaborHours * hourlyLaborRate;
+
+    const numTrucks = Number(estimationSections.numTrucks) !== undefined && estimationSections.numTrucks !== '' ? Number(estimationSections.numTrucks) : 3;
+    const hoursPerTruck = Number(estimationSections.hoursPerTruck) !== undefined && estimationSections.hoursPerTruck !== '' ? Number(estimationSections.hoursPerTruck) : 3;
+    const galvanizingTrucks = Number(estimationSections.galvanizingTrucks) !== undefined && estimationSections.galvanizingTrucks !== '' ? Number(estimationSections.galvanizingTrucks) : 5;
+    const galvHoursPerTruck = Number(estimationSections.galvHoursPerTruck) !== undefined && estimationSections.galvHoursPerTruck !== '' ? Number(estimationSections.galvHoursPerTruck) : 5.0;
+    const shippingRate = Number(estimationSections.shippingRate) !== undefined && estimationSections.shippingRate !== '' ? Number(estimationSections.shippingRate) : 195.0;
+
+    const totalShippingHours = (numTrucks * hoursPerTruck) + (galvanizingTrucks * galvHoursPerTruck);
+    const totalShippingCost = totalShippingHours * shippingRate;
+    const plantLaborAndShip = totalDirectplantCost + totalShippingCost;
+
+    // 3. Drafting & Directs Calculations
+    const subletDetailingCost = Number(estimationSections.subletDetailingCost) || 0;
+    const peStampCost = Number(estimationSections.peStampCost) || 0;
+    const otherDirectCosts = Number(estimationSections.otherDirectCosts) || 0;
+    const totalDirectDraftingCost = subletDetailingCost + peStampCost;
+    const draftingAndDirects = totalDirectDraftingCost + otherDirectCosts;
+
+    // 4. Overhead on Directs Calculations
+    const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCosts;
+    const overheadPercent = Number(estimationSections.overheadPercent) !== undefined && estimationSections.overheadPercent !== '' ? Number(estimationSections.overheadPercent) : 12.0;
+    const directCostOverhead = Math.round(totalDirectCosts * (overheadPercent / 100) * 100) / 100;
+    const bidAmountOnDirectCosts = Math.round(totalDirectCosts) + directCostOverhead;
+
+    // 5. Buyouts Calculations
+    const steelJoistCost = Number(estimationSections.steelJoistCost) || 0;
+    const deckCost = Number(estimationSections.deckCost) || 0;
+    const subletErectionCost = Number(estimationSections.subletErectionCost) || 0;
+    const miscMetalCost = Number(estimationSections.miscMetalCost) || 0;
+    const oshaLinearFeet = Number(estimationSections.oshaLinearFeet) || 0;
+    const oshaPostsCost = (oshaLinearFeet / 5) * 50;
+    const additionalSafetyCosts = Number(estimationSections.additionalSafetyCosts) || 0;
+    const ccipCosts = Number(estimationSections.ccipCosts) || 0;
+    const safetyCost = additionalSafetyCosts + ccipCosts;
+    const leedSubmissionCost = Number(estimationSections.leedSubmissionCost) || 0;
+    const suppliedMaterialCost = Number(estimationSections.suppliedMaterialCost) || 0;
+    const useTaxPercent = Number(estimationSections.useTaxPercent) !== undefined && estimationSections.useTaxPercent !== '' ? Number(estimationSections.useTaxPercent) : 6.0;
+
+    const totalDirectBuyoutCosts = steelJoistCost + deckCost + subletErectionCost + miscMetalCost + oshaPostsCost + safetyCost + leedSubmissionCost;
+    const useTax = suppliedMaterialCost * (useTaxPercent / 100);
+    const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
+
+    // 6. Overhead on Buyouts Calculations
+    const buyoutOverheadPercent = Number(estimationSections.buyoutOverheadPercent) !== undefined && estimationSections.buyoutOverheadPercent !== '' ? Number(estimationSections.buyoutOverheadPercent) : 12.0;
+    const buyoutOverhead = Math.round(totalBuyoutCosts) * (buyoutOverheadPercent / 100);
+    const bidAmountOnBuyouts = Math.round(totalBuyoutCosts) + buyoutOverhead;
+
+    // 7. Profit & Misc Calculations
+    const profitPercent = Number(estimationSections.profitPercent) !== undefined && estimationSections.profitPercent !== '' ? Number(estimationSections.profitPercent) : 10.0;
+    const miscCharges = Number(estimationSections.miscCharges) || 0;
+
+    const totalAmountBeforeProfit = Math.round(bidAmountOnDirectCosts) + Math.round(bidAmountOnBuyouts);
+    const profitAmount = totalAmountBeforeProfit * (profitPercent / 100);
+    const finalAmountBeforeMisc = totalAmountBeforeProfit + profitAmount;
+    const finalBidAmount = finalAmountBeforeMisc + miscCharges;
+    const profitAndMisc = profitAmount + miscCharges;
+
+    // 8. miscellaneous Summary Total Calculations
+    const miscellaneousLaborRate = Number(estimationSections.miscellaneousLaborRate) !== undefined && estimationSections.miscellaneousLaborRate !== '' ? Number(estimationSections.miscellaneousLaborRate) : 85.0;
+    const miscellaneousErectionMultiplier = Number(estimationSections.miscellaneousErectionMultiplier) !== undefined && estimationSections.miscellaneousErectionMultiplier !== '' ? Number(estimationSections.miscellaneousErectionMultiplier) : 1.12;
+    const miscellaneousJoistDeckMultiplier = Number(estimationSections.miscellaneousJoistDeckMultiplier) !== undefined && estimationSections.miscellaneousJoistDeckMultiplier !== '' ? Number(estimationSections.miscellaneousJoistDeckMultiplier) : 1.12;
+    const miscellaneousOtherCostMultiplier = Number(estimationSections.miscellaneousOtherCostMultiplier) !== undefined && estimationSections.miscellaneousOtherCostMultiplier !== '' ? Number(estimationSections.miscellaneousOtherCostMultiplier) : 1.12;
+
+    const miscellaneousLaborCost = totalLaborHours * miscellaneousLaborRate;
+    const miscellaneousMaterialTotal = totalMaterialCost;
+    const miscellaneousTruckingTotal = totalShippingCost;
+    const miscellaneousDetailingEngineeringTotal = totalDirectDraftingCost;
+    const miscellaneousSubTotal = miscellaneousLaborCost + miscellaneousMaterialTotal + miscellaneousTruckingTotal + miscellaneousDetailingEngineeringTotal;
+    
+    const miscellaneousErectionTotal = subletErectionCost * miscellaneousErectionMultiplier;
+    const taxMultiplier = 1 + useTaxPercent / 100;
+    const miscellaneousJoistDeckTotal = ((steelJoistCost + deckCost) * taxMultiplier) * miscellaneousJoistDeckMultiplier;
+    const miscellaneousOtherCostsTotal = (miscMetalCost + safetyCost + leedSubmissionCost) * miscellaneousOtherCostMultiplier;
+    const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
+    
+    const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + (miscellaneousTotalBeforeProfit * (profitPercent / 100)) + miscCharges;
+
+    return {
+      finalBidAmount,            // Standard Grand Total
+      miscellaneousFinalPrice,   // Misc Summary Total
+      totalMaterialCost,         // 1. Material Section
+      plantLaborAndShip,         // 2. plant Labor & Ship
+      draftingAndDirects,        // 3. Drafting & Directs
+      directCostOverhead,        // 4. Overhead on Directs
+      totalBuyoutCosts,          // 5. Buyouts Section
+      buyoutOverhead,            // 6. Overhead on Buyouts
+      profitAndMisc              // 7. Profit & Misc
+    };
+  };
+
+  const handleLoadProjectInModel = (proj) => {
+    const info = {
+      projectId: proj.id,
+      project: proj.name,
+      quoteNum: proj.code || '',
+      salesman: proj.project_manager_name || '',
+      startDate: proj.erection_date || '',
+      location: proj.customer_name || ''
+    };
+    // Save project specs info to trigger sync on mount in EstimationModel
+    localStorage.setItem('sfe_est_project', JSON.stringify(info));
+    // Clear out calculated fields so that mount fetches latest state from Project database
+    localStorage.removeItem('sfe_est_bid_enquiry');
+    localStorage.removeItem('sfe_est_sections');
+    
+    navigate('/estimation');
+  };
+
+  const formatCurrency = (val) => {
+    if (val === undefined || val === null || isNaN(val)) return '$0.00';
+    return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  };
+
+  const exportToCSV = () => {
+    const headers = [
+      "Project Name",
+      "Standard Grand Total",
+      "Misc Summary Total",
+      "Material Section",
+      "plant Labor & Ship",
+      "Drafting & Directs",
+      "Overhead on Directs",
+      "Buyouts Section",
+      "Overhead on Buyouts",
+      "Profit & Misc"
+    ];
+    
+    const rows = wonRfqs.map(rfq => {
+      const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+      const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
+      const vals = calculateEstimationValues(matched);
+      return [
+        rfq.project_name,
+        vals.finalBidAmount.toFixed(2),
+        vals.miscellaneousFinalPrice.toFixed(2),
+        vals.totalMaterialCost.toFixed(2),
+        vals.plantLaborAndShip.toFixed(2),
+        vals.draftingAndDirects.toFixed(2),
+        vals.directCostOverhead.toFixed(2),
+        vals.totalBuyoutCosts.toFixed(2),
+        vals.buyoutOverhead.toFixed(2),
+        vals.profitAndMisc.toFixed(2)
+      ];
+    });
+
+    const csvContent = [headers, ...rows].map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", "Estimation_Summary_Reports.csv");
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const filteredRfqs = wonRfqs.filter(rfq => {
+    const searchLower = search.toLowerCase();
+    return (
+      (rfq.project_name?.toLowerCase() || '').includes(searchLower) ||
+      (String(rfq.sfe_job_no || '')).includes(searchLower) ||
+      (rfq.quote_no?.toLowerCase() || '').includes(searchLower)
+    );
+  });
+
+  const totalPages = Math.ceil(filteredRfqs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const paginatedRfqs = filteredRfqs.slice(startIndex, startIndex + itemsPerPage);
+
+  if (!isEmbedded) {
+    return (
+      <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6 animate-fade-in">
+        {/* Error notification */}
+        {error && (
+          <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
+            <AlertCircle className="w-5 h-5" />
+            {error}
+          </div>
+        )}
+
+        {/* Header Toolbar */}
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+          <div className="relative flex-1 max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search projects by name, job number or quote number..."
+              value={search}
+              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all font-semibold"
+            />
+            {search && (
+              <button
+                onClick={() => { setSearch(''); setCurrentPage(1); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 text-slate-400"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
+            <button
+              onClick={exportToCSV}
+              disabled={loading || wonRfqs.length === 0}
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all disabled:opacity-50 cursor-pointer"
+            >
+              <Download className="w-4 h-4" /> Export CSV
+            </button>
+            <button
+              onClick={() => navigate('/estimation')}
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all cursor-pointer"
+            >
+              <Calculator className="w-4 h-4" /> Estimation Model
+            </button>
+          </div>
+        </div>
+
+        {/* Report Table Grid */}
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse min-w-[1200px]">
+              <thead>
+                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 min-w-[200px]">Project Name</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Standard Grand Total</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Misc Summary Total</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Material Section</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">plant Labor & Ship</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Drafting & Directs</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Overhead on Directs</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Buyouts Section</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Overhead on Buyouts</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Profit & Misc</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 bg-white text-[12px]">
+                {loading ? (
+                  <tr>
+                    <td colSpan="10" className="py-20 text-center">
+                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
+                      <p className="text-xs font-bold text-slate-400">Loading estimation reports...</p>
+                    </td>
+                  </tr>
+                ) : paginatedRfqs.length > 0 ? (
+                  paginatedRfqs.map((rfq) => {
+                    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+                    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+                    const hasCalc = matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0;
+                    
+                    const vals = matchedProj 
+                      ? calculateEstimationValues(matchedProj) 
+                      : {
+                          finalBidAmount: 0,
+                          miscellaneousFinalPrice: 0,
+                          totalMaterialCost: 0,
+                          plantLaborAndShip: 0,
+                          draftingAndDirects: 0,
+                          directCostOverhead: 0,
+                          totalBuyoutCosts: 0,
+                          buyoutOverhead: 0,
+                          profitAndMisc: 0
+                        };
+
+                    return (
+                      <tr key={rfq.id} className="transition-colors hover:bg-slate-50/50">
+                        <td className="px-2 py-3 border-r border-slate-100 text-slate-800 break-words leading-tight">
+                          <div className="flex flex-col">
+                            {matchedProj ? (
+                              <button
+                                onClick={() => handleLoadProjectInModel(matchedProj)}
+                                className="text-left font-bold text-slate-800 hover:text-amber-600 transition-colors inline-flex items-center gap-1.5 group/proj w-full"
+                                title={hasCalc ? "Edit Calculations in Model" : "Initialize Model Setup"}
+                              >
+                                <span>{rfq.project_name}</span>
+                                <Calculator className={`w-3.5 h-3.5 shrink-0 ${hasCalc ? 'text-amber-500' : 'text-slate-300'} opacity-60 group-hover/proj:opacity-100 transition-opacity`} />
+                              </button>
+                            ) : (
+                              <div className="flex flex-col">
+                                <span className="font-bold text-slate-500 italic">{rfq.project_name}</span>
+                                <span className="text-[9px] text-red-500/80 font-semibold uppercase tracking-wider">Unsynced Project</span>
+                              </div>
+                            )}
+                            <span className="text-[9px] font-mono text-slate-400 mt-0.5">
+                              {rfq.sfe_job_no ? `Job #${rfq.sfe_job_no}` : `Quote ${rfq.quote_no}`}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right font-black text-slate-800">
+                          {formatCurrency(vals.finalBidAmount)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right font-extrabold text-amber-600">
+                          {formatCurrency(vals.miscellaneousFinalPrice)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                          {formatCurrency(vals.totalMaterialCost)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                          {formatCurrency(vals.plantLaborAndShip)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                          {formatCurrency(vals.draftingAndDirects)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-650">
+                          {formatCurrency(vals.directCostOverhead)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                          {formatCurrency(vals.totalBuyoutCosts)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-650">
+                          {formatCurrency(vals.buyoutOverhead)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                          {formatCurrency(vals.profitAndMisc)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                ) : (
+                  <tr>
+                    <td colSpan="10" className="px-6 py-12 text-center text-slate-500 italic">No won RFQ projects matched your criteria.</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              {filteredRfqs.length} {filteredRfqs.length === 1 ? 'Record' : 'Records'} Found
+            </div>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-2">
+                <button
+                  disabled={currentPage === 1}
+                  onClick={() => setCurrentPage(prev => prev - 1)}
+                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+                <div className="flex items-center gap-1">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setCurrentPage(i + 1)}
+                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i + 1 ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200 cursor-pointer'}`}
+                    >
+                      {i + 1}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  disabled={currentPage === totalPages}
+                  onClick={() => setCurrentPage(prev => prev + 1)}
+                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all cursor-pointer"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ───────────────────────────────────────────────────────────────────────────
+  // EMBEDDED SINGLE-PROJECT SUMMARY VIEW GRAPHICS (Original JSX Render)
+  // ───────────────────────────────────────────────────────────────────────────
   return (
     <div className="max-w-7xl mx-auto space-y-6 p-2 animate-fade-in">
-      {/* Header Area */}
-      {!isEmbedded && (
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Estimation Totals Dashboard</h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Visual summary and KPI analysis of all 8 bid estimation sections.
-            </p>
-          </div>
-          <button
-            onClick={() => navigate('/estimation')}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-orange-500/10 hover:shadow-orange-500/20 transition-all cursor-pointer"
-          >
-            <Calculator className="w-4 h-4" />
-            Edit Model Inputs
-          </button>
-        </div>
-      )}
-
       {/* Active Project Details Card */}
       <div className="bg-white rounded-3xl border border-slate-200 shadow-sm p-6 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
         <div>
           <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">Active Project</span>
           <h3 className="text-lg font-black text-slate-800 mt-1">
-            {projectInfo.project ? `#${projectInfo.quoteNum || 'SFE'}-${projectInfo.project}` : 'No project selected'}
+            {activeProjectInfo.project ? `#${activeProjectInfo.quoteNum || 'SFE'}-${activeProjectInfo.project}` : 'No project selected'}
           </h3>
-          <div className="flex flex-wrap gap-x-6 gap-y-1.5 mt-2 text-xs text-slate-500 font-medium">
-            {projectInfo.location && <span>Location: <strong className="text-slate-700">{projectInfo.location}</strong></span>}
-            {projectInfo.date && <span>Date: <strong className="text-slate-700">{projectInfo.date}</strong></span>}
-            {projectInfo.salesman && <span>Salesman: <strong className="text-slate-700">{projectInfo.salesman}</strong></span>}
+          <div className="flex flex-wrap gap-x-6 gap-y-1.5 mt-2 text-xs text-slate-505 font-medium">
+            {activeProjectInfo.location && <span>Location: <strong className="text-slate-700">{activeProjectInfo.location}</strong></span>}
+            {activeProjectInfo.date && <span>Date: <strong className="text-slate-700">{activeProjectInfo.date}</strong></span>}
+            {activeProjectInfo.salesman && <span>Salesman: <strong className="text-slate-700">{activeProjectInfo.salesman}</strong></span>}
           </div>
         </div>
         <div className="flex items-center gap-4 bg-slate-50 border border-slate-100 p-4 rounded-2xl w-full md:w-auto justify-between md:justify-start">
           <div className="text-right">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Estimation Weight</span>
             <span className="text-base font-black text-slate-800">
-              {totalTons.toFixed(3)} <span className="text-xs font-bold text-slate-500">Tons</span>
+              {activeTotalTons.toFixed(3)} <span className="text-xs font-bold text-slate-505">Tons</span>
             </span>
           </div>
           <div className="w-px h-8 bg-slate-200" />
           <div className="text-right">
             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest block">Total Labor Hours</span>
             <span className="text-base font-black text-slate-800">
-              {totalLaborHours} <span className="text-xs font-bold text-slate-500">Hrs</span>
+              {activeTotalLaborHours} <span className="text-xs font-bold text-slate-505">Hrs</span>
             </span>
           </div>
         </div>
@@ -211,10 +662,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
             <div>
               <span className="text-[10px] font-black text-amber-400/90 uppercase tracking-widest block">Standard Grand Total</span>
               <h4 className="text-3xl font-black mt-2 tracking-tight">
-                ${finalBidAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(activeFinalBidAmount)}
               </h4>
               <p className="text-xs text-slate-350 mt-1 font-semibold">
-                Per Ton Rate: ${hasTons ? (finalBidAmount / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                Per Ton Rate: {formatCurrency(activeHasTons ? (activeFinalBidAmount / activeTotalTons) : 0)} /Ton
               </p>
             </div>
             <div className="bg-amber-500/10 border border-amber-500/25 p-3 rounded-2xl">
@@ -240,10 +691,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
             <div>
               <span className="text-[10px] font-black text-amber-100 uppercase tracking-widest block">miscellaneous Summary Total</span>
               <h4 className="text-3xl font-black mt-2 tracking-tight">
-                ${miscellaneousFinalPrice.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                {formatCurrency(activeMiscellaneousFinalPrice)}
               </h4>
               <p className="text-xs text-amber-50 mt-1 font-semibold">
-                Per Ton Rate: ${hasTons ? (miscellaneousFinalPrice / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                Per Ton Rate: {formatCurrency(activeHasTons ? (activeMiscellaneousFinalPrice / activeTotalTons) : 0)} /Ton
               </p>
             </div>
             <div className="bg-white/10 border border-white/20 p-3 rounded-2xl">
@@ -279,10 +730,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   1. Material Section
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${totalMaterialCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeTotalMaterialCost)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? (totalMaterialCost / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? (activeTotalMaterialCost / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-blue-50 p-2.5 rounded-xl text-blue-500 group-hover:scale-105 transition-transform">
@@ -309,10 +760,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   2. plant Labor & Ship
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${(totalDirectplantCost + totalShippingCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeTotalDirectplantCost + activeTotalShippingCost)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? ((totalDirectplantCost + totalShippingCost) / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? ((activeTotalDirectplantCost + activeTotalShippingCost) / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-green-50 p-2.5 rounded-xl text-green-600 group-hover:scale-105 transition-transform">
@@ -320,7 +771,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               </div>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 italic">{totalLaborHours} Hrs + Freight</span>
+              <span className="text-slate-400 italic">{activeTotalLaborHours} Hrs + Freight</span>
               <button
                 onClick={() => handleEditSection('plantLabor')}
                 className="text-green-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
@@ -339,10 +790,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   3. Drafting & Directs
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${(totalDirectDraftingCost + otherDirectCostsVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeTotalDirectDraftingCost + activeOtherDirectCostsVal)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? ((totalDirectDraftingCost + otherDirectCostsVal) / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? ((activeTotalDirectDraftingCost + activeOtherDirectCostsVal) / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-teal-50 p-2.5 rounded-xl text-teal-600 group-hover:scale-105 transition-transform">
@@ -369,10 +820,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   4. Overhead on Directs
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${directCostOverhead.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeDirectCostOverhead)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? (directCostOverhead / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? (activeDirectCostOverhead / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-purple-50 p-2.5 rounded-xl text-purple-600 group-hover:scale-105 transition-transform">
@@ -380,7 +831,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               </div>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 italic">Rate: {overheadPercentVal}%</span>
+              <span className="text-slate-400 italic">Rate: {activeOverheadPercentVal}%</span>
               <button
                 onClick={() => handleEditSection('profitDirect')}
                 className="text-purple-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
@@ -399,10 +850,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   5. Buyouts Section
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${totalBuyoutCosts.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeTotalBuyoutCosts)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? (totalBuyoutCosts / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? (activeTotalBuyoutCosts / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-indigo-50 p-2.5 rounded-xl text-indigo-600 group-hover:scale-105 transition-transform">
@@ -429,10 +880,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   6. Overhead on Buyouts
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${buyoutOverhead.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeBuyoutOverhead)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? (buyoutOverhead / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? (activeBuyoutOverhead / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-pink-50 p-2.5 rounded-xl text-pink-600 group-hover:scale-105 transition-transform">
@@ -440,7 +891,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               </div>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 italic">Rate: {buyoutOverheadPercentVal}%</span>
+              <span className="text-slate-400 italic">Rate: {activeBuyoutOverheadPercentVal}%</span>
               <button
                 onClick={() => handleEditSection('profitBuyouts')}
                 className="text-pink-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
@@ -459,10 +910,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   7. Profit & Misc
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  ${(profitAmount + miscChargesVal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  {formatCurrency(activeProfitAmount + activeMiscChargesVal)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  ${hasTons ? ((profitAmount + miscChargesVal) / totalTons).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0.00'} /Ton
+                  {formatCurrency(activeHasTons ? ((activeProfitAmount + activeMiscChargesVal) / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-orange-50 p-2.5 rounded-xl text-orange-600 group-hover:scale-105 transition-transform">
@@ -470,13 +921,13 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               </div>
             </div>
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
-              <span className="text-slate-400 italic">{profitPercentVal}% Profit + Misc Charges</span>
+              <span className="text-slate-400 italic">{activeProfitPercentVal}% Profit + Misc Charges</span>
               <button
                 onClick={() => handleEditSection('finalTotals')}
                 className="text-orange-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
               >
                 Edit inputs
-                <ArrowUpRight className="w-3 h-3" />
+                <ArrowUpRight className="w-3.5 h-3" />
               </button>
             </div>
           </div>

@@ -163,34 +163,31 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='next-quote-no')
     def next_quote_no(self, request):
-        """Auto-generate next quote number based on bid due date."""
-        bid_date_str = request.query_params.get('bid_date')
-        if bid_date_str:
-            try:
-                bid_date = date.fromisoformat(bid_date_str)
-            except ValueError:
-                bid_date = date.today()
-        else:
-            bid_date = date.today()
-
-        yy = bid_date.strftime('%y')
-        mm = bid_date.strftime('%m')
-        prefix = f"{yy}-{mm}-"
-
-        # Find the highest sequence for this YY-MM prefix
-        existing = RFQMaster.objects.filter(
-            quote_no__startswith=prefix
-        ).values_list('quote_no', flat=True)
-
-        max_seq = 0
-        for qno in existing:
-            m = re.match(rf'^{re.escape(prefix)}(\d+)', qno)
+        """Auto-generate next quote number based on the absolute highest/last existing quote number."""
+        qnos = list(RFQMaster.objects.values_list('quote_no', flat=True))
+        
+        parsed = []
+        for q in qnos:
+            m = re.match(r'^(\d{2})-(\d{2})-(\d+)', q)
             if m:
-                seq = int(m.group(1))
-                if seq > max_seq:
-                    max_seq = seq
-
-        next_no = f"{prefix}{max_seq + 1:02d}"
+                try:
+                    yy = int(m.group(1))
+                    mm = int(m.group(2))
+                    seq = int(m.group(3))
+                    parsed.append((yy, mm, seq))
+                except ValueError:
+                    pass
+        
+        if parsed:
+            parsed.sort(key=lambda x: (x[0], x[1], x[2]))
+            last_yy, last_mm, last_seq = parsed[-1]
+            next_seq = last_seq + 1
+            next_no = f"{last_yy:02d}-{last_mm:02d}-{next_seq:02d}"
+        else:
+            from django.utils import timezone
+            now = timezone.now()
+            next_no = f"{now.strftime('%y')}-{now.strftime('%m')}-01"
+            
         return Response({'next_quote_no': next_no})
 
     @action(detail=True, methods=['patch'], url_path='sebw-sync',

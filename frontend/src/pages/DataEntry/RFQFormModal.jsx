@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { rfqAPI } from '../../api/client'
@@ -15,6 +15,22 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
     quote_date: new Date().toISOString().slice(0, 10),
     scope_of_work: '',
   })
+
+  useEffect(() => {
+    let active = true
+    const fetchNextNo = async () => {
+      try {
+        const res = await rfqAPI.nextQuoteNo()
+        if (active && res.data?.next_quote_no) {
+          setForm(prev => ({ ...prev, quote_no: res.data.next_quote_no }))
+        }
+      } catch (err) {
+        console.error('Failed to fetch next quote number:', err)
+      }
+    }
+    fetchNextNo()
+    return () => { active = false }
+  }, [])
 
   const mutation = useMutation({
     mutationFn: (data) => rfqAPI.create(data),

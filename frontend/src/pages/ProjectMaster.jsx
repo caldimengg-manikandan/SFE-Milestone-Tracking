@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, FileText, Loader2, AlertCircle } from 'lucide-react';
-import { projectAPI, scheduleAPI } from '../services/api';
+import { projectAPI, scheduleAPI, rfqAPI } from '../services/api';
 import ProjectForm from '../components/forms/ProjectForm';
 
 export default function ProjectMaster() {
   const [projects, setProjects] = useState([]);
+  const [rfqs, setRfqs] = useState([]);
   const [schedules, setSchedules] = useState([]);
   const [allSchedules, setAllSchedules] = useState([]);
   const [search, setSearch] = useState('');
@@ -260,22 +261,50 @@ export default function ProjectMaster() {
     setSchedules(schedules.filter(s => s.id !== id));
   };
 
+  const getRfqTotalManhours = (rfq) => {
+    if (!rfq) return 0;
+    const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
+    const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
+    const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
+    const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
+    return avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
+  };
+
+  const findMatchingRfq = (project) => {
+    if (!project || !rfqs.length) return null;
+    return rfqs.find(r => 
+      String(r.sfe_job_no) === String(project.code) || 
+      r.quote_no === project.code || 
+      (project.name && r.project_name && project.name.toLowerCase().trim() === r.project_name.toLowerCase().trim())
+    );
+  };
+
   const fetchProjects = async () => {
     try {
       setLoading(true);
       setError('');
-      const res = await projectAPI.getAll();
+      const [projRes, rfqRes] = await Promise.all([
+        projectAPI.getAll(),
+        rfqAPI.getAll()
+      ]);
 
-      // Handle both { results: [] } and directly []
-      const data = res.data.results || res.data;
+      const projData = projRes.data.results || projRes.data;
+      const rfqData = rfqRes.data.results || rfqRes.data;
 
-      if (Array.isArray(data)) {
-        setProjects(data);
-      } else if (data && typeof data === 'object') {
-        // Handle case where it might be a single object instead of list
-        setProjects([data]);
+      if (Array.isArray(projData)) {
+        setProjects(projData);
+      } else if (projData && typeof projData === 'object') {
+        setProjects([projData]);
       } else {
         setProjects([]);
+      }
+
+      if (Array.isArray(rfqData)) {
+        setRfqs(rfqData);
+      } else if (rfqData && typeof rfqData === 'object') {
+        setRfqs([rfqData]);
+      } else {
+        setRfqs([]);
       }
     } catch (err) {
       console.error('Failed to fetch projects:', err);
@@ -864,8 +893,15 @@ export default function ProjectMaster() {
 
 
   const handleDetails = async (project, mode = 'edit') => {
+    const matchedRfq = rfqs.find(r => 
+      String(r.sfe_job_no) === String(project.code) || 
+      r.quote_no === project.code || 
+      (project.name && r.project_name && project.name.toLowerCase().trim() === r.project_name.toLowerCase().trim())
+    );
+
     setForm({
       ...project,
+      rfq_id: matchedRfq ? matchedRfq.id : '',
       name: project.name || '',
       code: project.code || '',
       customer_name: project.customer_name || '',
@@ -1022,18 +1058,38 @@ export default function ProjectMaster() {
   };
 
   const exportToCSV = () => {
-    const headers = ["Project Code", "Project Name", "Customer", "PM", "Priority", "Status", "Total Ton"];
-    const rows = filtered.map(p => [
-      p.code,
-      p.name,
-      p.customer_name,
-      p.project_manager_name,
-      p.priority,
-      p.status,
-      p.total_ton
-    ]);
+    const headers = [
+      "Project Name",
+      "Quote Number",
+      "Bid Reference",
+      "Location",
+      "Scope of Work",
+      "Customer",
+      "Estimator",
+      "Won / Lost / Pending",
+      "Total Manhours",
+      "Plant Name",
+      "Is Scheduled Field Measure Date Required?"
+    ];
+    const rows = filtered.map(p => {
+      const rfq = findMatchingRfq(p);
+      const totalMh = rfq ? getRfqTotalManhours(rfq) : (parseFloat(p.total_manhours) || 0);
+      return [
+        rfq?.project_name || p.name || '',
+        rfq?.quote_no || p.code || '',
+        rfq?.bid_reference || 'N/A',
+        rfq?.location || 'N/A',
+        rfq?.scope_of_work || 'None',
+        rfq?.customer_name || p.customer_name || 'N/A',
+        rfq?.primary_estimator_initials || 'N/A',
+        rfq?.won_lost || 'Pending',
+        totalMh.toFixed(2),
+        p.plant_name || 'N/A',
+        p.schedule_field_measure_required || 'Yes'
+      ];
+    });
 
-    const csvContent = [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(val => `"${String(val).replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -1046,11 +1102,26 @@ export default function ProjectMaster() {
   };
 
   const filtered = projects.filter(p => {
-    const matchesSearch = (p.name?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (p.code?.toLowerCase() || '').includes(search.toLowerCase()) ||
-      (p.customer_name?.toLowerCase() || '').includes(search.toLowerCase());
+    const rfq = findMatchingRfq(p);
+    const projName = rfq?.project_name || p.name || '';
+    const quoteNo = rfq?.quote_no || p.code || '';
+    const bidRef = rfq?.bid_reference || '';
+    const loc = rfq?.location || '';
+    const cust = rfq?.customer_name || p.customer_name || '';
+    const est = rfq?.primary_estimator_initials || '';
+    const status = rfq?.won_lost || 'Pending';
+    const plant = p.plant_name || '';
 
-    const matchesStatus = statusFilter === 'All' || p.status === statusFilter;
+    const matchesSearch = 
+      projName.toLowerCase().includes(search.toLowerCase()) ||
+      quoteNo.toLowerCase().includes(search.toLowerCase()) ||
+      bidRef.toLowerCase().includes(search.toLowerCase()) ||
+      loc.toLowerCase().includes(search.toLowerCase()) ||
+      cust.toLowerCase().includes(search.toLowerCase()) ||
+      est.toLowerCase().includes(search.toLowerCase()) ||
+      plant.toLowerCase().includes(search.toLowerCase());
+
+    const matchesStatus = statusFilter === 'All' || status.toLowerCase() === statusFilter.toLowerCase();
 
     return matchesSearch && matchesStatus;
   });
@@ -1101,9 +1172,9 @@ export default function ProjectMaster() {
               className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold outline-none focus:border-amber-400 transition-all"
             >
               <option value="All">All Statuses</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Yet to Start">Yet to Start</option>
-              <option value="Completed">Completed</option>
+              <option value="Won">Won</option>
+              <option value="Lost">Lost</option>
+              <option value="Pending">Pending</option>
             </select>
             <button className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all">
               <Filter className="w-4 h-4" /> Filters
@@ -1134,72 +1205,82 @@ export default function ProjectMaster() {
               <thead>
                 <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white">
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[120px]">Project Name</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 w-20">Code</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 min-w-[100px]">Customer Name</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Detailer Name</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Manager</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Erection</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Priority</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Ton</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">MH's</th>
-                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">MH's/Ton</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5 w-20">Quote Number</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Bid Reference</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Location</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Scope of Work</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Customer</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Estimator</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Won/Lost/Pending</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Total Manhours</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Plant Name</th>
+                  <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 border-r border-white/5">Field Measure Req</th>
                   <th className="px-2 py-3 text-[10px] font-black uppercase tracking-wider border-b border-white/10 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white">
                 {loading ? (
                   <tr>
-                    <td colSpan="11" className="py-20 text-center">
+                    <td colSpan="12" className="py-20 text-center">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
                       <p className="text-xs font-bold text-slate-400">Loading projects...</p>
                     </td>
                   </tr>
-                ) : paginatedData.length > 0 ? paginatedData.map((p) => (
-                  <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100">
-                    <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{p.name}</td>
-                    <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{p.code}</td>
-                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{p.customer_name || 'N/A'}</td>
-                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.detailer_name || 'N/A'}</td>
-                    <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{p.project_manager_name || 'N/A'}</td>
-                    <td className="px-2 py-3 text-slate-600 font-medium border-r border-slate-100">
-                      {p.erection_date ? formatDate(p.erection_date) : 'N/A'}
-                    </td>
-                    <td className="px-2 py-3 border-r border-slate-100 text-center">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${p.priority === 'High' ? 'bg-red-50 text-red-600 border border-red-100' :
-                        p.priority === 'Medium' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                          'bg-emerald-50 text-emerald-600 border border-emerald-100'
+                ) : paginatedData.length > 0 ? paginatedData.map((p) => {
+                  const rfq = findMatchingRfq(p);
+                  const totalMh = rfq ? getRfqTotalManhours(rfq) : (parseFloat(p.total_manhours) || 0);
+                  const wonLost = rfq?.won_lost || 'Pending';
+                  
+                  return (
+                    <tr key={p.id} className="transition-colors group text-[12px] border-b border-slate-100 hover:bg-slate-50/50">
+                      <td className="px-2 py-3 font-bold text-slate-800 border-r border-slate-100 break-words leading-tight">{rfq?.project_name || p.name}</td>
+                      <td className="px-2 py-3 font-mono text-[10px] text-slate-500 border-r border-slate-100">{rfq?.quote_no || p.code}</td>
+                      <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{rfq?.bid_reference || 'N/A'}</td>
+                      <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{rfq?.location || 'N/A'}</td>
+                      <td className="px-2 py-3 text-slate-600 border-r border-slate-100 break-words leading-tight">{rfq?.scope_of_work || 'None'}</td>
+                      <td className="px-2 py-3 text-slate-700 border-r border-slate-100 break-words leading-tight">{rfq?.customer_name || p.customer_name || 'N/A'}</td>
+                      <td className="px-2 py-3 text-slate-700 border-r border-slate-100 leading-tight">{rfq?.primary_estimator_initials || 'N/A'}</td>
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          wonLost.toLowerCase() === 'won' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
+                          wonLost.toLowerCase() === 'lost' ? 'bg-red-50 text-red-600 border border-red-100' :
+                          'bg-amber-50 text-amber-600 border border-amber-100'
                         }`}>
-                        {p.priority}
-                      </span>
-                    </td>
-                    <td className="px-2 py-3 font-bold text-slate-700 border-r border-slate-100 text-center">{p.total_ton}</td>
-                    <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">{p.total_manhours}</td>
-                    <td className="px-2 py-3 border-r border-slate-100 text-center font-bold text-amber-600">
-                      {p.total_ton > 0 ? (p.total_manhours / p.total_ton).toFixed(1) : '0.0'}
-                    </td>
-                    <td className="px-2 py-3 text-right">
-                      <div className="flex items-center justify-end gap-0.5">
-                        <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
-                          <FileText className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
-                          <Eye className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
-                          <Edit2 className="w-3.5 h-3.5" />
-                        </button>
-                        <button onClick={() => handleDelete(p.id)} className="p-1 rounded text-red-500 hover:bg-red-50" title="Delete">
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                )) : (
+                          {wonLost}
+                        </span>
+                      </td>
+                      <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center font-semibold">{totalMh.toFixed(2)}</td>
+                      <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">{p.plant_name || 'N/A'}</td>
+                      <td className="px-2 py-3 text-slate-600 border-r border-slate-100 text-center">
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-wider ${
+                          (p.schedule_field_measure_required || 'Yes').trim().toLowerCase() === 'no' ? 'bg-slate-100 text-slate-600' : 'bg-blue-50 text-blue-600 border border-blue-100'
+                        }`}>
+                          {p.schedule_field_measure_required || 'Yes'}
+                        </span>
+                      </td>
+                      <td className="px-2 py-3 text-right">
+                        <div className="flex items-center justify-end gap-0.5">
+                          <button onClick={() => downloadProjectPDF(p)} className="p-1 rounded text-indigo-500 hover:bg-indigo-50" title="Structural Plan">
+                            <FileText className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDetails(p, 'view')} className="p-1 rounded text-amber-500 hover:bg-amber-50" title="View">
+                            <Eye className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDetails(p, 'edit')} className="p-1 rounded text-blue-500 hover:bg-blue-50" title="Edit">
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                          <button onClick={() => handleDelete(p.id)} className="p-1 rounded text-red-500 hover:bg-red-50" title="Delete">
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                }) : (
                   <tr>
-                    <td colSpan="11" className="px-6 py-12 text-center text-slate-500 italic">No projects found matching your search.</td>
+                    <td colSpan="12" className="px-6 py-12 text-center text-slate-500 italic">No projects found matching your search.</td>
                   </tr>
                 )}
-
               </tbody>
             </table>
           </div>
