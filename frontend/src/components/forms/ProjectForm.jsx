@@ -581,11 +581,11 @@ export default function ProjectForm({
 
     const rfq = wonRfqs.find(r => String(r.id) === String(rfqId));
     if (rfq) {
-      const avgStructFab = Number(rfq.avg_monthly_struct_fab) || 0;
-      const avgMiscFab = Number(rfq.avg_monthly_misc_fab) || 0;
-      const avgStructErect = Number(rfq.avg_monthly_struct_erect) || 0;
-      const avgMiscErect = Number(rfq.avg_monthly_misc_erect) || 0;
-      const totalManhours = avgStructFab + avgMiscFab + avgStructErect + avgMiscErect;
+      const structFab = Number(rfq.struct_fab_hours) || 0;
+      const miscFab = Number(rfq.misc_fab_hours) || 0;
+      const structErect = Number(rfq.struct_erect_hours) || 0;
+      const miscErect = Number(rfq.misc_erect_hours) || 0;
+      const totalManhours = structFab + miscFab + structErect + miscErect;
 
       setForm(prev => ({
         ...prev,

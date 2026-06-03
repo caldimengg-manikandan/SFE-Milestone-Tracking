@@ -208,98 +208,118 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
   // Helper to compute all 9 required estimation totals for a given project record
   const calculateEstimationValues = (project) => {
+    if (!project || !project.estimation_data || Object.keys(project.estimation_data).length === 0) {
+      return {
+        finalBidAmount: 0,
+        miscellaneousFinalPrice: 0,
+        totalMaterialCost: 0,
+        plantLaborAndShip: 0,
+        draftingAndDirects: 0,
+        directCostOverhead: 0,
+        totalBuyoutCosts: 0,
+        buyoutOverhead: 0,
+        profitAndMisc: 0
+      };
+    }
+
     const estData = project.estimation_data || {};
     const bidEnquiry = estData.bidEnquiry || {};
     const estimationSections = estData.estimationSections || {};
 
+    const getNum = (val, fallback = 0) => {
+      if (val === undefined || val === null || val === '') return fallback;
+      const num = Number(val);
+      return isNaN(num) ? fallback : num;
+    };
+
     // 1. Material Section Calculations
-    const millWeight = Number(bidEnquiry.millWeight) || 0;
-    const millAmount = Number(bidEnquiry.millAmount) || 0;
-    const warehouseWeight = Number(bidEnquiry.warehouseWeight) || 0;
-    const warehouseAmount = Number(bidEnquiry.warehouseAmount) || 0;
+    const millWeight = getNum(bidEnquiry.millWeight);
+    const millAmount = getNum(bidEnquiry.millAmount);
+    const warehouseWeight = getNum(bidEnquiry.warehouseWeight);
+    const warehouseAmount = getNum(bidEnquiry.warehouseAmount);
     
-    const scrapPercent = Number(bidEnquiry.scrapPercent) !== undefined && bidEnquiry.scrapPercent !== '' ? Number(bidEnquiry.scrapPercent) : 5.0;
+    const scrapPercent = getNum(bidEnquiry.scrapPercent, 5.0);
     const scrapAmount = (millAmount + warehouseAmount) * scrapPercent / 100;
 
-    const boltQty = Number(bidEnquiry.boltQty) || 0;
-    const boltRate = Number(bidEnquiry.boltRate) !== undefined && bidEnquiry.boltRate !== '' ? Number(bidEnquiry.boltRate) : 1.75;
+    const boltQty = getNum(bidEnquiry.boltQty);
+    const boltRate = getNum(bidEnquiry.boltRate, 1.75);
     const boltAmount = boltQty * boltRate;
 
-    const paintQty = Number(bidEnquiry.paintQty) || 0;
-    const paintRate = Number(bidEnquiry.paintRate) !== undefined && bidEnquiry.paintRate !== '' ? Number(bidEnquiry.paintRate) : 22.20;
+    const paintQty = getNum(bidEnquiry.paintQty);
+    const paintRate = getNum(bidEnquiry.paintRate, 22.20);
     const paintAmount = paintQty * paintRate;
 
-    const galvanizingWeight = Number(bidEnquiry.galvanizingWeight) || 0;
-    const galvanizingRate = Number(bidEnquiry.galvanizingRate) !== undefined && bidEnquiry.galvanizingRate !== '' ? Number(bidEnquiry.galvanizingRate) : 0.40;
+    const galvanizingWeight = getNum(bidEnquiry.galvanizingWeight);
+    const galvanizingRate = getNum(bidEnquiry.galvanizingRate, 0.40);
     const galvanizingAmount = (galvanizingWeight * 1.05) * galvanizingRate;
 
     const miscSubtotal = Array.isArray(bidEnquiry.miscItems) 
-      ? bidEnquiry.miscItems.reduce((sum, item) => sum + (Number(item.amount) || 0), 0)
+      ? bidEnquiry.miscItems.reduce((sum, item) => sum + getNum(item.amount), 0)
       : 0;
 
     const totalMaterialDirectCosts = millAmount + warehouseAmount + scrapAmount + boltAmount + paintAmount + galvanizingAmount + miscSubtotal;
-    const taxPercent = Number(bidEnquiry.taxPercent) !== undefined && bidEnquiry.taxPercent !== '' ? Number(bidEnquiry.taxPercent) : 6.0;
+    const taxPercent = getNum(bidEnquiry.taxPercent, 6.0);
     const materialUseTaxAmount = totalMaterialDirectCosts * (taxPercent / 100);
     const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
 
     // 2. plant Labor & Shipping Calculations
-    const plantFabricationHours = Number(estimationSections.plantFabricationHours) || 0;
-    const miscLaborHours = Number(estimationSections.miscLaborHours) || 0;
-    const miscLaborOtherHours = Number(estimationSections.miscLaborOtherHours) || 0;
-    const miscLaborOther2Hours = Number(estimationSections.miscLaborOther2Hours) || 0;
+    const plantFabricationHours = getNum(estimationSections.plantFabricationHours);
+    const miscLaborHours = getNum(estimationSections.miscLaborHours);
+    const miscLaborOtherHours = getNum(estimationSections.miscLaborOtherHours);
+    const miscLaborOther2Hours = getNum(estimationSections.miscLaborOther2Hours);
     const totalLaborHours = plantFabricationHours + miscLaborHours + miscLaborOtherHours + miscLaborOther2Hours;
-    const hourlyLaborRate = Number(estimationSections.hourlyLaborRate) !== undefined && estimationSections.hourlyLaborRate !== '' ? Number(estimationSections.hourlyLaborRate) : 60.0;
+    const hourlyLaborRate = getNum(estimationSections.hourlyLaborRate, 60.0);
     const totalDirectplantCost = totalLaborHours * hourlyLaborRate;
 
-    const numTrucks = Number(estimationSections.numTrucks) !== undefined && estimationSections.numTrucks !== '' ? Number(estimationSections.numTrucks) : 3;
-    const hoursPerTruck = Number(estimationSections.hoursPerTruck) !== undefined && estimationSections.hoursPerTruck !== '' ? Number(estimationSections.hoursPerTruck) : 3;
-    const galvanizingTrucks = Number(estimationSections.galvanizingTrucks) !== undefined && estimationSections.galvanizingTrucks !== '' ? Number(estimationSections.galvanizingTrucks) : 5;
-    const galvHoursPerTruck = Number(estimationSections.galvHoursPerTruck) !== undefined && estimationSections.galvHoursPerTruck !== '' ? Number(estimationSections.galvHoursPerTruck) : 5.0;
-    const shippingRate = Number(estimationSections.shippingRate) !== undefined && estimationSections.shippingRate !== '' ? Number(estimationSections.shippingRate) : 195.0;
+    const numTrucks = getNum(estimationSections.numTrucks, 3);
+    const hoursPerTruck = getNum(estimationSections.hoursPerTruck, 3);
+    const galvanizingTrucks = getNum(estimationSections.galvanizingTrucks, 5);
+    const galvHoursPerTruck = getNum(estimationSections.galvHoursPerTruck, 5.0);
+    const shippingRate = getNum(estimationSections.shippingRate, 195.0);
 
     const totalShippingHours = (numTrucks * hoursPerTruck) + (galvanizingTrucks * galvHoursPerTruck);
     const totalShippingCost = totalShippingHours * shippingRate;
     const plantLaborAndShip = totalDirectplantCost + totalShippingCost;
 
     // 3. Drafting & Directs Calculations
-    const subletDetailingCost = Number(estimationSections.subletDetailingCost) || 0;
-    const peStampCost = Number(estimationSections.peStampCost) || 0;
-    const otherDirectCosts = Number(estimationSections.otherDirectCosts) || 0;
+    const subletDetailingCost = getNum(estimationSections.subletDetailingCost);
+    const peStampCost = getNum(estimationSections.peStampCost);
+    const otherDirectCosts = getNum(estimationSections.otherDirectCosts);
     const totalDirectDraftingCost = subletDetailingCost + peStampCost;
     const draftingAndDirects = totalDirectDraftingCost + otherDirectCosts;
 
     // 4. Overhead on Directs Calculations
     const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCosts;
-    const overheadPercent = Number(estimationSections.overheadPercent) !== undefined && estimationSections.overheadPercent !== '' ? Number(estimationSections.overheadPercent) : 12.0;
+    const overheadPercent = getNum(estimationSections.overheadPercent, 12.0);
     const directCostOverhead = Math.round(totalDirectCosts * (overheadPercent / 100) * 100) / 100;
     const bidAmountOnDirectCosts = Math.round(totalDirectCosts) + directCostOverhead;
 
     // 5. Buyouts Calculations
-    const steelJoistCost = Number(estimationSections.steelJoistCost) || 0;
-    const deckCost = Number(estimationSections.deckCost) || 0;
-    const subletErectionCost = Number(estimationSections.subletErectionCost) || 0;
-    const miscMetalCost = Number(estimationSections.miscMetalCost) || 0;
-    const oshaLinearFeet = Number(estimationSections.oshaLinearFeet) || 0;
+    const steelJoistCost = getNum(estimationSections.steelJoistCost);
+    const deckCost = getNum(estimationSections.deckCost);
+    const subletErectionCost = getNum(estimationSections.subletErectionCost);
+    const miscMetalCost = getNum(estimationSections.miscMetalCost);
+    const oshaLinearFeet = getNum(estimationSections.oshaLinearFeet);
     const oshaPostsCost = (oshaLinearFeet / 5) * 50;
-    const additionalSafetyCosts = Number(estimationSections.additionalSafetyCosts) || 0;
-    const ccipCosts = Number(estimationSections.ccipCosts) || 0;
+    const additionalSafetyCosts = getNum(estimationSections.additionalSafetyCosts);
+    const ccipCosts = getNum(estimationSections.ccipCosts);
     const safetyCost = additionalSafetyCosts + ccipCosts;
-    const leedSubmissionCost = Number(estimationSections.leedSubmissionCost) || 0;
-    const suppliedMaterialCost = Number(estimationSections.suppliedMaterialCost) || 0;
-    const useTaxPercent = Number(estimationSections.useTaxPercent) !== undefined && estimationSections.useTaxPercent !== '' ? Number(estimationSections.useTaxPercent) : 6.0;
+    const leedSubmissionCost = getNum(estimationSections.leedSubmissionCost);
+    const suppliedMaterialCost = getNum(estimationSections.suppliedMaterialCost);
+    const useTaxPercent = getNum(estimationSections.useTaxPercent, 6.0);
 
     const totalDirectBuyoutCosts = steelJoistCost + deckCost + subletErectionCost + miscMetalCost + oshaPostsCost + safetyCost + leedSubmissionCost;
     const useTax = suppliedMaterialCost * (useTaxPercent / 100);
     const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
 
     // 6. Overhead on Buyouts Calculations
-    const buyoutOverheadPercent = Number(estimationSections.buyoutOverheadPercent) !== undefined && estimationSections.buyoutOverheadPercent !== '' ? Number(estimationSections.buyoutOverheadPercent) : 12.0;
+    const buyoutOverheadPercent = getNum(estimationSections.buyoutOverheadPercent, 12.0);
     const buyoutOverhead = Math.round(totalBuyoutCosts) * (buyoutOverheadPercent / 100);
     const bidAmountOnBuyouts = Math.round(totalBuyoutCosts) + buyoutOverhead;
 
     // 7. Profit & Misc Calculations
-    const profitPercent = Number(estimationSections.profitPercent) !== undefined && estimationSections.profitPercent !== '' ? Number(estimationSections.profitPercent) : 10.0;
-    const miscCharges = Number(estimationSections.miscCharges) || 0;
+    const profitPercent = getNum(estimationSections.profitPercent, 10.0);
+    const miscCharges = getNum(estimationSections.miscCharges);
 
     const totalAmountBeforeProfit = Math.round(bidAmountOnDirectCosts) + Math.round(bidAmountOnBuyouts);
     const profitAmount = totalAmountBeforeProfit * (profitPercent / 100);
@@ -308,10 +328,10 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const profitAndMisc = profitAmount + miscCharges;
 
     // 8. miscellaneous Summary Total Calculations
-    const miscellaneousLaborRate = Number(estimationSections.miscellaneousLaborRate) !== undefined && estimationSections.miscellaneousLaborRate !== '' ? Number(estimationSections.miscellaneousLaborRate) : 85.0;
-    const miscellaneousErectionMultiplier = Number(estimationSections.miscellaneousErectionMultiplier) !== undefined && estimationSections.miscellaneousErectionMultiplier !== '' ? Number(estimationSections.miscellaneousErectionMultiplier) : 1.12;
-    const miscellaneousJoistDeckMultiplier = Number(estimationSections.miscellaneousJoistDeckMultiplier) !== undefined && estimationSections.miscellaneousJoistDeckMultiplier !== '' ? Number(estimationSections.miscellaneousJoistDeckMultiplier) : 1.12;
-    const miscellaneousOtherCostMultiplier = Number(estimationSections.miscellaneousOtherCostMultiplier) !== undefined && estimationSections.miscellaneousOtherCostMultiplier !== '' ? Number(estimationSections.miscellaneousOtherCostMultiplier) : 1.12;
+    const miscellaneousLaborRate = getNum(estimationSections.miscellaneousLaborRate, 85.0);
+    const miscellaneousErectionMultiplier = getNum(estimationSections.miscellaneousErectionMultiplier, 1.12);
+    const miscellaneousJoistDeckMultiplier = getNum(estimationSections.miscellaneousJoistDeckMultiplier, 1.12);
+    const miscellaneousOtherCostMultiplier = getNum(estimationSections.miscellaneousOtherCostMultiplier, 1.12);
 
     const miscellaneousLaborCost = totalLaborHours * miscellaneousLaborRate;
     const miscellaneousMaterialTotal = totalMaterialCost;
@@ -325,7 +345,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const miscellaneousOtherCostsTotal = (miscMetalCost + safetyCost + leedSubmissionCost) * miscellaneousOtherCostMultiplier;
     const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
     
-    const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + (miscellaneousTotalBeforeProfit * (profitPercent / 100)) + miscCharges;
+    const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercent / 100);
+    const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscCharges;
 
     return {
       finalBidAmount,            // Standard Grand Total
@@ -368,8 +389,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       "Project Name",
       "Standard Grand Total",
       "Misc Summary Total",
-      "Material Section",
-      "plant Labor & Ship",
+      "Total Direct Costs",
       "Drafting & Directs",
       "Overhead on Directs",
       "Buyouts Section",
@@ -377,21 +397,27 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       "Profit & Misc"
     ];
     
+    const formatExportVal = (v) => {
+      if (v === undefined || v === null || isNaN(v)) return '0';
+      const num = Number(v);
+      return num === 0 ? '0' : num.toFixed(2);
+    };
+    
     const rows = wonRfqs.map(rfq => {
       const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
       const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
       const vals = calculateEstimationValues(matched);
+      const totalDirect = (vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0);
       return [
         rfq.project_name,
-        vals.finalBidAmount.toFixed(2),
-        vals.miscellaneousFinalPrice.toFixed(2),
-        vals.totalMaterialCost.toFixed(2),
-        vals.plantLaborAndShip.toFixed(2),
-        vals.draftingAndDirects.toFixed(2),
-        vals.directCostOverhead.toFixed(2),
-        vals.totalBuyoutCosts.toFixed(2),
-        vals.buyoutOverhead.toFixed(2),
-        vals.profitAndMisc.toFixed(2)
+        formatExportVal(vals.finalBidAmount),
+        formatExportVal(vals.miscellaneousFinalPrice),
+        formatExportVal(totalDirect),
+        formatExportVal(vals.draftingAndDirects),
+        formatExportVal(vals.directCostOverhead),
+        formatExportVal(vals.totalBuyoutCosts),
+        formatExportVal(vals.buyoutOverhead),
+        formatExportVal(vals.profitAndMisc)
       ];
     });
 
@@ -478,8 +504,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 min-w-[200px]">Project Name</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Standard Grand Total</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Misc Summary Total</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Material Section</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">plant Labor & Ship</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Total Direct Costs</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Drafting & Directs</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Overhead on Directs</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Buyouts Section</th>
@@ -490,7 +515,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               <tbody className="divide-y divide-slate-100 bg-white text-[12px]">
                 {loading ? (
                   <tr>
-                    <td colSpan="10" className="py-20 text-center">
+                    <td colSpan="9" className="py-20 text-center">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
                       <p className="text-xs font-bold text-slate-400">Loading estimation reports...</p>
                     </td>
@@ -546,10 +571,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           {formatCurrency(vals.miscellaneousFinalPrice)}
                         </td>
                         <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
-                          {formatCurrency(vals.totalMaterialCost)}
-                        </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
-                          {formatCurrency(vals.plantLaborAndShip)}
+                          {formatCurrency((vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0))}
                         </td>
                         <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
                           {formatCurrency(vals.draftingAndDirects)}
@@ -571,7 +593,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   })
                 ) : (
                   <tr>
-                    <td colSpan="10" className="px-6 py-12 text-center text-slate-500 italic">No won RFQ projects matched your criteria.</td>
+                    <td colSpan="9" className="px-6 py-12 text-center text-slate-505 italic">No won RFQ projects matched your criteria.</td>
                   </tr>
                 )}
               </tbody>
