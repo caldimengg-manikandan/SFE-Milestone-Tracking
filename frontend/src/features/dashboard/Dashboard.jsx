@@ -188,6 +188,11 @@ export default function Dashboard() {
   const fabricationItems = processedSchedules.filter(s => s.category === 'fabrication');
   const sentForErectionItems = processedSchedules.filter(s => s.category === 'sent_for_erection');
 
+  const monthsNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+  const selectedMonthData = (Array.isArray(data.barData) && data.barData.length >= capacityMonth)
+    ? data.barData[capacityMonth - 1]
+    : null;
+
   const getUniqueProjectsCount = (items) => {
     const projectIds = new Set(items.map(item => String(item.project?.id || item.project)));
     return Array.from(projectIds).filter(id => id && id !== 'undefined' && id !== 'null').length;
@@ -747,11 +752,11 @@ export default function Dashboard() {
           {/* Activities Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Bar Chart */}
-            <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+            <div className="lg:col-span-2 bg-white border border-slate-300 p-8 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Capacity vs plant</p>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Manhours loading</p>
                 </div>
                 <div className="flex items-center gap-2">
                   <select
@@ -775,16 +780,63 @@ export default function Dashboard() {
                   </select>
                 </div>
               </div>
-              <ResponsiveContainer width="100%" height={260}>
+
+              {/* The 3 KPI Cards inside Capacity Utilization Summary Card */}
+              {selectedMonthData && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {/* Card 1: Manhours Available */}
+                  <div className="bg-blue-50/50 p-4 border border-blue-200 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-blue-100 flex items-center justify-center text-blue-600 rounded">
+                      <Clock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-blue-600/90 uppercase tracking-wider">Manhours Available</p>
+                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{selectedMonthData.capacity} Hours</h4>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Per Month (Workforce)</p>
+                    </div>
+                  </div>
+
+                  {/* Card 2: Manhours Required */}
+                  <div className="bg-amber-50/50 p-4 border border-amber-200 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-amber-100 flex items-center justify-center text-amber-600 rounded">
+                      <Box className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-amber-600/90 uppercase tracking-wider">Manhours Required</p>
+                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{selectedMonthData.allocated} Hours</h4>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Active in {monthsNames[capacityMonth - 1]}</p>
+                    </div>
+                  </div>
+
+                  {/* Card 3: Surplus/Shortage */}
+                  <div className={`${selectedMonthData.remaining >= 0 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'} p-4 border flex items-center gap-4`}>
+                    <div className={`w-10 h-10 ${selectedMonthData.remaining >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'} flex items-center justify-center rounded`}>
+                      {selectedMonthData.remaining >= 0 ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                    </div>
+                    <div>
+                      <p className={`text-[9px] font-bold ${selectedMonthData.remaining >= 0 ? 'text-emerald-600/90' : 'text-rose-600/90'} uppercase tracking-wider`}>
+                        {selectedMonthData.remaining >= 0 ? 'Surplus Manhours' : 'Shortage of Manhours'}
+                      </p>
+                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{Math.abs(selectedMonthData.remaining)} Hours</h4>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
+                        {selectedMonthData.remaining >= 0 ? 'We have surplus hours' : 'We need more manhours'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Recharts BarChart representing the 12 months */}
+              <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={data.barData} barGap={6}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
                   <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
                   <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
                   <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
-                  <Bar dataKey="capacity" name="Total Capacity / Month" fill="#1e293b" radius={0} />
-                  <Bar dataKey="allocated" name="Allocated Load" fill="#f59e0b" radius={0} />
-                  <Bar dataKey="remaining" name="Remaining Capacity" fill="#10b981" radius={0} />
+                  <Bar dataKey="capacity" name="Manhours Available" fill="#1e293b" radius={0} />
+                  <Bar dataKey="allocated" name="Manhours Required" fill="#f59e0b" radius={0} />
+                  <Bar dataKey="remaining" name="Remaining/Shortage" fill="#10b981" radius={0} />
                 </BarChart>
               </ResponsiveContainer>
             </div>

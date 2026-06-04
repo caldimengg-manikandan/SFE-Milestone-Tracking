@@ -190,53 +190,64 @@ class DashboardStatsView(APIView):
             cap_month = now.month
             cap_year = now.year
 
+        from production.models import Manpower
+        from apps.rfq.models import RFQMaster
+
+        months_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+        months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+        
+        won_rfqs = RFQMaster.objects.filter(won_lost='Won')
+        manpower_entries = Manpower.objects.all()
+
+        def is_schedule_active_in_month(start_month_date, duration_months, target_month_idx):
+            if not start_month_date or not duration_months or duration_months < 1:
+                return False
+            start_month_idx = start_month_date.month - 1  # 0-indexed month
+            active_indices = [(start_month_idx + i) % 12 for i in range(int(duration_months))]
+            return target_month_idx in active_indices
+
         bar_data = []
-        for plant in ['plant1', 'plant2', 'plant3']:
-            # Map 'plant1' -> 'shop1', 'plant2' -> 'shop2', etc. to match database records
-            shop_val = plant.replace('plant', 'shop')
-            
-            # Sum daily capacity rate for this plant and multiply by 30
-            cap_sum = Capacity.objects.filter(shop__iexact=shop_val).aggregate(total=Sum('rate_per_day'))['total'] or 0
-            capacity_month = float(cap_sum) * 30
-            
-            # Sum tons of all sequences of projects assigned to this plant distributed pro-rata by week start dates
-            sequences = StructuralScheduleItem.objects.filter(project__shop_name__iexact=shop_val)
-            allocated = 0.0
-            for seq in sequences:
-                tons = float(seq.tons or 0)
-                lead_weeks = int(seq.shop_lead_time_weeks or 0)
+        for idx, (m_name, m_short) in enumerate(zip(months_names, months_short)):
+            # 1. Available Manhours for this month
+            m_manpower = manpower_entries.filter(month__iexact=m_name)
+            available_hours = 0.0
+            for item in m_manpower:
+                mh = float(item.manhours) if item.manhours is not None else 8.0
+                ot = float(item.overtime) if item.overtime is not None else 0.0
+                available_hours += (mh + ot) * 20.0
                 
-                if seq.rts_date:
-                    if lead_weeks > 0:
-                        weekly_load = tons / lead_weeks
-                        for w in range(lead_weeks):
-                            week_start = seq.rts_date + timedelta(days=w * 7)
-                            if week_start.year == cap_year and week_start.month == cap_month:
-                                allocated += weekly_load
-                    else:
-                        # Lead weeks is 0, falls entirely in RTS Date month
-                        if seq.rts_date.year == cap_year and seq.rts_date.month == cap_month:
-                            allocated += tons
-                else:
-                    # Fallback to scheduled_erection_date
-                    if seq.scheduled_erection_date and seq.scheduled_erection_date.year == cap_year and seq.scheduled_erection_date.month == cap_month:
-                        allocated += tons
-            
-            remaining = capacity_month - allocated
+            # 2. Required Manhours for this month
+            required_hours = 0.0
+            for r in won_rfqs:
+                # Phase 1: Struct Fab
+                if is_schedule_active_in_month(r.struct_fab_start_month, r.struct_fab_duration_months, idx):
+                    hrs = float(r.struct_fab_hours or 0)
+                    dur = float(r.struct_fab_duration_months or 0)
+                    required_hours += hrs / dur if dur > 0 else hrs
+                # Phase 2: Misc Fab
+                if is_schedule_active_in_month(r.misc_fab_start_month, r.misc_fab_duration_months, idx):
+                    hrs = float(r.misc_fab_hours or 0)
+                    dur = float(r.misc_fab_duration_months or 0)
+                    required_hours += hrs / dur if dur > 0 else hrs
+                # Phase 3: Struct Erect
+                if is_schedule_active_in_month(r.struct_erect_start_month, r.struct_erect_duration_months, idx):
+                    hrs = float(r.struct_erect_hours or 0)
+                    dur = float(r.struct_erect_duration_months or 0)
+                    required_hours += hrs / dur if dur > 0 else hrs
+                # Phase 4: Misc Erect
+                if is_schedule_active_in_month(r.misc_erect_start_month, r.misc_erect_duration_months, idx):
+                    hrs = float(r.misc_erect_hours or 0)
+                    dur = float(r.misc_erect_duration_months or 0)
+                    required_hours += hrs / dur if dur > 0 else hrs
+
+            remaining = available_hours - required_hours
             
             bar_data.append({
-                'name': plant.capitalize(),
-                'capacity': round(capacity_month, 2),
-                'allocated': round(allocated, 2),
+                'name': m_short,
+                'capacity': round(available_hours, 2),
+                'allocated': round(required_hours, 2),
                 'remaining': round(remaining, 2)
             })
-
-        if sum(item['capacity'] for item in bar_data) == 0:
-            bar_data = [
-                {'name': 'plant1', 'capacity': 450.0, 'allocated': 320.0, 'remaining': 130.0},
-                {'name': 'plant2', 'capacity': 300.0, 'allocated': 150.0, 'remaining': 150.0},
-                {'name': 'plant3', 'capacity': 600.0, 'allocated': 620.0, 'remaining': -20.0},
-            ]
 
         # 5. Recent Activities (Recent Projects)
         recent_activities = []

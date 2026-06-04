@@ -48,6 +48,43 @@ const FormattedDateInput = ({ value, onChange, readOnly, className, max }) => {
   );
 };
 
+const parseDate = (dStr) => {
+  if (!dStr) return null;
+
+  // Try parsing yyyy-mm-dd
+  if (typeof dStr === 'string' && dStr.includes('-')) {
+    const parts = dStr.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      const d = new Date(
+        parseInt(parts[0], 10),
+        parseInt(parts[1], 10) - 1,
+        parseInt(parts[2], 10)
+      );
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+
+  // Try parsing dd/mm/yyyy
+  if (typeof dStr === 'string' && dStr.includes('/')) {
+    const parts = dStr.split('/');
+    if (parts.length === 3) {
+      const d = new Date(
+        parseInt(parts[2], 10),
+        parseInt(parts[1], 10) - 1,
+        parseInt(parts[0], 10)
+      );
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+
+  const iso = new Date(dStr);
+  if (!isNaN(iso.getTime())) {
+    return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+  }
+
+  return null;
+};
+
 export default function PlanTracking() {
   const [projects, setProjects] = useState([]);
   const [allSchedules, setAllSchedules] = useState([]);
@@ -80,36 +117,32 @@ export default function PlanTracking() {
   };
 
   const calculateStatus = (rtsDateStr, leadWeeks, actualRtsStr) => {
-    if (!rtsDateStr) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
+    const planRts = parseDate(rtsDateStr);
+    if (!planRts) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
 
-    const now = new Date();
-    const rtsDate = new Date(rtsDateStr);
-    if (isNaN(rtsDate.getTime())) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
+    const actualRts = parseDate(actualRtsStr);
 
-    const weeks = parseFloat(leadWeeks) || 0;
-    const leadDays = weeks * 7;
-    const completionDate = new Date(rtsDate.getTime() + leadDays * 24 * 60 * 60 * 1000);
-
-    const compDateOnly = new Date(completionDate.getFullYear(), completionDate.getMonth(), completionDate.getDate());
-
-    if (actualRtsStr) {
-      const actualRts = new Date(actualRtsStr);
-      if (!isNaN(actualRts.getTime())) {
-        const actDateOnly = new Date(actualRts.getFullYear(), actualRts.getMonth(), actualRts.getDate());
-        if (actDateOnly <= compDateOnly) {
-          return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
-        } else {
-          return { label: 'Completed with delay', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
-        }
+    if (actualRts) {
+      if (actualRts <= planRts) {
+        return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
+      } else {
+        return { label: 'Completed with delay', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
       }
     }
 
+    const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-    if (today <= compDateOnly) {
+    if (today <= planRts) {
       return { label: 'InProgress', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500', icon: Clock };
     } else {
-      return { label: 'Lightly delayed', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500', icon: Clock };
+      const diffTime = today.getTime() - planRts.getTime();
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) {
+        return { label: 'Litely delay', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500', icon: Clock };
+      } else {
+        return { label: 'Delayed', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
+      }
     }
   };
 
