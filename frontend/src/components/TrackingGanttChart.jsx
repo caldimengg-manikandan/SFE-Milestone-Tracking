@@ -50,36 +50,33 @@ const fmt = (d) =>
       })
     : 'N/A';
 
-const getStatus = (rtsDateStr, leadWeeks, actualRtsStr) => {
-  if (!rtsDateStr) return { label: 'TBD', color: '#9ca3af' };
+const getStatus = (rtsDateStr, actualRtsStr) => {
+  const planRts = parseDate(rtsDateStr);
+  if (!planRts) return { label: 'TBD', color: '#9ca3af' };
 
-  const now = new Date();
-  const rtsDate = new Date(rtsDateStr);
-  if (isNaN(rtsDate.getTime())) return { label: 'TBD', color: '#9ca3af' };
+  const actualRts = parseDate(actualRtsStr);
 
-  const weeks = parseFloat(leadWeeks) || 0;
-  const completionDate = new Date(rtsDate.getTime() + weeks * 7 * 24 * 60 * 60 * 1000);
-
-  const compDateOnly = new Date(completionDate.getFullYear(), completionDate.getMonth(), completionDate.getDate());
-
-  if (actualRtsStr) {
-    const actualRts = new Date(actualRtsStr);
-    if (!isNaN(actualRts.getTime())) {
-      const actDateOnly = new Date(actualRts.getFullYear(), actualRts.getMonth(), actualRts.getDate());
-      if (actDateOnly <= compDateOnly) {
-        return { label: 'Completed', color: '#22c55e' }; // Green 500
-      } else {
-        return { label: 'Completed with delay', color: '#ef4444' }; // Red 500
-      }
+  if (actualRts) {
+    if (actualRts <= planRts) {
+      return { label: 'Completed', color: '#22c55e' }; // Green 500
+    } else {
+      return { label: 'Completed with delay', color: '#ef4444' }; // Red 500
     }
   }
 
+  const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 
-  if (today <= compDateOnly) {
+  if (today <= planRts) {
     return { label: 'InProgress', color: '#3b82f6' }; // Blue 500
   } else {
-    return { label: 'Lightly delayed', color: '#eab308' }; // Yellow/Amber 500
+    const diffTime = today.getTime() - planRts.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) {
+      return { label: 'Litely delay', color: '#eab308' }; // Yellow/Amber 500
+    } else {
+      return { label: 'Delayed', color: '#ef4444' }; // Red 500
+    }
   }
 };
 
@@ -112,11 +109,14 @@ export default function TrackingGanttChart({ project, allSchedules }) {
     let earliest = null;
     let latest = null;
 
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     sorted.forEach(s => {
       const rts = parseDate(s.rts_date);
       const actualRts = parseDate(s.actual_rts_date);
       const start = awardedDate || (rts ? new Date(rts.getTime() - 30 * ONE_DAY) : null);
-      const end = actualRts || rts;
+      const end = actualRts || (rts && today > rts ? today : rts);
 
       const dates = [start, end].filter(Boolean);
       if (dates.length > 0) {
@@ -173,15 +173,18 @@ export default function TrackingGanttChart({ project, allSchedules }) {
 
   /* ── bar data ── */
   const bars = useMemo(() => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
     return filteredSchedules.map((sched) => {
       const rtsDate = parseDate(sched.rts_date);
       if (!rtsDate) return null;
 
       const actualRts = parseDate(sched.actual_rts_date);
 
-      // Bar: Start Date (Awarded Date or fallback) → End Date (Actual RTS or Planned RTS)
+      // Bar: Start Date (Awarded Date or fallback) → End Date (Actual RTS or Planned RTS or today if delayed)
       const start = awardedDate || new Date(rtsDate.getTime() - 30 * ONE_DAY);
-      const end = actualRts || rtsDate;
+      const end = actualRts || (today > rtsDate ? today : rtsDate);
 
       const barStart = start;
       const barEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate() + 1);
@@ -194,7 +197,7 @@ export default function TrackingGanttChart({ project, allSchedules }) {
 
       const leftPct = ((visibleStart - timelineStart) / timelineMs) * 100;
       const widthPct = ((visibleEnd - visibleStart) / timelineMs) * 100;
-      const { label, color } = getStatus(sched.rts_date, sched.plant_lead_time_weeks, sched.actual_rts_date);
+      const { label, color } = getStatus(sched.rts_date, sched.actual_rts_date);
 
       return { sched, start: barStart, end, leftPct, widthPct, label, color };
     }).filter(Boolean);
@@ -299,7 +302,11 @@ export default function TrackingGanttChart({ project, allSchedules }) {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-2 rounded bg-[#eab308] shadow-sm" />
-              <span>Lightly Delayed</span>
+              <span>Litely delay</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-3.5 h-2 rounded bg-[#ef4444] shadow-sm" />
+              <span>Delayed</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-2 rounded bg-[#ef4444] shadow-sm" />
