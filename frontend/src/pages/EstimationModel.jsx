@@ -135,6 +135,7 @@ export default function EstimationModel() {
   });
 
   // --- State and Effect for Project Master Dropdown ---
+  const [selectedRfqId, setSelectedRfqId] = useState('');
   const [projects, setProjects] = useState([]);
   const [wonRfqs, setWonRfqs] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
@@ -144,8 +145,8 @@ export default function EstimationModel() {
       try {
         setLoadingProjects(true);
         const [projRes, rfqRes] = await Promise.all([
-          projectAPI.getAll({ won_rfq: 'true' }),
-          rfqAPI.getAll({ won_lost: 'Won' })
+          projectAPI.getAll(),
+          rfqAPI.getAll()
         ]);
         
         const projData = projRes.data.results || projRes.data;
@@ -171,58 +172,100 @@ export default function EstimationModel() {
     fetchDropdownData();
   }, []);
 
+  // Sync selectedRfqId with projectInfo and wonRfqs
+  useEffect(() => {
+    if (wonRfqs.length > 0) {
+      const matchedRfq = wonRfqs.find(rfq => {
+        const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+        return code === projectInfo.quoteNum || rfq.project_name === projectInfo.project;
+      });
+      if (matchedRfq) {
+        setSelectedRfqId(String(matchedRfq.id));
+      } else {
+        setSelectedRfqId('');
+      }
+    }
+  }, [wonRfqs, projectInfo.quoteNum, projectInfo.project]);
+
   const handleProjectChange = async (e) => {
-    const projId = e.target.value;
-    if (!projId) {
+    const rfqId = e.target.value;
+    if (!rfqId) {
       setProjectInfo(DEFAULT_PROJECT_INFO);
       setBidEnquiry(DEFAULT_BID_ENQUIRY);
       setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      setSelectedRfqId('');
       localStorage.removeItem('sfe_est_project');
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
       return;
     }
     
-    try {
-      setLoadingProjects(true);
-      const res = await projectAPI.getById(projId);
-      const selected = res.data;
-      if (selected) {
-        const nextProjectInfo = {
-          ...DEFAULT_PROJECT_INFO,
-          projectId: selected.id,
-          project: selected.name,
-          quoteNum: selected.code || '',
-          salesman: selected.project_manager_name || '',
-          startDate: selected.erection_date || ''
-        };
-        
-        const estData = selected.estimation_data || {};
-        if (estData.bidEnquiry && estData.estimationSections) {
-          setProjectInfo({
-            ...nextProjectInfo,
-            ...estData.projectInfo,
+    const selectedRfq = wonRfqs.find(r => String(r.id) === String(rfqId));
+    if (!selectedRfq) return;
+    
+    setSelectedRfqId(String(rfqId));
+    
+    const code = selectedRfq.sfe_job_no ? String(selectedRfq.sfe_job_no) : selectedRfq.quote_no;
+    const matchedProj = projects.find(p => p.code === code || p.name === selectedRfq.project_name);
+    
+    if (matchedProj) {
+      try {
+        setLoadingProjects(true);
+        const res = await projectAPI.getById(matchedProj.id);
+        const selected = res.data;
+        if (selected) {
+          const nextProjectInfo = {
+            ...DEFAULT_PROJECT_INFO,
             projectId: selected.id,
             project: selected.name,
             quoteNum: selected.code || '',
             salesman: selected.project_manager_name || '',
-            startDate: selected.erection_date || ''
-          });
-          setBidEnquiry(estData.bidEnquiry);
-          setEstimationSections(estData.estimationSections);
-          toast.success(`Calculations loaded for ${selected.name}`);
-        } else {
-          setProjectInfo(nextProjectInfo);
-          setBidEnquiry(DEFAULT_BID_ENQUIRY);
-          setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
-          toast.success(`Calculations reset for ${selected.name}`);
+            startDate: selected.erection_date || '',
+            location: selected.customer_name || ''
+          };
+          
+          const estData = selected.estimation_data || {};
+          if (estData.bidEnquiry && estData.estimationSections) {
+            setProjectInfo({
+              ...nextProjectInfo,
+              ...estData.projectInfo,
+              projectId: selected.id,
+              project: selected.name,
+              quoteNum: selected.code || '',
+              salesman: selected.project_manager_name || '',
+              startDate: selected.erection_date || ''
+            });
+            setBidEnquiry(estData.bidEnquiry);
+            setEstimationSections(estData.estimationSections);
+            toast.success(`Calculations loaded for ${selected.name}`);
+          } else {
+            setProjectInfo(nextProjectInfo);
+            setBidEnquiry(DEFAULT_BID_ENQUIRY);
+            setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+            toast.success(`Calculations reset for ${selected.name}`);
+          }
         }
+      } catch (err) {
+        console.error('Failed to fetch project details:', err);
+        toast.error('Failed to load project calculations');
+      } finally {
+        setLoadingProjects(false);
       }
-    } catch (err) {
-      console.error('Failed to fetch project details:', err);
-      toast.error('Failed to load project calculations');
-    } finally {
-      setLoadingProjects(false);
+    } else {
+      // Unsynced RFQ - pre-fill details from RFQ record
+      const nextProjectInfo = {
+        ...DEFAULT_PROJECT_INFO,
+        projectId: '',
+        project: selectedRfq.project_name || '',
+        quoteNum: selectedRfq.sfe_job_no ? String(selectedRfq.sfe_job_no) : (selectedRfq.quote_no || ''),
+        salesman: selectedRfq.primary_estimator ? selectedRfq.primary_estimator.full_name : '',
+        startDate: selectedRfq.contract_executed_date || selectedRfq.awarded_job_date || '',
+        location: selectedRfq.location || ''
+      };
+      setProjectInfo(nextProjectInfo);
+      setBidEnquiry(DEFAULT_BID_ENQUIRY);
+      setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      toast.success(`Pre-filled details for unsynced project: ${selectedRfq.project_name}`);
     }
   };
 
@@ -259,21 +302,97 @@ export default function EstimationModel() {
   }, []);
 
   const handleSaveToDatabase = async () => {
-    if (!projectInfo.projectId) {
-      toast.error('Please select a project first');
-      return;
-    }
     try {
       setIsSaving(true);
-      const payload = {
-        estimation_data: {
-          projectInfo,
-          bidEnquiry,
-          estimationSections
+      
+      let currentProjectId = projectInfo.projectId;
+      
+      if (!currentProjectId) {
+        // Unsynced Project! Create new project first.
+        const selectedRfq = wonRfqs.find(r => String(r.id) === String(selectedRfqId));
+        if (!selectedRfq) {
+          toast.error('No project/RFQ selected');
+          setIsSaving(false);
+          return;
         }
-      };
-      await projectAPI.patch(projectInfo.projectId, payload);
-      toast.success('Calculations successfully saved');
+        
+        const code = selectedRfq.sfe_job_no ? String(selectedRfq.sfe_job_no) : selectedRfq.quote_no;
+        
+        const projectPayload = {
+          code: code,
+          name: projectInfo.project || selectedRfq.project_name || '',
+          customer_name: selectedRfq.customer ? selectedRfq.customer.name : (selectedRfq.customer_name || ''),
+          project_manager_name: projectInfo.salesman || (selectedRfq.primary_estimator ? selectedRfq.primary_estimator.full_name : ''),
+          total_ton: Math.round(totalTons * 100) / 100,
+          total_manhours: Math.round(totalLaborHours * 100) / 100,
+          manhour_ton: totalTons > 0 ? Math.round((totalLaborHours / totalTons) * 100) / 100 : 0,
+          erection_date: projectInfo.startDate || selectedRfq.contract_executed_date || selectedRfq.awarded_job_date || null,
+          status: 'Yet to Start',
+          estimation_data: {
+            projectInfo,
+            bidEnquiry,
+            estimationSections
+          }
+        };
+        
+        const res = await projectAPI.create(projectPayload);
+        const newProj = res.data;
+        currentProjectId = newProj.id;
+        
+        // Update local state with the new project ID
+        const updatedProjectInfo = {
+          ...projectInfo,
+          projectId: newProj.id
+        };
+        setProjectInfo(updatedProjectInfo);
+        
+        // Update estimation_data inside the newly created project to store the correct projectId
+        const patchPayload = {
+          estimation_data: {
+            projectInfo: updatedProjectInfo,
+            bidEnquiry,
+            estimationSections
+          }
+        };
+        await projectAPI.patch(newProj.id, patchPayload);
+        toast.success('Project created and calculations saved');
+      } else {
+        // Existing Project! Just update it.
+        const payload = {
+          total_ton: Math.round(totalTons * 100) / 100,
+          total_manhours: Math.round(totalLaborHours * 100) / 100,
+          manhour_ton: totalTons > 0 ? Math.round((totalLaborHours / totalTons) * 100) / 100 : 0,
+          estimation_data: {
+            projectInfo,
+            bidEnquiry,
+            estimationSections
+          }
+        };
+        await projectAPI.patch(currentProjectId, payload);
+        toast.success('Calculations successfully saved');
+      }
+      
+      // Refresh the local lists to update dropdown filtering
+      const [projRes, rfqRes] = await Promise.all([
+        projectAPI.getAll(),
+        rfqAPI.getAll()
+      ]);
+      
+      const projData = projRes.data.results || projRes.data;
+      if (Array.isArray(projData)) {
+        setProjects(projData);
+      }
+      
+      const rfqData = rfqRes.data.results || rfqRes.data;
+      if (Array.isArray(rfqData)) {
+        const sortedRfqs = [...rfqData].sort((a, b) => {
+          const aNo = a.sfe_job_no || 0;
+          const bNo = b.sfe_job_no || 0;
+          return bNo - aNo;
+        });
+        setWonRfqs(sortedRfqs);
+      }
+      
     } catch (err) {
       console.error('Failed to save calculations:', err);
       toast.error('Failed to save calculations');
@@ -294,6 +413,19 @@ export default function EstimationModel() {
   useEffect(() => {
     localStorage.setItem('sfe_est_sections', JSON.stringify(estimationSections));
   }, [estimationSections]);
+
+  const availableRfqs = wonRfqs.filter(rfq => {
+    if (selectedRfqId && String(rfq.id) === String(selectedRfqId)) {
+      return true;
+    }
+    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+    const isSubmitted = matchedProj && 
+                        matchedProj.estimation_data && 
+                        matchedProj.estimation_data.bidEnquiry && 
+                        matchedProj.estimation_data.estimationSections;
+    return !isSubmitted;
+  });
 
   // --- Calculations ---
 
@@ -472,10 +604,8 @@ export default function EstimationModel() {
   // Clear Form handler
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear all fields?")) {
-      setProjectInfo(DEFAULT_PROJECT_INFO);
       setBidEnquiry(DEFAULT_BID_ENQUIRY);
       setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
-      localStorage.removeItem('sfe_est_project');
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
     }
@@ -1897,21 +2027,19 @@ export default function EstimationModel() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
-          {projectInfo.projectId && (
-            <button
-              onClick={handleSaveToDatabase}
-              disabled={isSaving}
-              className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
-              title="Save calculations"
-            >
-              {isSaving ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <Save className="w-4 h-4" />
-              )}
-              {isSaving ? 'Saving...' : 'Save'}
-            </button>
-          )}
+          <button
+            onClick={handleSaveToDatabase}
+            disabled={!selectedRfqId || isSaving}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+            title="Save calculations"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <Save className="w-4 h-4" />
+            )}
+            {isSaving ? 'Saving...' : 'Submit'}
+          </button>
           <button
             onClick={handleClear}
             className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition-all border border-slate-200"
@@ -1968,18 +2096,18 @@ export default function EstimationModel() {
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">PROJECT</label>
                   <div className="relative">
                     <select
-                      value={projectInfo.projectId || ''}
+                      value={selectedRfqId || ''}
                       onChange={handleProjectChange}
                       className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none cursor-pointer"
                     >
                       <option value="">Select Project</option>
-                      {wonRfqs.map(rfq => {
+                      {availableRfqs.map(rfq => {
                         const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
                         const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
-                        const projId = matchedProj ? matchedProj.id : '';
+                        const isSynced = !!matchedProj;
                         return (
-                          <option key={rfq.id} value={projId} disabled={!projId}>
-                            #{code}-{rfq.project_name}{!projId ? ' (Unsynced)' : ''}
+                          <option key={rfq.id} value={rfq.id}>
+                            #{code} - {rfq.project_name}{!isSynced ? ' (Unsynced)' : ''}
                           </option>
                         );
                       })}

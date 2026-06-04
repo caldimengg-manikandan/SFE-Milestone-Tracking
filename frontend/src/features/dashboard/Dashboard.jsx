@@ -319,16 +319,6 @@ export default function Dashboard() {
             Operations
           </button>
         </div>
-
-        {/* Active Mode Badge */}
-        {dashboardMode === 'executive' && (
-          <div className="flex items-center gap-2 px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg shadow-amber-200/50 self-start">
-            <Crown className="w-3.5 h-3.5 text-white" />
-            <span className="text-[9px] font-black text-white uppercase tracking-[0.25em]">
-              Executive Intelligence Suite — VP View
-            </span>
-          </div>
-        )}
       </div>
 
       {/* ─── VP Dashboard Mount ─────────────────────────────── */}

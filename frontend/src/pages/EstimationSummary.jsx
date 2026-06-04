@@ -17,7 +17,8 @@ import {
   ChevronRight,
   X,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Pen
 } from 'lucide-react';
 import { projectAPI, rfqAPI } from '../services/api';
 
@@ -384,6 +385,22 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     return `$${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
   };
 
+  const filteredRfqs = wonRfqs.filter(rfq => {
+    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+    if (!matchedProj) return false;
+
+    const vals = calculateEstimationValues(matchedProj);
+    if (vals.finalBidAmount <= 0) return false;
+
+    const searchLower = search.toLowerCase();
+    return (
+      (rfq.project_name?.toLowerCase() || '').includes(searchLower) ||
+      (String(rfq.sfe_job_no || '')).includes(searchLower) ||
+      (rfq.quote_no?.toLowerCase() || '').includes(searchLower)
+    );
+  });
+
   const exportToCSV = () => {
     const headers = [
       "Project Name",
@@ -403,7 +420,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       return num === 0 ? '0' : num.toFixed(2);
     };
     
-    const rows = wonRfqs.map(rfq => {
+    const rows = filteredRfqs.map(rfq => {
       const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
       const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
       const vals = calculateEstimationValues(matched);
@@ -432,15 +449,6 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     link.click();
     document.body.removeChild(link);
   };
-
-  const filteredRfqs = wonRfqs.filter(rfq => {
-    const searchLower = search.toLowerCase();
-    return (
-      (rfq.project_name?.toLowerCase() || '').includes(searchLower) ||
-      (String(rfq.sfe_job_no || '')).includes(searchLower) ||
-      (rfq.quote_no?.toLowerCase() || '').includes(searchLower)
-    );
-  });
 
   const totalPages = Math.ceil(filteredRfqs.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -551,7 +559,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                                 title={hasCalc ? "Edit Calculations in Model" : "Initialize Model Setup"}
                               >
                                 <span>{rfq.project_name}</span>
-                                <Calculator className={`w-3.5 h-3.5 shrink-0 ${hasCalc ? 'text-amber-500' : 'text-slate-300'} opacity-60 group-hover/proj:opacity-100 transition-opacity`} />
+                                <Pen className={`w-3.5 h-3.5 shrink-0 ${hasCalc ? 'text-black' : 'text-slate-300'} opacity-60 group-hover/proj:opacity-100 transition-opacity`} />
                               </button>
                             ) : (
                               <div className="flex flex-col">
@@ -593,7 +601,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   })
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-6 py-12 text-center text-slate-505 italic">No won RFQ projects matched your criteria.</td>
+                    <td colSpan="9" className="px-6 py-12 text-center text-slate-500 font-medium italic">No estimated projects found. Use the Estimation Model to perform bid calculations first.</td>
                   </tr>
                 )}
               </tbody>

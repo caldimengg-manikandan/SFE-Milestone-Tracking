@@ -43,6 +43,21 @@ class ProjectSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at']
 
+    def to_internal_value(self, data):
+        if hasattr(data, '_mutable') and not data._mutable:
+            data = data.copy()
+        elif isinstance(data, dict):
+            data = dict(data)
+            
+        for field in ['total_ton', 'total_manhours', 'manhour_ton']:
+            if field in data and data[field] is not None:
+                try:
+                    val = float(data[field])
+                    data[field] = round(val, 2)
+                except (ValueError, TypeError):
+                    pass
+        return super().to_internal_value(data)
+
     def get_awarded_job_no_date(self, obj):
         from bids.models import BidEnquiry
         try:
