@@ -13,6 +13,118 @@ import { projectAPI, rfqAPI } from '../services/api';
 import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
 
+function SearchableDropdown({ options, value, onChange, placeholder, className, containerClassName = "w-full", loading }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const selectedOption = options.find(opt => String(opt.id) === String(value));
+  
+  useEffect(() => {
+    if (selectedOption) {
+      setSearchTerm(selectedOption.label);
+    } else {
+      setSearchTerm('');
+    }
+  }, [value, selectedOption]);
+
+  const filteredOptions = options.filter(opt =>
+    (opt.label || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelect = (opt) => {
+    onChange({ target: { value: opt.id } });
+    setSearchTerm(opt.label);
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.searchable-dropdown-container')) {
+        setIsOpen(false);
+        if (selectedOption) {
+          setSearchTerm(selectedOption.label);
+        } else {
+          setSearchTerm('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedOption]);
+
+  return (
+    <div className={`relative searchable-dropdown-container ${containerClassName}`}>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+            if (e.target.value === '') {
+              onChange({ target: { value: '' } });
+            }
+          }}
+          onFocus={() => setIsOpen(true)}
+          onClick={() => setIsOpen(true)}
+          className={`w-full pr-16 ${className}`}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400">
+          {value && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange({ target: { value: '' } });
+                setSearchTerm('');
+                setIsOpen(false);
+              }}
+              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 focus:outline-none"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="p-1 hover:bg-slate-50 rounded focus:outline-none text-slate-400 focus:outline-none"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-[1.25rem] shadow-xl divide-y divide-slate-100 animate-fade-in">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleSelect(opt)}
+                className={`w-full text-left px-4 py-3 text-xs font-bold transition-all hover:bg-slate-50 ${String(opt.id) === String(value) ? 'bg-amber-50 text-amber-600' : 'text-slate-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))
+          ) : (
+            <p className="px-4 py-3 text-xs text-slate-400 italic text-center">No matching options found</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 const DEFAULT_PROJECT_INFO = {
   projectId: '',
   project: '',
@@ -2030,7 +2142,7 @@ export default function EstimationModel() {
           <button
             onClick={handleSaveToDatabase}
             disabled={!selectedRfqId || isSaving}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-2xl font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
             title="Save calculations"
           >
             {isSaving ? (
@@ -2042,7 +2154,7 @@ export default function EstimationModel() {
           </button>
           <button
             onClick={handleClear}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-bold text-xs transition-all border border-slate-200"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-all border border-slate-200"
             title="Clear all fields"
           >
             <Trash2 className="w-4 h-4" />
@@ -2053,21 +2165,21 @@ export default function EstimationModel() {
 
       {/* ── KPI Summary Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center justify-between">
+        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tonnage</span>
             <h4 className="text-xl font-extrabold text-slate-800 mt-1">{formatTons(totalTons)} Tons</h4>
           </div>
           <Calculator className="w-8 h-8 text-amber-500 bg-amber-50 p-1.5 rounded-xl animate-pulse" />
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center justify-between">
+        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Direct Costs</span>
             <h4 className="text-xl font-extrabold text-slate-800 mt-1">${totalDirectCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h4>
           </div>
           <Calculator className="w-8 h-8 text-blue-500 bg-blue-50 p-1.5 rounded-xl" />
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center justify-between border-l-4 border-l-amber-500">
+        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between border-l-4 border-l-amber-500">
           <div>
             <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Final Bid Amount</span>
             <h4 className="text-xl font-black text-amber-600 mt-1">${finalBidAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h4>
@@ -2080,9 +2192,9 @@ export default function EstimationModel() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
         {/* Left Side: Project Specifications */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-6">
           {/* Card 1: Project Specifications */}
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 md:p-8 space-y-6">
+          <div className="bg-white rounded border border-slate-500 shadow-sm p-6 md:p-8 space-y-6">
             <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
               <FileText className="w-6 h-6 text-amber-500" />
               <h3 className="text-lg font-bold text-slate-900">Project Specifications</h3>
@@ -2094,32 +2206,22 @@ export default function EstimationModel() {
               <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">PROJECT</label>
-                  <div className="relative">
-                    <select
-                      value={selectedRfqId || ''}
-                      onChange={handleProjectChange}
-                      className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none cursor-pointer"
-                    >
-                      <option value="">Select Project</option>
-                      {availableRfqs.map(rfq => {
-                        const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
-                        const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
-                        const isSynced = !!matchedProj;
-                        return (
-                          <option key={rfq.id} value={rfq.id}>
-                            #{code} - {rfq.project_name}{!isSynced ? ' (Unsynced)' : ''}
-                          </option>
-                        );
-                      })}
-                    </select>
-                    <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
-                      {loadingProjects ? (
-                        <Loader2 className="w-4.5 h-4.5 animate-spin" />
-                      ) : (
-                        <ChevronDown className="w-4.5 h-4.5" />
-                      )}
-                    </div>
-                  </div>
+                  <SearchableDropdown
+                    options={availableRfqs.map(rfq => {
+                      const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+                      const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+                      const isSynced = !!matchedProj;
+                      return {
+                        id: rfq.id,
+                        label: `#${code} - ${rfq.project_name}${!isSynced ? ' (Unsynced)' : ''}`
+                      };
+                    })}
+                    value={selectedRfqId || ''}
+                    onChange={handleProjectChange}
+                    placeholder="Select Project"
+                    className="w-full px-5 py-3.5 rounded border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    loading={loadingProjects}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -2129,7 +2231,7 @@ export default function EstimationModel() {
                     value={projectInfo.location}
                     placeholder="Enter site location..."
                     onChange={(e) => setProjectInfo({ ...projectInfo, location: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2139,7 +2241,7 @@ export default function EstimationModel() {
                     type="date"
                     value={projectInfo.materialDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, materialDate: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2180,7 +2282,7 @@ export default function EstimationModel() {
                     type="date"
                     value={projectInfo.date}
                     onChange={(e) => setProjectInfo({ ...projectInfo, date: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2191,7 +2293,7 @@ export default function EstimationModel() {
                     value={projectInfo.salesman}
                     placeholder="Enter sales representative..."
                     onChange={(e) => setProjectInfo({ ...projectInfo, salesman: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2202,7 +2304,7 @@ export default function EstimationModel() {
                     value={projectInfo.quoteNum}
                     placeholder="e.g. SFE-2026-904"
                     onChange={(e) => setProjectInfo({ ...projectInfo, quoteNum: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2212,18 +2314,30 @@ export default function EstimationModel() {
                     type="date"
                     value={projectInfo.startDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, startDate: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-2xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
               </div>
 
             </div>
           </div>
+
+          {/* Button 9: Summary */}
+          <button
+            onClick={() => setActiveSection('summary')}
+            className={`w-full flex items-center justify-between p-4 border font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'summary' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-500 text-slate-700'}`}
+          >
+            <div className="flex items-center gap-3">
+              <BarChart3 className={`w-5 h-5 ${activeSection === 'summary' ? 'text-white' : 'text-slate-500'}`} />
+              <span>Estimation Summary</span>
+            </div>
+            <span className={`${activeSection === 'summary' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+          </button>
         </div>
 
         {/* Right Side: Estimation Sections Navigation */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white rounded-[2rem] border border-slate-200 shadow-sm p-6 space-y-4">
+          <div className="bg-white border border-slate-500 shadow-sm p-6 space-y-4">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">
               Estimation Sections
             </h3>
@@ -2322,18 +2436,6 @@ export default function EstimationModel() {
                   <span>miscellaneous</span>
                 </div>
                 <span className={`${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
-              </button>
-
-              {/* Button 9: Summary */}
-              <button
-                onClick={() => setActiveSection('summary')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'summary' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
-              >
-                <div className="flex items-center gap-3">
-                  <BarChart3 className={`w-5 h-5 ${activeSection === 'summary' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>Estimation Summary</span>
-                </div>
-                <span className={`${activeSection === 'summary' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
             </div>
           </div>

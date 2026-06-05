@@ -1,9 +1,121 @@
 import { useState, useEffect } from 'react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight } from 'lucide-react';
+import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import StructuralScheduleForm from './StructuralScheduleForm';
 import { customerAPI, detailerAPI, employeeAPI, rfqAPI } from '../../services/api';
+
+function SearchableDropdown({ options, value, onChange, placeholder, className, containerClassName = "w-full", loading }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  
+  const selectedOption = options.find(opt => String(opt.id) === String(value));
+  
+  useEffect(() => {
+    if (selectedOption) {
+      setSearchTerm(selectedOption.label);
+    } else {
+      setSearchTerm('');
+    }
+  }, [value, selectedOption]);
+
+  const filteredOptions = options.filter(opt =>
+    (opt.label || '').toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  const handleSelect = (opt) => {
+    onChange({ target: { value: opt.id } });
+    setSearchTerm(opt.label);
+    setIsOpen(false);
+  };
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.searchable-dropdown-container')) {
+        setIsOpen(false);
+        if (selectedOption) {
+          setSearchTerm(selectedOption.label);
+        } else {
+          setSearchTerm('');
+        }
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [selectedOption]);
+
+  return (
+    <div className={`relative searchable-dropdown-container ${containerClassName}`}>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder={placeholder}
+          value={searchTerm}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setIsOpen(true);
+            if (e.target.value === '') {
+              onChange({ target: { value: '' } });
+            }
+          }}
+          onFocus={() => setIsOpen(true)}
+          onClick={() => setIsOpen(true)}
+          className={`w-full pr-16 ${className}`}
+        />
+        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400">
+          {value && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onChange({ target: { value: '' } });
+                setSearchTerm('');
+                setIsOpen(false);
+              }}
+              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 focus:outline-none"
+              title="Clear selection"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsOpen(!isOpen);
+            }}
+            className="p-1 hover:bg-slate-50 rounded focus:outline-none text-slate-400 focus:outline-none"
+          >
+            {loading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <ChevronDown className="w-4 h-4" />
+            )}
+          </button>
+        </div>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-[1.25rem] shadow-xl divide-y divide-slate-100 animate-fade-in">
+          {filteredOptions.length > 0 ? (
+            filteredOptions.map((opt) => (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleSelect(opt)}
+                className={`w-full text-left px-4 py-3 text-xs font-bold transition-all hover:bg-slate-50 ${String(opt.id) === String(value) ? 'bg-amber-50 text-amber-600' : 'text-slate-700'}`}
+              >
+                {opt.label}
+              </button>
+            ))
+          ) : (
+            <p className="px-4 py-3 text-xs text-slate-400 italic text-center">No matching options found</p>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function ProjectForm({
   schedules,
@@ -28,6 +140,7 @@ export default function ProjectForm({
   const [detailers, setDetailers] = useState([]);
   const [employees, setEmployees] = useState([]);
   const [wonRfqs, setWonRfqs] = useState([]);
+  const [selectedRfqId, setSelectedRfqId] = useState('');
 
   useEffect(() => {
     const fetchData = async () => {
@@ -674,7 +787,18 @@ export default function ProjectForm({
 
   const handleRfqSelect = (e) => {
     const rfqId = e.target.value;
-    if (!rfqId) return;
+    setSelectedRfqId(rfqId);
+    if (!rfqId) {
+      setForm(prev => ({
+        ...prev,
+        name: '',
+        code: '',
+        customer_name: '',
+        total_ton: '',
+        total_manhours: '',
+      }));
+      return;
+    }
 
     const rfq = wonRfqs.find(r => String(r.id) === String(rfqId));
     if (rfq) {
@@ -755,18 +879,17 @@ export default function ProjectForm({
                       <h5 className="text-sm font-bold text-slate-800">Pre-fill Project from Won RFQs</h5>
                       <p className="text-xs text-slate-500">Select an awarded RFQ to automatically populate project info and total tonnage/manhours.</p>
                     </div>
-                    <select
+                    <SearchableDropdown
+                      options={wonRfqs.map(rfq => ({
+                        id: rfq.id,
+                        label: `${rfq.sfe_job_no ? `[Job #${rfq.sfe_job_no}] ` : ''}${rfq.quote_no} — ${rfq.project_name}`
+                      }))}
+                      value={selectedRfqId || ''}
                       onChange={handleRfqSelect}
-                      className="w-full md:w-80 px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all cursor-pointer"
-                      defaultValue=""
-                    >
-                      <option value="">-- Select a Won RFQ --</option>
-                      {wonRfqs.map(rfq => (
-                        <option key={rfq.id} value={rfq.id}>
-                          {rfq.sfe_job_no ? `[Job #${rfq.sfe_job_no}] ` : ''}{rfq.quote_no} — {rfq.project_name}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="-- Select a Won RFQ --"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      containerClassName="w-full md:w-80"
+                    />
                   </div>
                 )}
 

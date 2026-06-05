@@ -216,37 +216,46 @@ class DashboardStatsView(APIView):
                 ot = float(item.overtime) if item.overtime is not None else 0.0
                 available_hours += (mh + ot) * 20.0
                 
-            # 2. Required Manhours for this month
-            required_hours = 0.0
+            # 2. Required Manhours breakdown for this month
+            struct_fab = 0.0
+            misc_fab = 0.0
+            struct_erect = 0.0
+            misc_erect = 0.0
+            
             for r in won_rfqs:
                 # Phase 1: Struct Fab
                 if is_schedule_active_in_month(r.struct_fab_start_month, r.struct_fab_duration_months, idx):
                     hrs = float(r.struct_fab_hours or 0)
                     dur = float(r.struct_fab_duration_months or 0)
-                    required_hours += hrs / dur if dur > 0 else hrs
+                    struct_fab += hrs / dur if dur > 0 else hrs
                 # Phase 2: Misc Fab
                 if is_schedule_active_in_month(r.misc_fab_start_month, r.misc_fab_duration_months, idx):
                     hrs = float(r.misc_fab_hours or 0)
                     dur = float(r.misc_fab_duration_months or 0)
-                    required_hours += hrs / dur if dur > 0 else hrs
+                    misc_fab += hrs / dur if dur > 0 else hrs
                 # Phase 3: Struct Erect
                 if is_schedule_active_in_month(r.struct_erect_start_month, r.struct_erect_duration_months, idx):
                     hrs = float(r.struct_erect_hours or 0)
                     dur = float(r.struct_erect_duration_months or 0)
-                    required_hours += hrs / dur if dur > 0 else hrs
+                    struct_erect += hrs / dur if dur > 0 else hrs
                 # Phase 4: Misc Erect
                 if is_schedule_active_in_month(r.misc_erect_start_month, r.misc_erect_duration_months, idx):
                     hrs = float(r.misc_erect_hours or 0)
                     dur = float(r.misc_erect_duration_months or 0)
-                    required_hours += hrs / dur if dur > 0 else hrs
+                    misc_erect += hrs / dur if dur > 0 else hrs
 
+            required_hours = struct_fab + misc_fab + struct_erect + misc_erect
             remaining = available_hours - required_hours
             
             bar_data.append({
                 'name': m_short,
                 'capacity': round(available_hours, 2),
                 'allocated': round(required_hours, 2),
-                'remaining': round(remaining, 2)
+                'remaining': round(remaining, 2),
+                'struct_fab': round(struct_fab, 2),
+                'misc_fab': round(misc_fab, 2),
+                'struct_erect': round(struct_erect, 2),
+                'misc_erect': round(misc_erect, 2)
             })
 
         # 5. Recent Activities (Recent Projects)

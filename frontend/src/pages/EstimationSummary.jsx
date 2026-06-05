@@ -510,7 +510,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
               <thead>
                 <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider">
                   <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 min-w-[200px]">Project Name</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Standard Grand Total</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Total Bid Amount</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Misc Summary Total</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Total Direct Costs</th>
                   <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Drafting & Directs</th>
@@ -690,7 +690,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
           <div className="absolute right-0 top-0 translate-x-10 -translate-y-10 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
           <div className="flex justify-between items-start gap-4">
             <div>
-              <span className="text-[10px] font-black text-amber-400/90 uppercase tracking-widest block">Standard Grand Total</span>
+              <span className="text-[10px] font-black text-amber-400/90 uppercase tracking-widest block">Total Bid Amount</span>
               <h4 className="text-3xl font-black mt-2 tracking-tight">
                 {formatCurrency(activeFinalBidAmount)}
               </h4>
