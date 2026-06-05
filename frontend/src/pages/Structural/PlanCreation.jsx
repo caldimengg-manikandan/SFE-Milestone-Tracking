@@ -392,14 +392,16 @@ export default function PlanCreation() {
     doc.text(project.project_manager_name || 'N/A', 186, 38);
 
     // Schedule table
-    const tableHeaders = [
-      'Seq #', 'Tons', 'Item Description', 'Category',
-      'Schedule\nOFA', 'Actual\nOFA', 'Schedule\nBFA', 'Actual\nBFA',
-      'Schedule Field\nMeasure', 'RTS', 'plant Lead\nTime\n(WEEKS)',
-      'Schedule\nErection', 'Budget\nplant\nHours', 'Budget\nField\nHours',
-      'plant\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
-      'DWG\nStatus', 'Notes'
-    ];
+      const isFMRequired = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
+      const tableHeaders = [
+        'Seq #', 'Tons', 'Item Description', 'Category',
+        'Scheduled\nOFA', 'Actual\nOFA', 'Scheduled\nBFA', 'Actual\nBFA',
+        ...(isFMRequired ? ['Field\nMeasure'] : []),
+        'RTS', 'plant Lead\nTime\n(WEEKS)',
+        'Scheduled\nErection', 'Budget\nplant\nHours', 'Budget\nField\nHours',
+        'plant\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
+        'DWG\nStatus', 'Notes'
+      ];
 
     const tableData = sortedSchedules.map(s => [
       s.seq_no || '',
@@ -410,7 +412,7 @@ export default function PlanCreation() {
       fmtDate(s.actual_ofa_date),
       fmtDate(s.scheduled_bfa_date),
       fmtDate(s.actual_bfa_date),
-      fmtDate(s.scheduled_field_measure_date),
+      ...(isFMRequired ? [fmtDate(s.scheduled_field_measure_date)] : []),
       fmtDate(s.rts_date),
       s.plant_lead_time_weeks || '0',
       fmtDate(s.scheduled_erection_date),
@@ -481,11 +483,10 @@ export default function PlanCreation() {
       const bfa = parseDate(s.scheduled_bfa_date);
       const rts = parseDate(s.rts_date);
       const erection = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
-      const ship = parseDate(s.ship_date);
       const fieldMeasure = parseDate(s.scheduled_field_measure_date);
       const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
 
-      const dates = [ofa, bfa, rts, erection, ship, fieldMeasure, awardedDate].filter(Boolean);
+      const dates = [ofa, bfa, rts, erection, fieldMeasure, awardedDate].filter(Boolean);
       if (dates.length > 0) {
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
         const maxDate = new Date(Math.max(...dates.map(d => d.getTime())));
@@ -557,21 +558,24 @@ export default function PlanCreation() {
       return { label: 'In Progress', color: [245, 158, 11] };
     };
 
-    const milestoneColors = {
-      scheduled_ofa_date: [139, 92, 246], actual_ofa_date: [107, 114, 128],
-      scheduled_bfa_date: [6, 182, 212], actual_bfa_date: [20, 184, 166],
-      scheduled_field_measure_date: [249, 115, 22], rts_date: [30, 41, 59],
-      ship_date: [239, 68, 68], scheduled_erection_date: [79, 70, 229],
-    };
+      const milestoneColors = {
+        scheduled_ofa_date: [139, 92, 246], actual_ofa_date: [107, 114, 128],
+        scheduled_bfa_date: [6, 182, 212], actual_bfa_date: [20, 184, 166],
+        ...(isFMRequired ? { scheduled_field_measure_date: [249, 115, 22] } : {}),
+        rts_date: [30, 41, 59],
+        scheduled_erection_date: [79, 70, 229],
+      };
 
     const rowH = 14;
     sortedSchedules.forEach(s => {
       if (gy + rowH > pageHeight - 30) { doc.addPage(); gy = 20; }
 
-      const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
-      const start = awardedDate;
-      const rawEnd = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
-      const end = (rawEnd && rawEnd >= start) ? rawEnd : start;
+      let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
+      let end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
+
+      if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
+      if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
+
       const status = getStatus(start, end);
 
       // Label cell
@@ -672,10 +676,10 @@ export default function PlanCreation() {
     doc.text('MILESTONE DOTS:', 115, legY);
 
     const dotLegend1 = [
-      { name: "OFA Sch", color: [139, 92, 246], x: 142 },
-      { name: "OFA Act", color: [107, 114, 128], x: 177 },
-      { name: "BFA Sch", color: [6, 182, 212], x: 212 },
-      { name: "BFA Act", color: [20, 184, 166], x: 247 }
+      { name: "Scheduled OFA", color: [139, 92, 246], x: 142 },
+      { name: "Actual OFA", color: [107, 114, 128], x: 177 },
+      { name: "Scheduled BFA", color: [6, 182, 212], x: 212 },
+      { name: "Actual BFA", color: [20, 184, 166], x: 247 }
     ];
 
     dotLegend1.forEach(st => {
@@ -690,10 +694,9 @@ export default function PlanCreation() {
     // Line 2 for Milestone dots
     const legY2 = legY + 5;
     const dotLegend2 = [
-      { name: "Field Measure", color: [249, 115, 22], x: 142 },
+      ...(isFMRequired ? [{ name: "Field Measure", color: [249, 115, 22], x: 142 }] : []),
       { name: "RTS", color: [30, 41, 59], x: 177 },
-      { name: "Ship", color: [239, 68, 68], x: 212 },
-      { name: "Erection Sch", color: [79, 70, 229], x: 247 }
+      { name: "Scheduled Erection", color: [79, 70, 229], x: 212 }
     ];
 
     dotLegend2.forEach(st => {
@@ -797,7 +800,7 @@ export default function PlanCreation() {
                 viewProjectId === p.id && (
                   <tr key={`gantt-${p.id}`} className="bg-slate-50">
                     <td colSpan={5} className="p-4">
-                      <GanttChart project={p} allSchedules={allSchedules} />
+                      <GanttChart project={p} allSchedules={allSchedules} showFieldMeasure={p.schedule_field_measure_required?.trim().toLowerCase() !== 'no'} />
                     </td>
                   </tr>
                 )
