@@ -126,7 +126,7 @@ const calculateMilestones = (erectionDate, isFMRequired) => {
 
 /* ── component ──────────────────────────────────────────────── */
 
-export default function GanttChart({ project, allSchedules }) {
+export default function GanttChart({ project, allSchedules, showFieldMeasure }) {
   /* filter + sort schedules for this project */
   const sorted = useMemo(() => {
     const rows = allSchedules.filter((s) => {
@@ -143,8 +143,8 @@ export default function GanttChart({ project, allSchedules }) {
     });
   }, [allSchedules, project.id]);
 
-  // Is field measure required for this project?
-  const isFMRequired = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
+  // Determine if Field Measure is required (prop overrides project setting if provided)
+  const isFMRequired = typeof showFieldMeasure !== 'undefined' ? showFieldMeasure : (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
 
   // Awarded date (bar start)
   const awardedDate = project?.awarded_job_no_date ? parseDate(project.awarded_job_no_date) : null;
@@ -155,17 +155,13 @@ export default function GanttChart({ project, allSchedules }) {
     let latest = null;
 
     sorted.forEach(s => {
-      const erection = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
-      const milestones = calculateMilestones(erection, isFMRequired);
-      const ship = parseDate(s.ship_date);
       const dates = [
         awardedDate,
-        milestones.ofa,
-        milestones.bfa,
-        milestones.fm,
-        milestones.rts,
-        ship,
-        erection,
+        parseDate(s.scheduled_ofa_date),
+        parseDate(s.scheduled_bfa_date),
+        parseDate(s.scheduled_field_measure_date),
+        parseDate(s.rts_date),
+        parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date),
       ].filter(Boolean);
       if (dates.length > 0) {
         const minDate = new Date(Math.min(...dates.map(d => d.getTime())));
@@ -182,7 +178,7 @@ export default function GanttChart({ project, allSchedules }) {
     const timelineEnd = new Date(latest.getFullYear(), latest.getMonth() + 1, 1);
 
     return { timelineStart, timelineEnd };
-  }, [sorted, project?.erection_date, awardedDate, isFMRequired]);
+  }, [sorted, project?.erection_date, awardedDate]);
 
   /* ── 2. Available months list ── */
   const availableMonths = useMemo(() => {
@@ -200,21 +196,10 @@ export default function GanttChart({ project, allSchedules }) {
   }, [fullRange]);
 
   /* ── 3. Default month calculation (prioritizes current month, then erection month, then first available) ── */
-  const defaultMonthVal = useMemo(() => {
-    const today = new Date();
-    const currentVal = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
-    const hasCurrent = availableMonths.some(m => m.value === currentVal);
-    if (hasCurrent) return currentVal;
-
-    if (project?.erection_date) {
-      const eDate = new Date(project.erection_date);
-      const eVal = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}`;
-      if (availableMonths.some(m => m.value === eVal)) return eVal;
-    }
-
-    if (availableMonths.length > 0) return availableMonths[0].value;
-    return 'all';
-  }, [availableMonths, project?.erection_date]);
+   const defaultMonthVal = useMemo(() => {
+     // Default to showing all months; user can filter explicitly later.
+     return 'all';
+   }, []);
 
   const [selectedMonth, setSelectedMonth] = useState(defaultMonthVal);
 
@@ -242,8 +227,7 @@ export default function GanttChart({ project, allSchedules }) {
     // Filter sequences that have ANY timeline bar overlap with the selected month
     const filtered = sorted.filter(s => {
       const erection = parseDate(s.scheduled_erection_date) || parseDate(project?.erection_date);
-      const milestones = calculateMilestones(erection, isFMRequired);
-      const barStart = awardedDate || milestones.ofa || erection;
+      const barStart = awardedDate || parseDate(s.scheduled_ofa_date) || erection;
       const barEnd = erection;
 
       if (!barStart && !barEnd) return false;
@@ -259,7 +243,7 @@ export default function GanttChart({ project, allSchedules }) {
       timelineStart: startOfMonth,
       timelineEnd: endOfMonth
     };
-  }, [selectedMonth, sorted, fullRange, project?.erection_date, awardedDate, isFMRequired]);
+  }, [selectedMonth, sorted, fullRange, project?.erection_date, awardedDate]);
 
   const timelineMs = timelineEnd.getTime() - timelineStart.getTime();
 
@@ -300,11 +284,9 @@ export default function GanttChart({ project, allSchedules }) {
   /* ── bar data ── */
   const bars = filteredSchedules.map((sched) => {
     const erection = parseDate(sched.scheduled_erection_date) || parseDate(project?.erection_date);
-    const milestones = calculateMilestones(erection, isFMRequired);
-    const ship = parseDate(sched.ship_date);
 
     // Bar: Awarded Date → Erection Date
-    const start = awardedDate || milestones.ofa;
+    const start = awardedDate || parseDate(sched.scheduled_ofa_date) || erection;
     const end = erection;
     if (!start && !end) return null;
 
@@ -323,17 +305,18 @@ export default function GanttChart({ project, allSchedules }) {
     const widthPct = ((visibleEnd - visibleStart) / timelineMs) * 100;
     const { label, color } = getStatus(barStart, end);
 
-    return { sched, start: barStart, end, leftPct, widthPct, label, color, milestones, ship, erection };
+    return { sched, start: barStart, end, leftPct, widthPct, label, color, erection };
   }).filter(Boolean);
 
   /* ── milestone dot definitions ── */
-  const milestoneTypes = [
-    { key: 'ofa', label: 'Sch OFA', color: '#a855f7' },
-    { key: 'bfa', label: 'Sch BFA', color: '#06b6d4' },
-    { key: 'fm', label: 'Sch Field Measure', color: '#f97316' },
-    { key: 'rts', label: 'RTS', color: '#1e293b' },
-    { key: 'ship', label: 'Ship Date', color: '#ef4444' },
-  ];
+  // isFMRequired is already defined above; reuse this variable
+   const milestoneTypes = [
+     { key: 'scheduled_ofa_date', label: 'Scheduled OFA', color: '#a855f7' },
+     { key: 'scheduled_bfa_date', label: 'Scheduled BFA', color: '#06b6d4' },
+     // Conditionally include Field Measure based on project setting
+     ...(isFMRequired ? [{ key: 'scheduled_field_measure_date', label: 'Field Measure', color: '#f97316' }] : []),
+     { key: 'rts_date', label: 'RTS', color: '#1e293b' },
+   ];
 
   if (sorted.length === 0) {
     return (
@@ -387,7 +370,7 @@ export default function GanttChart({ project, allSchedules }) {
         {/* ── body rows ── */}
         {bars.map((bar, idx) => {
           if (!bar) return null;
-          const { sched, start, end, leftPct, widthPct, label, color, milestones, ship, erection } = bar;
+          const { sched, start, end, leftPct, widthPct, label, color, milestones, erection } = bar;
           return (
             <div key={sched.id || idx} className="gantt-row">
               {/* Seq Column */}
@@ -426,9 +409,9 @@ export default function GanttChart({ project, allSchedules }) {
                   </span>
                 </div>
 
-                {/* Milestone Dots — using calculated dates */}
+                {/* Milestone Dots — using database values */}
                 {milestoneTypes.map((m) => {
-                  const dateVal = m.key === 'ship' ? ship : milestones[m.key];
+                  const dateVal = parseDate(sched[m.key]);
                   const pct = getDatePct(dateVal);
                   if (pct === null) return null;
                   return (
@@ -473,27 +456,25 @@ export default function GanttChart({ project, allSchedules }) {
           <span className="uppercase tracking-widest text-[8px] text-slate-400">Milestone Legend:</span>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#a855f7] shadow-sm" />
-            <span>Sch OFA</span>
+            <span>Scheduled OFA</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#06b6d4] shadow-sm" />
-            <span>Sch BFA</span>
+            <span>Scheduled BFA</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#f97316] shadow-sm" />
-            <span>Sch Field Measure</span>
-          </div>
+          {isFMRequired && (
+            <div className="flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#f97316] shadow-sm" />
+              <span>Field Measure</span>
+            </div>
+          )}
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#1e293b] shadow-sm" />
             <span>RTS</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full border border-white bg-[#ef4444] shadow-sm" />
-            <span>Ship Date</span>
-          </div>
-          <div className="flex items-center gap-1.5">
             <span className="text-[13px] leading-none">🚩</span>
-            <span>Erection Date</span>
+            <span>Scheduled Erection</span>
           </div>
         </div>
       </div>

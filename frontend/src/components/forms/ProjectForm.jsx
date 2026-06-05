@@ -92,7 +92,14 @@ export default function ProjectForm({
     doc.setTextColor(71, 85, 105); doc.setFont(undefined, 'bold'); doc.text("MANAGER:", 150, 38);
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(form.project_manager_name || 'N/A', 180, 38);
 
-    const tableHeaders = [["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA", "Sch Field Meas", "RTS Date", "Ship Date", "plant Lead (Wks)", "Sch Erection", "Bud. plant Hr", "Bud. Field Hr", "Act. plant Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes"]];
+    const showFieldMeasure = (form.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
+
+    const headersList = ["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA", "Actual OFA", "Scheduled BFA", "Actual BFA"];
+    if (showFieldMeasure) {
+      headersList.push("Field Measure");
+    }
+    headersList.push("RTS Date", "plant Lead (Wks)", "Scheduled Erection", "Bud. plant Hr", "Bud. Field Hr", "Act. plant Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
+    const tableHeaders = [headersList];
 
     const sortedSchedules = [...schedules].sort((a, b) => {
       const aNum = parseFloat(a.seq_no);
@@ -101,28 +108,65 @@ export default function ProjectForm({
       return String(a.seq_no).localeCompare(String(b.seq_no), undefined, { numeric: true });
     });
 
-    const tableData = sortedSchedules.map(s => [
-      s.seq_no,
-      s.tons,
-      s.item_description,
-      s.category || '',
-      s.scheduled_ofa_date,
-      s.actual_ofa_date || '-',
-      s.scheduled_bfa_date,
-      s.actual_bfa_date || '-',
-      s.scheduled_field_measure_date || '-',
-      s.rts_date,
-      s.ship_date || '-',
-      s.plant_lead_time_weeks,
-      s.scheduled_erection_date,
-      s.budget_plant_hours,
-      s.budget_field_hours,
-      s.actual_plant_hours,
-      s.actual_field_hours,
-      s.detailer_vendor,
-      s.dwg_status,
-      s.notes
-    ]);
+    const tableData = sortedSchedules.map(s => {
+      const row = [
+        s.seq_no,
+        s.tons,
+        s.item_description,
+        s.category || '',
+        s.scheduled_ofa_date,
+        s.actual_ofa_date || '-',
+        s.scheduled_bfa_date,
+        s.actual_bfa_date || '-'
+      ];
+      if (showFieldMeasure) {
+        row.push(s.scheduled_field_measure_date || '-');
+      }
+      row.push(
+        s.rts_date,
+        s.plant_lead_time_weeks,
+        s.scheduled_erection_date,
+        s.budget_plant_hours,
+        s.budget_field_hours,
+        s.actual_plant_hours,
+        s.actual_field_hours,
+        s.detailer_vendor,
+        s.dwg_status,
+        s.notes
+      );
+      return row;
+    });
+
+    const stylesMap = [
+      { cellWidth: 8, halign: 'center' },   // SEQ #
+      { cellWidth: 9, halign: 'center' },  // Tons
+      { cellWidth: 'auto' }, // Item Description
+      { cellWidth: 14 },  // Category
+      { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
+      { cellWidth: 12, halign: 'center' },  // Actual OFA Date
+      { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
+      { cellWidth: 12, halign: 'center' }   // Actual BFA Date
+    ];
+    if (showFieldMeasure) {
+      stylesMap.push({ cellWidth: 14, halign: 'center' }); // Scheduled Field Measure Date
+    }
+    stylesMap.push(
+      { cellWidth: 12, halign: 'center' },  // RTS Date
+      { cellWidth: 14, halign: 'center' },  // plant Lead Time in WEEKS
+      { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
+      { cellWidth: 11, halign: 'center' }, // Budget plant Hours
+      { cellWidth: 11, halign: 'center' }, // Budget Field Hours
+      { cellWidth: 11, halign: 'center' }, // plant Hours Actual
+      { cellWidth: 11, halign: 'center' }, // Field Hours Actual
+      { cellWidth: 13 }, // Detailer / Vendor
+      { cellWidth: 12 }, // Dwg Status
+      { cellWidth: 14 }  // Notes
+    );
+
+    const columnStyles = {};
+    stylesMap.forEach((style, idx) => {
+      columnStyles[idx] = style;
+    });
 
     autoTable(doc, {
       startY: 50,
@@ -132,17 +176,7 @@ export default function ProjectForm({
       headStyles: { fillColor: [30, 41, 59], fontSize: 6.5, fontStyle: 'bold', halign: 'center', valign: 'middle' },
       bodyStyles: { fontSize: 6.0, valign: 'middle' },
       styles: { cellPadding: 1, overflow: 'linebreak' },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },   // SEQ #
-        1: { cellWidth: 9, halign: 'center' },  // Tons
-        2: { cellWidth: 'auto' }, // Item Description
-        3: { cellWidth: 14 },  // Category
-        4: { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
-        5: { cellWidth: 12, halign: 'center' },  // Actual OFA Date
-        6: { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
-        7: { cellWidth: 12, halign: 'center' },  // Actual BFA Date
-        ...(form.schedule_field_measure_required === 'Yes' ? { 8: { cellWidth: 14, halign: 'center' } } : {}),
-      }
+      columnStyles: columnStyles
     });
 
     // --- GANTT CHART IN PDF ---
@@ -222,7 +256,7 @@ export default function ProjectForm({
     // Helper to determine active range for a sequence
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
+      let end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
 
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -261,7 +295,6 @@ export default function ProjectForm({
         parseDate(s.actual_bfa_date),
         parseDate(s.scheduled_field_measure_date),
         parseDate(s.rts_date),
-        parseDate(s.ship_date),
         parseDate(s.scheduled_erection_date)
       ].filter(Boolean);
 
@@ -512,9 +545,8 @@ export default function ProjectForm({
               { date: s.actual_ofa_date, color: [236, 72, 153] },
               { date: s.scheduled_bfa_date, color: [6, 182, 212] },
               { date: s.actual_bfa_date, color: [20, 184, 166] },
-              { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
+              ...(showFieldMeasure ? [{ date: s.scheduled_field_measure_date, color: [249, 115, 22] }] : []),
               { date: s.rts_date, color: [30, 41, 59] },
-              { date: s.ship_date, color: [220, 38, 38] },
               { date: s.scheduled_erection_date, color: [79, 70, 229] }
             ];
 
@@ -582,10 +614,10 @@ export default function ProjectForm({
         doc.text("MILESTONE DOTS:", 115, yLegend);
 
         const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 142 },
-          { name: "OFA Act", color: [236, 72, 153], x: 177 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 212 },
-          { name: "BFA Act", color: [20, 184, 166], x: 247 }
+          { name: "Scheduled OFA", color: [168, 85, 247], x: 142 },
+          { name: "Actual OFA", color: [236, 72, 153], x: 177 },
+          { name: "Scheduled BFA", color: [6, 182, 212], x: 212 },
+          { name: "Actual BFA", color: [20, 184, 166], x: 247 }
         ];
 
         dotLegend1.forEach(st => {
@@ -599,10 +631,9 @@ export default function ProjectForm({
         // Line 2 for Milestone dots
         const yLegend2 = pageHeight - 14;
         const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 142 },
+          ...(showFieldMeasure ? [{ name: "Field Measure", color: [249, 115, 22], x: 142 }] : []),
           { name: "RTS", color: [30, 41, 59], x: 177 },
-          { name: "Ship", color: [220, 38, 38], x: 212 },
-          { name: "Erection Sch", color: [79, 70, 229], x: 247 }
+          { name: "Scheduled Erection", color: [79, 70, 229], x: 212 }
         ];
 
         dotLegend2.forEach(st => {

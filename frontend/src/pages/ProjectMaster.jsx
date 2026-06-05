@@ -368,13 +368,17 @@ export default function ProjectMaster() {
     doc.setFont(undefined, 'normal'); doc.setTextColor(15, 23, 42); doc.text(project.project_manager_name || 'N/A', 180, 38);
 
 
-    const showFieldMeasure = project.schedule_field_measure_required !== 'No';
-
-    const headersList = ["SEQ #", "Tons", "Item Description", "Category", "Sch OFA", "Act OFA", "Sch BFA", "Act BFA"];
+    const showFieldMeasure = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
+    const headersList = [
+      'Seq #', 'Tons', 'Item Description', 'Category',
+      'Scheduled\nOFA', 'Actual\nOFA', 'Scheduled\nBFA', 'Actual\nBFA'
+    ];
     if (showFieldMeasure) {
-      headersList.push("Sch Field Meas");
+      headersList.push('Field\nMeasure');
     }
-    headersList.push("RTS Date", "plant Lead (Wks)", "Sch Erection", "Bud. plant Hr", "Bud. Field Hr", "Act. plant Hr", "Act. Field Hr", "Detailer/Vendor", "Dwg Status", "Notes");
+    headersList.push('RTS', 'plant Lead\nTime\n(WEEKS)', 'Scheduled\nErection', 'Budget\nplant\nHours', 'Budget\nField\nHours',
+      'plant\nHours\nActual', 'Field\nHours\nActual', 'Detailer /\nVendor',
+      'DWG\nStatus', 'Notes');
     const tableHeaders = [headersList];
 
     const sortedSchedules = [...projectSchedules].sort((a, b) => {
@@ -414,26 +418,26 @@ export default function ProjectMaster() {
     });
 
     const stylesMap = [
-      { cellWidth: 8, halign: 'center' },   // SEQ #
-      { cellWidth: 9, halign: 'center' },  // Tons
+      { cellWidth: 10 }, // SEQ #
+      { cellWidth: 12 }, // Tons
       { cellWidth: 'auto' }, // Item Description
-      { cellWidth: 14 },  // Category
-      { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
-      { cellWidth: 12, halign: 'center' },  // Actual OFA Date
-      { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
-      { cellWidth: 12, halign: 'center' }   // Actual BFA Date
+      { cellWidth: 16 }, // Category
+      { cellWidth: 12, halign: 'center' }, // schedule OFA
+      { cellWidth: 12, halign: 'center' }, // actual OFA
+      { cellWidth: 12, halign: 'center' }, // schedule BFA
+      { cellWidth: 12, halign: 'center' } // actual BFA
     ];
     if (showFieldMeasure) {
-      stylesMap.push({ cellWidth: 14, halign: 'center' }); // Scheduled Field Measure Date
+      stylesMap.push({ cellWidth: 14, halign: 'center' }); // Field Measure
     }
     stylesMap.push(
-      { cellWidth: 12, halign: 'center' },  // RTS Date
-      { cellWidth: 14, halign: 'center' },  // plant Lead Time in WEEKS
-      { cellWidth: 13, halign: 'center' }, // Scheduled Start of Erection
-      { cellWidth: 11, halign: 'center' }, // Budget plant Hours
-      { cellWidth: 11, halign: 'center' }, // Budget Field Hours
-      { cellWidth: 11, halign: 'center' }, // plant Hours Actual
-      { cellWidth: 11, halign: 'center' }, // Field Hours Actual
+      { cellWidth: 12, halign: 'center' }, // RTS
+      { cellWidth: 14, halign: 'center' }, // plant Lead Time
+      { cellWidth: 13, halign: 'center' }, // scheduled erection
+      { cellWidth: 11 }, // Bud. plant Hr
+      { cellWidth: 11 }, // Bud. Field Hr
+      { cellWidth: 11 }, // Act. plant Hr
+      { cellWidth: 11 }, // Act. Field Hr
       { cellWidth: 13 }, // Detailer / Vendor
       { cellWidth: 12 }, // Dwg Status
       { cellWidth: 14 }  // Notes
@@ -532,7 +536,7 @@ export default function ProjectMaster() {
     // Helper to determine active range for a sequence
     const getSequenceRange = (s) => {
       let start = parseDate(s.scheduled_ofa_date) || parseDate(s.scheduled_bfa_date) || parseDate(s.rts_date);
-      let end = parseDate(s.scheduled_erection_date) || parseDate(s.ship_date) || parseDate(s.rts_date);
+      let end = parseDate(s.scheduled_erection_date) || parseDate(s.rts_date);
 
       if (!start && end) start = new Date(end.getTime() - 30 * 24 * 60 * 60 * 1000);
       if (!end && start) end = new Date(start.getTime() + 30 * 24 * 60 * 60 * 1000);
@@ -571,7 +575,6 @@ export default function ProjectMaster() {
         parseDate(s.actual_bfa_date),
         parseDate(s.scheduled_field_measure_date),
         parseDate(s.rts_date),
-        parseDate(s.ship_date),
         parseDate(s.scheduled_erection_date)
       ].filter(Boolean);
 
@@ -822,9 +825,8 @@ export default function ProjectMaster() {
               { date: s.actual_ofa_date, color: [236, 72, 153] },
               { date: s.scheduled_bfa_date, color: [6, 182, 212] },
               { date: s.actual_bfa_date, color: [20, 184, 166] },
-              { date: s.scheduled_field_measure_date, color: [249, 115, 22] },
+              ...(showFieldMeasure ? [{ date: s.scheduled_field_measure_date, color: [249, 115, 22] }] : []),
               { date: s.rts_date, color: [30, 41, 59] },
-              { date: s.ship_date, color: [220, 38, 38] },
               { date: s.scheduled_erection_date, color: [79, 70, 229] }
             ];
 
@@ -892,10 +894,10 @@ export default function ProjectMaster() {
         doc.text("MILESTONE DOTS:", 115, yLegend);
 
         const dotLegend1 = [
-          { name: "OFA Sch", color: [168, 85, 247], x: 142 },
-          { name: "OFA Act", color: [236, 72, 153], x: 177 },
-          { name: "BFA Sch", color: [6, 182, 212], x: 212 },
-          { name: "BFA Act", color: [20, 184, 166], x: 247 }
+          { name: "Scheduled OFA", color: [168, 85, 247], x: 142 },
+          { name: "Actual OFA", color: [236, 72, 153], x: 177 },
+          { name: "Scheduled BFA", color: [6, 182, 212], x: 212 },
+          { name: "Actual BFA", color: [20, 184, 166], x: 247 }
         ];
 
         dotLegend1.forEach(st => {
@@ -909,10 +911,9 @@ export default function ProjectMaster() {
         // Line 2 for Milestone dots
         const yLegend2 = pageHeight - 14;
         const dotLegend2 = [
-          { name: "Field Measure", color: [249, 115, 22], x: 142 },
+          ...(showFieldMeasure ? [{ name: "Field Measure", color: [249, 115, 22], x: 142 }] : []),
           { name: "RTS", color: [30, 41, 59], x: 177 },
-          { name: "Ship", color: [220, 38, 38], x: 212 },
-          { name: "Erection Sch", color: [79, 70, 229], x: 247 }
+          { name: "Scheduled Erection", color: [79, 70, 229], x: 212 }
         ];
 
         dotLegend2.forEach(st => {
