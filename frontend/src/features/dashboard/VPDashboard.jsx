@@ -54,29 +54,52 @@ const parseMonthYear = (str) => {
 const classifyProject = (project, schedules) => {
   if (project.status === 'Completed') return 'completed';
   const seqs = schedules.filter(s => String(s.project?.id || s.project) === String(project.id));
+  if (seqs.length === 0) return 'yet_to_start';
+
   const now = TODAY.getTime();
-  let delayed=false, light=false, onTrack=false;
+  let delayed = false, light = false, onTrack = false;
   for (const s of seqs) {
-    if (s.actual_ship_date) continue;
-    const sd = s.ship_date ? new Date(s.ship_date) : null;
-    if (!sd) { onTrack=true; continue; }
-    const diff = (sd.getTime()-now)/(1000*60*60*24);
-    if (diff<0) delayed=true;
-    else if (diff<=7) light=true;
-    else onTrack=true;
+    if (s.actual_rts_date) continue;
+    const sd = s.rts_date ? new Date(s.rts_date) : null;
+    if (!sd) { onTrack = true; continue; }
+    const diffTime = now - sd.getTime();
+    if (diffTime > 0) {
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) light = true;
+      else delayed = true;
+    } else {
+      onTrack = true;
+    }
   }
+
   if (delayed) return 'delayed';
   if (light)   return 'light_delay';
+
+  const allCompleted = seqs.every(s => s.actual_rts_date);
+  if (allCompleted) return 'completed';
+
   return 'on_track';
 };
 
 const classifySeq = (seq) => {
-  if (seq.actual_ship_date) return 'completed';
-  const sd = seq.ship_date ? new Date(seq.ship_date) : null;
-  if (!sd) return 'on_track';
-  const diff = (sd.getTime()-TODAY.getTime())/(1000*60*60*24);
-  if (diff<0)    return 'delayed';
-  if (diff<=7)   return 'light_delay';
+  const plan = seq.rts_date ? new Date(seq.rts_date) : null;
+  const actual = seq.actual_rts_date ? new Date(seq.actual_rts_date) : null;
+
+  if (actual) {
+    if (plan && actual > plan) {
+      return 'completed_delayed';
+    }
+    return 'completed';
+  }
+
+  if (!plan) return 'on_track';
+
+  const diffTime = TODAY.getTime() - plan.getTime();
+  if (diffTime > 0) {
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) return 'light_delay';
+    return 'delayed';
+  }
   return 'on_track';
 };
 
@@ -85,11 +108,13 @@ const classifySeq = (seq) => {
 ───────────────────────────────────────────────────────── */
 const S = {
   completed:  { label:'Completed',       dot:'bg-emerald-500', badge:'bg-emerald-50 text-emerald-700 border-emerald-100',  row:'',              blink:'' },
+  completed_delayed: { label:'Completed with Delay', dot:'bg-red-500', badge:'bg-red-50 text-red-700 border-red-100', row:'',              blink:'' },
   on_track:   { label:'On Track',        dot:'bg-blue-500',    badge:'bg-blue-50 text-blue-700 border-blue-100',            row:'',              blink:'' },
-  light_delay:{ label:'Lightly Delayed', dot:'bg-amber-500',   badge:'bg-amber-50 text-amber-700 border-amber-200',         row:'bg-amber-50/30',blink:'animate-blink-amber' },
+  light_delay:{ label:'Likely Delay',     dot:'bg-amber-500',   badge:'bg-amber-50 text-amber-700 border-amber-200',         row:'bg-amber-50/30',blink:'animate-blink-amber' },
   delayed:    { label:'Delayed',         dot:'bg-red-500',     badge:'bg-red-50 text-red-700 border-red-100',               row:'bg-red-50/20',  blink:'animate-blink-red' },
+  yet_to_start:{ label:'Yet to Start',    dot:'bg-slate-400',   badge:'bg-slate-50 text-slate-600 border-slate-200',         row:'',              blink:'' },
 };
-const STATUS_ORDER = ['delayed','light_delay','on_track','completed'];
+const STATUS_ORDER = ['yet_to_start','on_track','completed','delayed','light_delay'];
 
 /* ─────────────────────────────────────────────────────────
    TOOLTIP
@@ -156,7 +181,7 @@ export default function VPDashboard() {
   const [capData, setCapData]       = useState([]);
 
   /* Hierarchy */
-  const [openGroups, setOpenGroups]   = useState({delayed:true,light_delay:true,on_track:false,completed:false});
+  const [activeHierarchyTab, setActiveHierarchyTab] = useState('completed');
   const [openProjects, setOpenProjects] = useState({});
 
   /* Bid chart */
@@ -210,6 +235,16 @@ export default function VPDashboard() {
 
   /* ── Derived ── */
   const wonBids = useMemo(() => bids.filter(b=>b.won_lost==='Won'), [bids]);
+  const wonBidsCurrentYear = useMemo(() => {
+    const curYear = TODAY.getFullYear();
+    return wonBids.filter(b => {
+      const dt = new Date(b.awarded_job_date || b.created_at);
+      return dt.getFullYear() === curYear;
+    });
+  }, [wonBids]);
+  const wonBidsCurrentYearValue = useMemo(() => {
+    return wonBidsCurrentYear.reduce((s, b) => s + parseFloat(b.awarded_amount || b.bid_amount || 0), 0);
+  }, [wonBidsCurrentYear]);
   const latestWins = useMemo(() => [...wonBids].sort((a,b)=>new Date(b.awarded_job_date||b.created_at)-new Date(a.awarded_job_date||a.created_at)).slice(0,6), [wonBids]);
 
   const kpi = useMemo(() => {
@@ -226,7 +261,7 @@ export default function VPDashboard() {
   }, [bids, wonBids, projects, schedules]);
 
   const grouped = useMemo(() => {
-    const g = {delayed:[],light_delay:[],on_track:[],completed:[]};
+    const g = {delayed:[],light_delay:[],on_track:[],yet_to_start:[],completed:[]};
     projects.forEach(p => g[classifyProject(p,schedules)].push(p));
     return g;
   }, [projects, schedules]);
@@ -413,112 +448,124 @@ export default function VPDashboard() {
       <Panel>
         <PanelHeader title="Project Health Hierarchy" sub="Status grouped by schedule adherence · Click to expand">
           <div className="flex flex-wrap items-center gap-2">
-            {Object.entries(S).map(([k,c])=>(
-              <span key={k} className={`flex items-center gap-1.5 px-2 py-1 text-[9px] font-black uppercase tracking-wider border rounded ${c.badge}`}>
-                <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.blink}`}/>
-                {c.label}
-              </span>
-            ))}
+            {STATUS_ORDER.map(sk => {
+              const c = S[sk];
+              const isActive = activeHierarchyTab === sk;
+              const projs = grouped[sk] || [];
+
+              /* Per-status inactive tint so every tab has a distinct colour */
+              const inactiveCls = {
+                yet_to_start: 'bg-slate-50  border-slate-200  text-slate-500  hover:bg-slate-100',
+                on_track:     'bg-blue-50   border-blue-100   text-blue-500   hover:bg-blue-100',
+                completed:    'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100',
+                delayed:      'bg-red-50    border-red-100    text-red-500    hover:bg-red-100',
+                light_delay:  'bg-amber-50  border-amber-100  text-amber-600  hover:bg-amber-100',
+              }[sk] ?? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50';
+
+              return (
+                <button
+                  key={sk}
+                  onClick={() => setActiveHierarchyTab(sk)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider border rounded transition-all
+                    ${isActive
+                      ? `${c.badge} ring-2 ring-slate-800/10 scale-105 shadow-sm`
+                      : inactiveCls}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.blink}`} />
+                  {c.label}
+                  <span className={`ml-1 px-1.5 py-0.5 text-[8px] rounded border font-mono
+                    ${isActive ? 'bg-white/60 border-current/30 text-current' : 'bg-white/80 border-slate-200 text-slate-600'}`}>
+                    {projs.length}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </PanelHeader>
 
-        <div className="divide-y divide-slate-100">
-          {STATUS_ORDER.map(sk => {
-            const cfg=S[sk];
-            const projs=grouped[sk]||[];
-            const open=openGroups[sk];
+        <div className="bg-slate-50/30">
+          {(() => {
+            const sk = activeHierarchyTab;
+            const cfg = S[sk];
+            const projs = grouped[sk] || [];
+            
+            if (projs.length === 0) {
+              return (
+                <p className="px-8 py-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                  No projects in this category.
+                </p>
+              );
+            }
+            
             return (
-              <div key={sk}>
-                {/* Group Row */}
-                <button
-                  onClick={()=>setOpenGroups(p=>({...p,[sk]:!p[sk]}))}
-                  className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-slate-50 transition-colors"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink}`}/>
-                    <span className={`text-[11px] font-black uppercase tracking-[0.2em] ${cfg.badge.split(' ')[1]}`}>{cfg.label}</span>
-                    <span className={`text-[9px] font-black px-2 py-0.5 rounded border ${cfg.badge}`}>{projs.length} Project{projs.length!==1?'s':''}</span>
-                  </div>
-                  <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${open?'rotate-180':''}`}/>
-                </button>
+              <div className="divide-y divide-slate-100">
+                {projs.map(proj => {
+                  const projSeqs = schedules.filter(s => String(s.project?.id || s.project) === String(proj.id));
+                  const isOpen = openProjects[proj.id];
+                  return (
+                    <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
+                      {/* Project row */}
+                      <button
+                        onClick={() => setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
+                        className="w-full flex items-center gap-3 px-8 py-3.5 hover:bg-white/60 transition-colors text-left bg-white"
+                      >
+                        <div className={`w-0.5 h-5 ${cfg.dot}`} />
+                        {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name || 'N/A'}</p>
+                        </div>
+                        {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`} />}
+                        <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
+                      </button>
 
-                {open && (
-                  <div className="border-t border-slate-100 bg-slate-50/30">
-                    {projs.length===0 && (
-                      <p className="px-8 py-4 text-[10px] text-slate-400 font-bold uppercase tracking-widest">No projects in this category.</p>
-                    )}
-                    {projs.map(proj=>{
-                      const projSeqs=schedules.filter(s=>String(s.project?.id||s.project)===String(proj.id));
-                      const isOpen=openProjects[proj.id];
-                      return (
-                        <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
-                          {/* Project row */}
-                          <button
-                            onClick={()=>setOpenProjects(p=>({...p,[proj.id]:!p[proj.id]}))}
-                            className="w-full flex items-center gap-3 px-8 py-3 hover:bg-white/60 transition-colors text-left"
-                          >
-                            <div className={`w-0.5 h-5 ${cfg.dot}`}/>
-                            {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0"/> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0"/>}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
-                              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name||'N/A'}</p>
-                            </div>
-                            {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`}/>}
-                            <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
-                          </button>
-
-                          {/* Sequence table */}
-                          {isOpen && (
-                            <div className="bg-white border-t border-slate-100 overflow-x-auto">
-                              {projSeqs.length===0 ? (
-                                <p className="px-10 py-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">No sequences.</p>
-                              ) : (
-                                <table className="w-full text-left min-w-[700px]">
-                                  <thead>
-                                    <tr className="bg-slate-800 text-slate-100 text-[9px] font-black uppercase tracking-wider">
-                                      <th className="px-8 py-2.5">Seq No</th>
-                                      <th className="px-4 py-2.5">Description</th>
-                                      <th className="px-4 py-2.5 text-center">RTS Date</th>
-                                      <th className="px-4 py-2.5 text-center">Ship Date</th>
-                                      <th className="px-4 py-2.5 text-center">Actual Ship</th>
-                                      <th className="px-4 py-2.5 text-center">Status</th>
-                                      <th className="px-4 py-2.5 text-center">Tons</th>
+                      {/* Sequence table */}
+                      {isOpen && (
+                        <div className="bg-white border-t border-slate-100 overflow-x-auto">
+                          {projSeqs.length === 0 ? (
+                            <p className="px-10 py-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">No sequences.</p>
+                          ) : (
+                            <table className="w-full text-left min-w-[700px]">
+                              <thead>
+                                <tr className="bg-slate-800 text-slate-100 text-[9px] font-black uppercase tracking-wider">
+                                  <th className="px-8 py-2.5">Seq No</th>
+                                  <th className="px-4 py-2.5">Description</th>
+                                  <th className="px-4 py-2.5 text-center">RTS Date</th>
+                                  <th className="px-4 py-2.5 text-center">Act. RTS</th>
+                                  <th className="px-4 py-2.5 text-center">Status</th>
+                                  <th className="px-4 py-2.5 text-center">Tons</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {projSeqs.map(seq => {
+                                  const ss = classifySeq(seq); const sc = S[ss];
+                                  return (
+                                    <tr key={seq.id} className={`text-[11px] font-medium hover:bg-slate-50/40 transition-colors ${sc.row}`}>
+                                      <td className="px-8 py-2.5 font-mono font-bold text-slate-700">{seq.seq_no}</td>
+                                      <td className="px-4 py-2.5 text-slate-600 truncate max-w-[180px]" title={seq.item_description}>{seq.item_description || '—'}</td>
+                                      <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.rts_date)}</td>
+                                      <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.actual_rts_date)}</td>
+                                      <td className="px-4 py-2.5 text-center">
+                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wide ${sc.badge}`}>
+                                          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${sc.blink}`} />
+                                          {sc.label}
+                                        </span>
+                                      </td>
+                                      <td className="px-4 py-2.5 text-center text-slate-500">{parseFloat(seq.tons || 0).toFixed(1)}t</td>
                                     </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-slate-100">
-                                    {projSeqs.map(seq=>{
-                                      const ss=classifySeq(seq); const sc=S[ss];
-                                      const overdue=seq.ship_date&&new Date(seq.ship_date)<TODAY&&!seq.actual_ship_date;
-                                      return (
-                                        <tr key={seq.id} className={`text-[11px] font-medium hover:bg-slate-50/40 transition-colors ${sc.row}`}>
-                                          <td className="px-8 py-2.5 font-mono font-bold text-slate-700">{seq.seq_no}</td>
-                                          <td className="px-4 py-2.5 text-slate-600 truncate max-w-[180px]" title={seq.item_description}>{seq.item_description||'—'}</td>
-                                          <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.rts_date)}</td>
-                                          <td className={`px-4 py-2.5 text-center whitespace-nowrap font-bold ${overdue?'text-red-600':'text-slate-600'}`}>{fmt(seq.ship_date)}</td>
-                                          <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.actual_ship_date)}</td>
-                                          <td className="px-4 py-2.5 text-center">
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wide ${sc.badge}`}>
-                                              <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${sc.blink}`}/>
-                                              {sc.label}
-                                            </span>
-                                          </td>
-                                          <td className="px-4 py-2.5 text-center text-slate-500">{parseFloat(seq.tons||0).toFixed(1)}t</td>
-                                        </tr>
-                                      );
-                                    })}
-                                  </tbody>
-                                </table>
-                              )}
-                            </div>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
                           )}
                         </div>
-                      );
-                    })}
-                  </div>
-                )}
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             );
-          })}
+          })()}
         </div>
       </Panel>
 
@@ -541,6 +588,7 @@ export default function VPDashboard() {
             {[
               {label:'Total',value:bids.length,      cls:'bg-slate-100 text-slate-700'},
               {label:'Won',  value:wonBids.length,   cls:'bg-emerald-50 text-emerald-700 border border-emerald-100'},
+              {label:`Won (${TODAY.getFullYear()})`, value:`${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls:'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold'},
               {label:'Lost', value:bids.filter(b=>b.won_lost==='Lost').length, cls:'bg-red-50 text-red-700 border border-red-100'},
               {label:'Pending',value:bids.filter(b=>b.won_lost==='Pending').length, cls:'bg-amber-50 text-amber-700 border border-amber-100'},
               {label:'Win Rate',value:kpi.winRate+'%', cls:'bg-slate-100 text-slate-700'},
