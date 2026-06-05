@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, ListChecks, CheckCircle2, Clock, AlertCircle, LayoutList, ArrowLeft, Edit2, Calendar } from 'lucide-react';
+import { Search, Calendar } from 'lucide-react';
 import { projectAPI, scheduleAPI } from '../../services/api';
 import TrackingGanttChart from '../../components/TrackingGanttChart';
 
@@ -51,29 +51,64 @@ const FormattedDateInput = ({ value, onChange, readOnly, className, max }) => {
 const parseDate = (dStr) => {
   if (!dStr) return null;
 
-  // Try parsing yyyy-mm-dd
-  if (typeof dStr === 'string' && dStr.includes('-')) {
-    const parts = dStr.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-      const d = new Date(
-        parseInt(parts[0], 10),
-        parseInt(parts[1], 10) - 1,
-        parseInt(parts[2], 10)
-      );
-      return isNaN(d.getTime()) ? null : d;
-    }
+  if (dStr instanceof Date) {
+    return isNaN(dStr.getTime()) ? null : dStr;
   }
 
-  // Try parsing dd/mm/yyyy
-  if (typeof dStr === 'string' && dStr.includes('/')) {
-    const parts = dStr.split('/');
-    if (parts.length === 3) {
-      const d = new Date(
-        parseInt(parts[2], 10),
-        parseInt(parts[1], 10) - 1,
-        parseInt(parts[0], 10)
-      );
-      return isNaN(d.getTime()) ? null : d;
+  if (typeof dStr === 'string') {
+    const trimmed = dStr.trim();
+
+    // Try parsing yyyy-mm-dd or mm-dd-yyyy
+    if (trimmed.includes('-')) {
+      const parts = trimmed.split('-');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY-MM-DD
+          const d = new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[2], 10)
+          );
+          return isNaN(d.getTime()) ? null : d;
+        } else if (parts[2].length === 4) {
+          // MM-DD-YYYY
+          const d = new Date(
+            parseInt(parts[2], 10),
+            parseInt(parts[0], 10) - 1,
+            parseInt(parts[1], 10)
+          );
+          return isNaN(d.getTime()) ? null : d;
+        }
+      }
+    }
+
+    // Try parsing slashed formats (YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY)
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        if (parts[0].length === 4) {
+          // YYYY/MM/DD
+          const d = new Date(
+            parseInt(parts[0], 10),
+            parseInt(parts[1], 10) - 1,
+            parseInt(parts[2], 10)
+          );
+          return isNaN(d.getTime()) ? null : d;
+        } else if (parts[2].length === 4) {
+          let day = parseInt(parts[0], 10);
+          let month = parseInt(parts[1], 10) - 1;
+          if (month > 11) {
+            day = parseInt(parts[1], 10);
+            month = parseInt(parts[0], 10) - 1;
+          }
+          const d = new Date(
+            parseInt(parts[2], 10),
+            month,
+            day
+          );
+          return isNaN(d.getTime()) ? null : d;
+        }
+      }
     }
   }
 
@@ -113,36 +148,6 @@ export default function PlanTracking() {
       console.error('Failed to fetch data:', err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const calculateStatus = (rtsDateStr, leadWeeks, actualRtsStr) => {
-    const planRts = parseDate(rtsDateStr);
-    if (!planRts) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400', icon: Clock };
-
-    const actualRts = parseDate(actualRtsStr);
-
-    if (actualRts) {
-      if (actualRts <= planRts) {
-        return { label: 'Completed', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500', icon: CheckCircle2 };
-      } else {
-        return { label: 'Completed with delay', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
-      }
-    }
-
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-    if (today <= planRts) {
-      return { label: 'InProgress', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500', icon: Clock };
-    } else {
-      const diffTime = today.getTime() - planRts.getTime();
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      if (diffDays <= 7) {
-        return { label: 'Litely delay', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500', icon: Clock };
-      } else {
-        return { label: 'Delayed', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500', icon: AlertCircle };
-      }
     }
   };
 
@@ -202,8 +207,8 @@ export default function PlanTracking() {
 
 
 
-  const handleDateUpdate = async (itemId, field, value) => {
-    if (field.startsWith('actual_') && value) {
+  const handleFieldUpdate = async (itemId, field, value) => {
+    if (field.startsWith('actual_') && field.endsWith('_date') && value) {
       const selectedDate = new Date(value);
       const today = new Date();
       const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -298,76 +303,112 @@ export default function PlanTracking() {
                           <td colSpan="4" className="p-0">
                             <div className="overflow-hidden animate-fade-in">
                               <div className="w-full overflow-x-auto">
-                                <table className="w-full text-left border-collapse table-fixed min-w-[1500px]">
+                                <table className="w-full text-left border-collapse table-fixed min-w-[2200px]">
                                   <thead>
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
-                                      <th className="px-2 py-3 border-r border-white/10 w-[7%]">Sequence</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[11%]">Item Description</th>
-                                      <th className="px-2 py-3 border-r border-white/10 w-[6%]">Material</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[5%]">Weight</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">RTS date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. RTS</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Ship date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[10%]">Act. Ship</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[7%]">Shop Lead Time (Weeks)</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[9%]">Outlook Completion Date</th>
-                                      <th className="px-2 py-3 border-r border-white/10 text-center w-[11%]">Status</th>
-                                      <th className="px-2 py-3 text-center w-[7%]">Notes</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-1">Sequence</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-2">Item Description</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-3">Material</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-4">Weight</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Scheduled OFA Date</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[7%]">Actual OFA Date</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Scheduled BFA Date</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[7%]">Actual BFA Date</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Scheduled Field Measure Date</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">RTS date</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[7%]">Act. RTS</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[4%]">Shop Lead Time (Weeks)</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Scheduled Start of Erection</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[4%]">Budget Shop Hours</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[4%]">Budget Field Hours</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Shop Hours actual</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Field Hours Actual</th>
+                                      
+                                      <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Outlook Completion Date</th>
+                                      <th className="px-1 py-3 text-center w-[3%]">Notes</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-100 bg-white">
                                     {projectSchedules.length > 0 ? (
                                       projectSchedules.map((item) => {
-                                        const status = calculateStatus(item.rts_date, item.plant_lead_time_weeks, item.actual_rts_date);
                                         const isNotInScope = item.notes?.toLowerCase() === 'not in scope';
 
                                         return (
-                                          <tr key={item.id} className={`${isNotInScope ? 'bg-slate-200/60' : 'hover:bg-slate-50/50'} transition-colors`}>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-semibold border-r border-slate-100 truncate" title={item.seq_no}>{item.seq_no}</td>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate" title={item.item_description}>{item.item_description || '-'}</td>
-                                            <td className="px-2 py-2.5 text-slate-900 text-[11px] font-medium border-r border-slate-100 truncate">{item.category || '-'}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{parseFloat(item.tons || 0).toFixed(2)}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.rts_date)}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
+                                          <tr key={item.id} className={`${isNotInScope ? 'bg-slate-200/60 row-not-in-scope' : 'hover:bg-slate-50/50'} transition-colors`}>
+                                            <td className="px-1 py-2 text-slate-900 text-[10px] font-semibold border-r border-slate-100 truncate sticky-col-1" title={item.seq_no}>{item.seq_no}</td>
+                                            <td className="px-1 py-2 text-slate-900 text-[10px] font-medium border-r border-slate-100 truncate sticky-col-2" title={item.item_description}>{item.item_description || '-'}</td>
+                                            <td className="px-1 py-2 text-slate-900 text-[10px] font-medium border-r border-slate-100 truncate sticky-col-3" title={item.category}>{item.category || '-'}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 sticky-col-4">{parseFloat(item.tons || 0).toFixed(2)}</td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.scheduled_ofa_date)}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
+                                              <FormattedDateInput
+                                                value={item.actual_ofa_date || ''}
+                                                onChange={(e) => handleFieldUpdate(item.id, 'actual_ofa_date', e.target.value)}
+                                                max={new Date().toISOString().split('T')[0]}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                              />
+                                            </td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.scheduled_bfa_date)}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
+                                              <FormattedDateInput
+                                                value={item.actual_bfa_date || ''}
+                                                onChange={(e) => handleFieldUpdate(item.id, 'actual_bfa_date', e.target.value)}
+                                                max={new Date().toISOString().split('T')[0]}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                              />
+                                            </td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.scheduled_field_measure_date)}</td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.rts_date)}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
                                               <FormattedDateInput
                                                 value={item.actual_rts_date || ''}
-                                                onChange={(e) => handleDateUpdate(item.id, 'actual_rts_date', e.target.value)}
+                                                onChange={(e) => handleFieldUpdate(item.id, 'actual_rts_date', e.target.value)}
                                                 max={new Date().toISOString().split('T')[0]}
                                                 className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
                                               />
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
-                                              <FormattedDateInput
-                                                value={item.ship_date || ''}
-                                                onChange={(e) => handleDateUpdate(item.id, 'ship_date', e.target.value)}
-                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100">{item.plant_lead_time_weeks}</td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.scheduled_erection_date)}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100">{item.budget_plant_hours}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100">{item.budget_field_hours}</td>
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
+                                              <input
+                                                type="number"
+                                                value={item.actual_plant_hours !== null && item.actual_plant_hours !== undefined ? item.actual_plant_hours : ''}
+                                                onChange={(e) => handleFieldUpdate(item.id, 'actual_plant_hours', e.target.value)}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 bg-white"
+                                                step="any"
                                               />
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 relative">
-                                              <FormattedDateInput
-                                                value={item.actual_ship_date || ''}
-                                                onChange={(e) => handleDateUpdate(item.id, 'actual_ship_date', e.target.value)}
-                                                max={new Date().toISOString().split('T')[0]}
-                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400"
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
+                                              <input
+                                                type="number"
+                                                value={item.actual_field_hours !== null && item.actual_field_hours !== undefined ? item.actual_field_hours : ''}
+                                                onChange={(e) => handleFieldUpdate(item.id, 'actual_field_hours', e.target.value)}
+                                                className="w-full text-[10px] p-1 border border-slate-200 rounded text-slate-700 focus:outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 bg-white"
+                                                step="any"
                                               />
                                             </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100">{item.plant_lead_time_weeks}</td>
-                                            <td className="px-2 py-2.5 text-center text-slate-900 text-[11px] font-medium border-r border-slate-100 whitespace-nowrap">{getOutlookCompletionDate(item.rts_date, item.plant_lead_time_weeks)}</td>
-                                            <td className="px-2 py-2.5 border-r border-slate-100">
-                                              <div className="flex flex-col items-center">
-                                                <span className={`flex items-center justify-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight shadow-sm border ${status.bg} ${status.color} border-current/10`}>
-                                                  <div className={`w-1 h-1 rounded-full ${status.dot} shadow-[0_0_4px_rgba(0,0,0,0.1)]`} />
-                                                  {status.label}
-                                                </span>
-                                              </div>
-                                            </td>
-                                            <td className="px-2 py-2.5 text-center text-slate-600 italic text-[11px] truncate" title={item.notes}>{item.notes || '-'}</td>
+                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{getOutlookCompletionDate(item.rts_date, item.plant_lead_time_weeks)}</td>
+                                            <td className="px-1 py-2 text-center text-slate-600 italic text-[10px] truncate" title={item.notes}>{item.notes || '-'}</td>
                                           </tr>
                                         );
                                       })
                                     ) : (
                                       <tr>
-                                        <td colSpan="12" className="px-6 py-12 text-center text-slate-400">
+                                        <td colSpan="19" className="px-6 py-12 text-center text-slate-400">
                                           No tracking sequences found matching search or project.
                                         </td>
                                       </tr>

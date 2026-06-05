@@ -312,7 +312,7 @@ export default function Dashboard() {
             }`}
           >
             <LayoutDashboard className="w-3.5 h-3.5" />
-            Bid and Estimation
+            Operations
           </button>
           <button
             onClick={() => setDashboardMode('executive')}
@@ -321,7 +321,7 @@ export default function Dashboard() {
             }`}
           >
             <Crown className="w-3.5 h-3.5" />
-            Operations
+            Bid and Estimation
           </button>
         </div>
       </div>
