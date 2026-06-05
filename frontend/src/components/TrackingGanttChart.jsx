@@ -108,7 +108,7 @@ const getStatus = (planDateStr, actualDateStr) => {
     const diffTime = today.getTime() - plan.getTime();
     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     if (diffDays <= 7) {
-      return { label: 'Slightly delayed', color: '#eab308' }; // Yellow/Amber 500
+      return { label: 'Likely delay', color: '#eab308' }; // Yellow/Amber 500
     } else {
       return { label: 'Delayed', color: '#ef4444' }; // Red 500
     }
@@ -766,7 +766,7 @@ export default function TrackingGanttChart({ project, allSchedules }) {
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-2 rounded bg-[#eab308] shadow-sm" />
-              <span>Slightly delayed</span>
+              <span>Likely delay</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="w-3.5 h-2 rounded bg-[#ef4444] shadow-sm" />
