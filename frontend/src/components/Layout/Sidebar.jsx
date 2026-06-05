@@ -186,7 +186,7 @@ export default function Sidebar({
         </div>
 
         {/* ── Navigation ── */}
-        <nav className="flex-1 overflow-y-auto overflow-x-hidden py-4 px-3 sidebar-scrollbar">
+        <nav className="flex-1 overflow-y-scroll overflow-x-hidden py-4 px-3 sidebar-scrollbar">
           {navSections.map((section, sIdx) => (
             <div key={section.label} className={sIdx > 0 ? 'mt-6' : ''}>
               {/* Section Label */}

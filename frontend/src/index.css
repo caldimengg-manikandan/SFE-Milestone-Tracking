@@ -98,18 +98,82 @@
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(251, 191, 36, 0.35); /* clearly visible amber color */
+  background: rgba(251, 191, 36, 0.7); /* clearly visible amber color */
   border-radius: 99px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .sidebar-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(251, 191, 36, 0.6);
+  background: rgba(251, 191, 36, 0.95);
 }
 
 .sidebar-scrollbar {
   scrollbar-width: thin;
-  scrollbar-color: rgba(251, 191, 36, 0.35) transparent;
+  scrollbar-color: rgba(251, 191, 36, 0.7) transparent;
+}
+
+/* Frozen columns for Plan Tracking table */
+.sticky-col-1 {
+  position: sticky !important;
+  left: 0;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+.sticky-col-2 {
+  position: sticky !important;
+  left: 80px;
+  width: 220px;
+  min-width: 220px;
+  max-width: 220px;
+}
+.sticky-col-3 {
+  position: sticky !important;
+  left: 300px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
+}
+.sticky-col-4 {
+  position: sticky !important;
+  left: 420px;
+  width: 80px;
+  min-width: 80px;
+  max-width: 80px;
+}
+
+th.sticky-col-1, th.sticky-col-2, th.sticky-col-3, th.sticky-col-4 {
+  z-index: 20 !important;
+  background-color: #f59e0b !important; /* matches header orange/amber start */
+}
+
+td.sticky-col-1, td.sticky-col-2, td.sticky-col-3, td.sticky-col-4 {
+  z-index: 10 !important;
+  background-color: #ffffff !important;
+}
+
+/* Row hover effect for sticky cells */
+tr:hover td.sticky-col-1,
+tr:hover td.sticky-col-2,
+tr:hover td.sticky-col-3,
+tr:hover td.sticky-col-4 {
+  background-color: #f8fafc !important; /* subtle gray hover */
+}
+
+/* Keep gray background for not in scope rows */
+tr.row-not-in-scope td.sticky-col-1,
+tr.row-not-in-scope td.sticky-col-2,
+tr.row-not-in-scope td.sticky-col-3,
+tr.row-not-in-scope td.sticky-col-4 {
+  background-color: #e2e8f0 !important;
+}
+
+/* Distinct right border for the boundary of frozen columns */
+th.sticky-col-4 {
+  border-right: 2px solid #d97706 !important;
+}
+td.sticky-col-4 {
+  border-right: 2px solid #cbd5e1 !important;
 }
 
 .sidebar-nav-item {

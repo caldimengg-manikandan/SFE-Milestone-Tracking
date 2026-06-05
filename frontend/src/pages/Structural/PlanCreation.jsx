@@ -261,10 +261,76 @@ export default function PlanCreation() {
     const pageWidth = doc.internal.pageSize.getWidth();
     const pageHeight = doc.internal.pageSize.getHeight();
 
-    const parseDate = dStr => {
+    const parseDate = (dStr) => {
       if (!dStr) return null;
-      const d = new Date(dStr);
-      return isNaN(d.getTime()) ? null : d;
+
+      if (dStr instanceof Date) {
+        return isNaN(dStr.getTime()) ? null : dStr;
+      }
+
+      if (typeof dStr === 'string') {
+        const trimmed = dStr.trim();
+
+        // Try parsing yyyy-mm-dd or mm-dd-yyyy
+        if (trimmed.includes('-')) {
+          const parts = trimmed.split('-');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              // YYYY-MM-DD
+              const d = new Date(
+                parseInt(parts[0], 10),
+                parseInt(parts[1], 10) - 1,
+                parseInt(parts[2], 10)
+              );
+              return isNaN(d.getTime()) ? null : d;
+            } else if (parts[2].length === 4) {
+              // MM-DD-YYYY
+              const d = new Date(
+                parseInt(parts[2], 10),
+                parseInt(parts[0], 10) - 1,
+                parseInt(parts[1], 10)
+              );
+              return isNaN(d.getTime()) ? null : d;
+            }
+          }
+        }
+
+        // Try parsing slashed formats (YYYY/MM/DD, DD/MM/YYYY, or MM/DD/YYYY)
+        if (trimmed.includes('/')) {
+          const parts = trimmed.split('/');
+          if (parts.length === 3) {
+            if (parts[0].length === 4) {
+              // YYYY/MM/DD
+              const d = new Date(
+                parseInt(parts[0], 10),
+                parseInt(parts[1], 10) - 1,
+                parseInt(parts[2], 10)
+              );
+              return isNaN(d.getTime()) ? null : d;
+            } else if (parts[2].length === 4) {
+              let day = parseInt(parts[0], 10);
+              let month = parseInt(parts[1], 10) - 1;
+              if (month > 11) {
+                day = parseInt(parts[1], 10);
+                month = parseInt(parts[0], 10) - 1;
+              }
+              const d = new Date(
+                parseInt(parts[2], 10),
+                month,
+                day
+              );
+              return isNaN(d.getTime()) ? null : d;
+            }
+          }
+        }
+      }
+
+      const iso = new Date(dStr);
+      if (!isNaN(iso.getTime())) {
+        return new Date(iso.getFullYear(), iso.getMonth(), iso.getDate());
+      }
+
+      return null;
     };
 
     const fmtDate = dStr => {
