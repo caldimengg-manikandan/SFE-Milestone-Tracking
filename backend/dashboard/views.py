@@ -196,7 +196,8 @@ class DashboardStatsView(APIView):
         months_names = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
         months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
-        won_rfqs = RFQMaster.objects.filter(won_lost='Won')
+        won_rfqs = RFQMaster.objects.filter(won_lost='Won', deleted_at__isnull=True)
+        total_won_tonnage = sum(float(r.total_tonnage or 0) for r in won_rfqs)
         manpower_entries = Manpower.objects.all()
 
         def is_schedule_active_in_month(start_month_date, duration_months, target_month_idx):
@@ -317,7 +318,8 @@ class DashboardStatsView(APIView):
             'pieData': pie_data,
             'barData': bar_data,
             'recentActivities': recent_activities,
-            'announcements': announcements_list
+            'announcements': announcements_list,
+            'total_won_tonnage': round(total_won_tonnage, 2)
         })
 
 

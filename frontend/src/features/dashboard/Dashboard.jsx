@@ -2,7 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import {
   Users, FolderKanban, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight,
   Clock, CheckCircle2, AlertTriangle, Box, Loader2, X, Calendar, Search,
-  Crown, LayoutDashboard
+  Crown, LayoutDashboard, Scale
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -27,7 +27,8 @@ export default function Dashboard() {
     areaData: [],
     pieData: [],
     barData: [],
-    recentActivities: []
+    recentActivities: [],
+    total_won_tonnage: 0
   });
   const [error, setError] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState(null);
@@ -806,9 +807,9 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* The 4 KPI Cards inside Capacity Utilization Summary Card */}
+              {/* The 5 KPI Cards inside Capacity Utilization Summary Card */}
               {selectedMonthData && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
                   {/* Card 1: Manhours Available */}
                   <div className="bg-blue-50/50 p-4 border border-blue-200 flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-100 flex items-center justify-center text-blue-600 rounded">
@@ -893,6 +894,20 @@ export default function Dashboard() {
                         </h4>
                         <p className="text-[8px] text-slate-400 font-medium mt-0.5">Allocated vs Capacity</p>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Card 5: Total Won Tonnage */}
+                  <div className="bg-violet-50/50 p-4 border border-violet-200 flex items-center gap-4">
+                    <div className="w-10 h-10 bg-violet-100 flex items-center justify-center text-violet-600 rounded">
+                      <Scale className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-[9px] font-bold text-violet-600/90 uppercase tracking-wider">Total Tonnage</p>
+                      <h4 className="text-lg font-black text-slate-800 mt-0.5">
+                        {data.total_won_tonnage ? data.total_won_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
+                      </h4>
+                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
                     </div>
                   </div>
                 </div>
