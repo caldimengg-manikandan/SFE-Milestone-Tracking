@@ -79,7 +79,6 @@ export default function StructuralScheduleForm({
     return `${m}-${d}-${y}`;
   };
 
-
   return (
     <div className="flex-1 overflow-hidden flex flex-col bg-white">
       {/* Spreadsheet Header Metrics */}
@@ -253,8 +252,8 @@ export default function StructuralScheduleForm({
                             onClick={() => openFabricationModal(row)}
                             disabled={!row.is_new}
                             className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-0.5 rounded transition-all border shadow-sm text-[8px] font-bold ${row.is_new
-                                ? 'bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 border-slate-200 hover:border-amber-200'
-                                : 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed opacity-60'
+                              ? 'bg-slate-100 hover:bg-amber-100 text-slate-600 hover:text-amber-700 border-slate-200 hover:border-amber-200'
+                              : 'bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed opacity-60'
                               }`}
                           >
                             <Plus className="w-2.5 h-2.5" /> Add Item
