@@ -6,17 +6,12 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend
+  BarChart, Bar, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line
 } from 'recharts';
 import { dashboardAPI, projectAPI, scheduleAPI } from '../../services/api';
 import VPDashboard from './VPDashboard';
 
 /* ── Configs ── */
-const announcements = [
-  { id: 1, title: 'Safety audit scheduled for May 15', priority: 'high' },
-  { id: 2, title: 'Quarterly production targets updated', priority: 'medium' },
-  { id: 3, title: 'Server maintenance — May 10, 2AM', priority: 'low' },
-];
 
 export default function Dashboard() {
   const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
@@ -26,6 +21,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [capacityMonth, setCapacityMonth] = useState(new Date().getMonth() + 1);
   const [capacityYear, setCapacityYear] = useState(new Date().getFullYear().toString());
+  const [capacityView, setCapacityView] = useState('planning'); // 'planning' | 'forecast'
   const [data, setData] = useState({
     stats: [],
     areaData: [],
@@ -192,6 +188,10 @@ export default function Dashboard() {
   const selectedMonthData = (Array.isArray(data.barData) && data.barData.length >= capacityMonth)
     ? data.barData[capacityMonth - 1]
     : null;
+
+  const utilizationRate = selectedMonthData && selectedMonthData.capacity > 0
+    ? Math.round((selectedMonthData.allocated / selectedMonthData.capacity) * 100)
+    : 0;
 
   const getUniqueProjectsCount = (items) => {
     const projectIds = new Set(items.map(item => String(item.project?.id || item.project)));
@@ -564,7 +564,7 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto scrollbar-thin">
+              <div className="overflow-x-auto scrollbar-thin px-8 pb-4">
                 <div className="db-gantt-grid">
                   {/* Header Row: Months */}
                   <div
@@ -752,17 +752,42 @@ export default function Dashboard() {
           {/* Activities Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Bar Chart */}
-            <div className="lg:col-span-2 bg-white border border-slate-300 p-8 space-y-6">
+            <div className="lg:col-span-2 bg-white border border-slate-300 p-8 flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Manhours loading</p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-4">
+                  {/* View Toggle Tabs */}
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                    <button
+                      onClick={() => setCapacityView('planning')}
+                      className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                        capacityView === 'planning'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      Monthly Planning
+                    </button>
+                    <button
+                      onClick={() => setCapacityView('forecast')}
+                      className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                        capacityView === 'forecast'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      Yearly Forecast
+                    </button>
+                  </div>
+
                   <select
                     value={capacityMonth}
                     onChange={(e) => setCapacityMonth(parseInt(e.target.value))}
-                    className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+                    disabled={capacityView === 'forecast'}
+                    className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded disabled:bg-slate-50 disabled:cursor-not-allowed"
                   >
                     {['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'].map((m, i) => (
                       <option key={i} value={i + 1}>{m}</option>
@@ -781,9 +806,9 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              {/* The 3 KPI Cards inside Capacity Utilization Summary Card */}
+              {/* The 4 KPI Cards inside Capacity Utilization Summary Card */}
               {selectedMonthData && (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                   {/* Card 1: Manhours Available */}
                   <div className="bg-blue-50/50 p-4 border border-blue-200 flex items-center gap-4">
                     <div className="w-10 h-10 bg-blue-100 flex items-center justify-center text-blue-600 rounded">
@@ -823,22 +848,166 @@ export default function Dashboard() {
                       </p>
                     </div>
                   </div>
+
+                  {/* Card 4: Capacity Utilization Gauge */}
+                  <div className="bg-slate-50/50 p-4 border border-slate-200 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className="relative flex items-center justify-center">
+                        <svg className="w-16 h-16 transform -rotate-90">
+                          <circle cx="32" cy="32" r="26" stroke="#e2e8f0" strokeWidth="5" fill="transparent" />
+                          <circle
+                            cx="32"
+                            cy="32"
+                            r="26"
+                            stroke={
+                              utilizationRate === 0 ? '#94a3b8' :
+                              utilizationRate <= 75 ? '#10b981' :
+                              utilizationRate <= 90 ? '#6366f1' :
+                              utilizationRate <= 100 ? '#f59e0b' :
+                              '#ef4444'
+                            }
+                            strokeWidth="5"
+                            fill="transparent"
+                            strokeDasharray={2 * Math.PI * 26}
+                            strokeDashoffset={2 * Math.PI * 26 * (1 - Math.min(utilizationRate, 100) / 100)}
+                            strokeLinecap="round"
+                            className="transition-all duration-500 ease-out"
+                          />
+                        </svg>
+                        <span className="absolute text-[10px] font-black text-slate-800">{utilizationRate}%</span>
+                      </div>
+                      <div>
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Capacity Utilization</p>
+                        <h4 className={`text-[10px] font-black uppercase tracking-wider mt-1 ${
+                          utilizationRate === 0 ? 'text-slate-500' :
+                          utilizationRate <= 75 ? 'text-emerald-600' :
+                          utilizationRate <= 90 ? 'text-indigo-600' :
+                          utilizationRate <= 100 ? 'text-amber-600' :
+                          'text-rose-600'
+                        }`}>
+                          {utilizationRate === 0 ? 'No Load' :
+                           utilizationRate <= 75 ? 'Underloaded' :
+                           utilizationRate <= 90 ? 'Optimal' :
+                           utilizationRate <= 100 ? 'High Load' :
+                           'Overloaded'}
+                        </h4>
+                        <p className="text-[8px] text-slate-400 font-medium mt-0.5">Allocated vs Capacity</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Recharts BarChart representing the 12 months */}
-              <ResponsiveContainer width="100%" height={240}>
-                <BarChart data={data.barData} barGap={6}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="name" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
-                  <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
-                  <Bar dataKey="capacity" name="Manhours Available" fill="#1e293b" radius={0} />
-                  <Bar dataKey="allocated" name="Manhours Required" fill="#f59e0b" radius={0} />
-                  <Bar dataKey="remaining" name="Remaining/Shortage" fill="#10b981" radius={0} />
-                </BarChart>
-              </ResponsiveContainer>
+              {capacityView === 'planning' ? (
+                /* Recharts Stacked Chart representing the 12 months - wraps ResponsiveContainer in flex-grow div to fill the vertical space */
+                <div className="flex-1 min-h-[380px] w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data.barData} barGap={6} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <YAxis domain={[0, 1500]} ticks={[0, 500, 1000, 1500, 2000]} tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1.5} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+                      
+                      {/* Stacked Bars showing breakdown of allocated manhours */}
+                      <Bar dataKey="struct_fab" stackId="required" name="Struct Fab" fill="#3b82f6" radius={0} />
+                      <Bar dataKey="misc_fab" stackId="required" name="Misc Fab" fill="#8b5cf6" radius={0} />
+                      <Bar dataKey="struct_erect" stackId="required" name="Struct Erect" fill="#f59e0b" radius={0} />
+                      <Bar dataKey="misc_erect" stackId="required" name="Misc Erect" fill="#ec4899" radius={0} />
+                      
+                      {/* Available Capacity Line overlay */}
+                      <Line type="monotone" dataKey="capacity" name="Available Capacity" stroke="#1e293b" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                /* Heat Map Calendar for Yearly Capacity Planning */
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 pt-2">
+                  {data.barData.map((m, idx) => {
+                    const mUtil = m.capacity > 0 ? Math.round((m.allocated / m.capacity) * 100) : 0;
+                    
+                    let themeColor = 'slate';
+                    let statusLabel = 'No Load';
+                    let badgeClass = 'bg-slate-50 text-slate-500 border border-slate-200';
+                    let barColor = 'bg-slate-300';
+                    let glowBorder = 'border-slate-200';
+
+                    if (mUtil > 0) {
+                      if (mUtil <= 75) {
+                        themeColor = 'emerald';
+                        statusLabel = 'Underloaded';
+                        badgeClass = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+                        barColor = 'bg-emerald-500';
+                        glowBorder = 'border-emerald-200 shadow-[0_2px_10px_rgba(16,185,129,0.05)] hover:border-emerald-400';
+                      } else if (mUtil <= 90) {
+                        themeColor = 'indigo';
+                        statusLabel = 'Optimal';
+                        badgeClass = 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+                        barColor = 'bg-indigo-500';
+                        glowBorder = 'border-indigo-200 shadow-[0_2px_10px_rgba(99,102,241,0.05)] hover:border-indigo-400';
+                      } else if (mUtil <= 100) {
+                        themeColor = 'amber';
+                        statusLabel = 'High Load';
+                        badgeClass = 'bg-amber-50 text-amber-600 border border-amber-100';
+                        barColor = 'bg-amber-500';
+                        glowBorder = 'border-amber-200 shadow-[0_2px_10px_rgba(245,158,11,0.05)] hover:border-amber-400';
+                      } else {
+                        themeColor = 'rose';
+                        statusLabel = 'Overloaded';
+                        badgeClass = 'bg-rose-50 text-rose-600 border border-rose-100';
+                        barColor = 'bg-rose-500';
+                        glowBorder = 'border-rose-200 shadow-[0_2px_10px_rgba(239,68,68,0.05)] hover:border-rose-400';
+                      }
+                    }
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setCapacityMonth(idx + 1);
+                          setCapacityView('planning');
+                        }}
+                        className={`bg-white border rounded-xl p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer ${glowBorder}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-slate-800 uppercase">{monthsNames[idx]}</span>
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeClass}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="flex items-baseline justify-between text-[10px] font-black">
+                            <span className="text-slate-800">{mUtil}% Loaded</span>
+                            <span className="text-slate-400 font-medium">{m.allocated}h / {m.capacity}h</span>
+                          </div>
+                          {/* Mini Progress Bar */}
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                              style={{ width: `${Math.min(mUtil, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-1 text-[9px] font-bold text-slate-400">
+                          <div className="flex flex-col">
+                            <span>AVAILABLE</span>
+                            <span className="text-slate-700 font-mono mt-0.5">{m.capacity}h</span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span>{m.remaining >= 0 ? 'SURPLUS' : 'SHORTAGE'}</span>
+                            <span className={`font-mono mt-0.5 ${m.remaining >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {m.remaining >= 0 ? `+${m.remaining}h` : `${m.remaining}h`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
             <div className="space-y-6">
@@ -867,18 +1036,25 @@ export default function Dashboard() {
               <div className="bg-white border border-slate-300 p-8">
                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
                 <div className="space-y-4">
-                  {(data.announcements && data.announcements.length > 0 ? data.announcements : announcements).map((a) => (
-                    <div
-                      key={a.id}
-                      className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
-                      onClick={() => setSelectedNotice(a)}
-                      title="Click to view details"
-                    >
-                      <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${a.priority === 'high' ? 'bg-red-500' : a.priority === 'medium' ? 'bg-amber-500' : 'bg-slate-400'
+                  {data.announcements && data.announcements.length > 0 ? (
+                    data.announcements.map((a) => (
+                      <div
+                        key={a.id}
+                        className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
+                        onClick={() => setSelectedNotice(a)}
+                        title="Click to view details"
+                      >
+                        <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${
+                          a.priority === 'high' ? 'bg-red-500' :
+                          a.priority === 'medium' ? 'bg-amber-500' :
+                          'bg-slate-400'
                         }`} />
-                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
-                    </div>
-                  ))}
+                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center py-4">No active notices</p>
+                  )}
                 </div>
               </div>
             </div>
