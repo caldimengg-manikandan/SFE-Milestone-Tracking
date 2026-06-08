@@ -1,11 +1,11 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from django.db.models import Count
+from django.db.models import Count  # type: ignore
 from employees.models import Employee
 from projects.models import Project, StructuralScheduleItem
 from production.models import ProductionPriorityItem, ProductionItem, ProductionSchedule, Capacity
-from django.utils import timezone
+from django.utils import timezone  # type: ignore
 from datetime import timedelta
 from .models import Announcement
 
@@ -90,28 +90,32 @@ class DashboardStatsView(APIView):
                 except:
                     pass
                     
+                rts_date = None
                 try:
                     struct_item = StructuralScheduleItem.objects.filter(
                         project__code=item.job_number, 
                         seq_no=item.sequence_number
                     ).first()
                     if struct_item:
-                        ofa_date = struct_item.scheduled_ofa_date.isoformat() if struct_item.scheduled_ofa_date else None
-                        erection_date = struct_item.scheduled_erection_date.isoformat() if struct_item.scheduled_erection_date else None
-                        plant_lead_time_weeks = struct_item.shop_lead_time_weeks
+                        plant_lead_time_weeks = struct_item.shop_lead_time_weeks or 0
                         if struct_item.rts_date:
-                            item_start = struct_item.rts_date.isoformat()
-                            item_end = (struct_item.rts_date + timedelta(days=plant_lead_time_weeks * 7)).isoformat()
-                        else:
-                            item_start = ofa_date
-                            item_end = erection_date
+                            rts_date = struct_item.rts_date
                 except:
                     pass
 
-                if not item_start:
-                    item_start = item.rts_date.isoformat() if item.rts_date else ofa_date
-                if not item_end:
-                    item_end = item.ship_date.isoformat() if item.ship_date else erection_date
+                # If no struct_item or no struct_item.rts_date, fall back to production item rts_date
+                if not rts_date:
+                    rts_date = item.rts_date
+
+                # Only if we have a valid RTS date, calculate start and end dates
+                if rts_date:
+                    item_start = rts_date.isoformat()
+                    # Exp. completion is rts_date + lead_time_weeks * 7
+                    lead_weeks = plant_lead_time_weeks if plant_lead_time_weeks > 0 else 1
+                    item_end = (rts_date + timedelta(days=lead_weeks * 7)).isoformat()
+                else:
+                    item_start = None
+                    item_end = None
 
                 schedule_items.append({
                     'job_number': item.job_number,
@@ -119,10 +123,10 @@ class DashboardStatsView(APIView):
                     'sequence_number': item.sequence_number,
                     'weight': str(item.weight) if item.weight else '0.00',
                     'quantity': item.quantity,
-                    'ofa_date': ofa_date,
-                    'erection_date': erection_date,
-                    'rts_date': item.rts_date.isoformat() if item.rts_date else None,
-                    'ship_date': item.ship_date.isoformat() if item.ship_date else None,
+                    'ofa_date': None,
+                    'erection_date': None,
+                    'rts_date': rts_date.isoformat() if rts_date else None,
+                    'ship_date': None,
                     'start_date': item_start,
                     'end_date': item_end,
                     'plant_lead_time_weeks': plant_lead_time_weeks,
@@ -169,7 +173,7 @@ class DashboardStatsView(APIView):
             ]
 
         # 4. plant Capacity Loading
-        from django.db.models import Sum, Q
+        from django.db.models import Sum, Q  # type: ignore
         
         cap_month_param = request.query_params.get('capacity_month')
         cap_year_param = request.query_params.get('capacity_year')
@@ -285,7 +289,7 @@ class DashboardStatsView(APIView):
         completed = Project.objects.filter(status='Completed').count()
 
         # Fetch active announcements
-        from django.utils.timezone import localdate
+        from django.utils.timezone import localdate  # type: ignore
         from .models import Announcement
         today = localdate()
         active_announcements = Announcement.objects.filter(

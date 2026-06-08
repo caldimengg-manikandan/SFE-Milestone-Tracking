@@ -21,6 +21,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { machineAPI, manpowerAPI, capacityAPI, projectAPI, rfqAPI } from '../services/api';
+import FormattedDateInput from '../components/forms/FormattedDateInput';
 
 export default function CapacityMapping() {
   const { tab } = useParams();
@@ -552,7 +553,7 @@ function MachineView({ data, refresh }) {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Commissioned Date</label>
-                  <input type="date" className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.commissioned_date || ''} onChange={e => setForm({ ...form, commissioned_date: e.target.value })} />
+                  <FormattedDateInput className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.commissioned_date || ''} onChange={e => setForm({ ...form, commissioned_date: e.target.value })} />
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Validity (MM/YY)</label>

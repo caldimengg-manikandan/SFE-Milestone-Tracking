@@ -3,6 +3,9 @@
   "venv": "venv",
   "pythonVersion": "3.11",
   "extraPaths": ["backend"],
+  "reportMissingTypeStubs": false,
+  "reportMissingImports": "none",
+  "reportAttributeAccessIssue": "none",
   "executionEnvironments": [
     {
       "root": "backend",

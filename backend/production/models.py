@@ -1,6 +1,7 @@
-from django.db import models
+from django.db import models  # type: ignore
 
 class ProductionSchedule(models.Model):
+    objects = models.Manager()
     schedule_number = models.CharField(max_length=50, unique=True)
     start_date = models.DateField(null=True, blank=True)
     end_date = models.DateField(null=True, blank=True)
@@ -12,6 +13,7 @@ class ProductionSchedule(models.Model):
         return self.schedule_number
 
 class ProductionItem(models.Model):
+    objects = models.Manager()
     schedule = models.ForeignKey(ProductionSchedule, related_name='items', on_delete=models.CASCADE)
     job_number = models.CharField(max_length=100)
     sequence_number = models.CharField(max_length=100)
@@ -25,6 +27,7 @@ class ProductionItem(models.Model):
         return f"{self.job_number} - {self.sequence_number}"
 
 class ProductionPriority(models.Model):
+    objects = models.Manager()
     MODULE_CHOICES = [
         ('PLATE', 'Plate'),
         ('ANGLE', 'Angle'),
@@ -44,6 +47,7 @@ class ProductionPriority(models.Model):
         return f"{self.module_type} - {self.process_type}"
 
 class ProductionPriorityItem(models.Model):
+    objects = models.Manager()
     priority = models.ForeignKey(ProductionPriority, on_delete=models.CASCADE, related_name='items')
     job_number = models.CharField(max_length=100, null=True, blank=True)
     sequence_number = models.CharField(max_length=100, null=True, blank=True)
@@ -63,6 +67,7 @@ class ProductionPriorityItem(models.Model):
         return f"{self.job_number} - {self.sequence_number}"
 
 class Machine(models.Model):
+    objects = models.Manager()
     name = models.CharField(max_length=200)
     machine_id = models.CharField(max_length=100, null=True, blank=True)
     make = models.CharField(max_length=200)
@@ -80,6 +85,7 @@ class Machine(models.Model):
         return self.name
 
 class Manpower(models.Model):
+    objects = models.Manager()
     SKILL_CHOICES = [
         ('High', 'High'),
         ('Medium', 'Medium'),
@@ -114,6 +120,7 @@ class Manpower(models.Model):
         return f"{self.employee_name} ({self.skill_level})"
 
 class Capacity(models.Model):
+    objects = models.Manager()
     CATEGORY_CHOICES = [
         ('Machine', 'Machine'),
         ('Manual', 'Manual'),
@@ -132,11 +139,11 @@ class Capacity(models.Model):
 
     @property
     def rate_per_month(self):
-        return float(self.rate_per_day) * 30
+        return float(str(self.rate_per_day)) * 30
 
     @property
     def rate_per_year(self):
-        return float(self.rate_per_day) * 360
+        return float(str(self.rate_per_day)) * 360
 
     def __str__(self):
         return f"{self.shop} - {self.category} Capacity"

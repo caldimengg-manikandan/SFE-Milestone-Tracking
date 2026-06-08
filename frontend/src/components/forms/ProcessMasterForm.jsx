@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Calendar, Loader2, Columns, ChevronRight, CheckCircle2, Layers, Zap, LayoutGrid, FileText, ChevronDown } from 'lucide-react';
 import { productionAPI, priorityAPI, projectAPI, scheduleAPI } from '../../services/api';
+import FormattedDateInput from './FormattedDateInput';
 
 const DEFAULT_COLUMNS = [
   { key: 'job', label: 'Job #', type: 'text', fixed: true },
@@ -283,7 +284,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     if (!dateStr) return '-';
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return '-';
-    return `${String(date.getDate()).padStart(2,'0')}-${String(date.getMonth()+1).padStart(2,'0')}-${date.getFullYear()}`;
+    return `${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}-${date.getFullYear()}`;
   };
 
 
@@ -543,27 +544,19 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                   </div>
                   <div>
                     <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">Start Date</label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={header.startDate}
-                        readOnly
-                        className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
-                      />
-                      <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 pointer-events-none" />
-                    </div>
+                    <FormattedDateInput
+                      value={header.startDate}
+                      readOnly
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
+                    />
                   </div>
                   <div>
                     <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">End Date</label>
-                    <div className="relative">
-                      <input
-                        type="date"
-                        value={header.endDate}
-                        readOnly
-                        className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
-                      />
-                      <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-300 pointer-events-none" />
-                    </div>
+                    <FormattedDateInput
+                      value={header.endDate}
+                      readOnly
+                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
+                    />
                   </div>
                   <div className="relative">
                     <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">Select Projects</label>

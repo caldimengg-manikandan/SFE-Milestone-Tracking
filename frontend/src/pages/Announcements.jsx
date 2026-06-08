@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Megaphone, Calendar, CheckCircle2, AlertTriangle, Edit3, Trash2, ShieldAlert, ToggleLeft, ToggleRight } from 'lucide-react';
 import { announcementAPI } from '../services/api';
+import FormattedDateInput from '../components/forms/FormattedDateInput';
 
 export default function Announcements() {
   const [announcements, setAnnouncements] = useState([]);
@@ -41,12 +42,14 @@ export default function Announcements() {
     if (!dateStr) return '';
     const parts = dateStr.split('-');
     if (parts.length === 3) {
-      // YYYY-MM-DD to D/M/YYYY
-      return `${parseInt(parts[2])}/${parseInt(parts[1])}/${parts[0]}`;
+      // YYYY-MM-DD to MM-DD-YYYY
+      return `${parts[1]}-${parts[2]}-${parts[0]}`;
     }
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
-    return `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const d = date.getDate().toString().padStart(2, '0');
+    return `${m}-${d}-${date.getFullYear()}`;
   };
 
   const isExpired = (toDateStr) => {
@@ -198,8 +201,7 @@ export default function Announcements() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div>
                 <label className="text-sm font-semibold text-slate-600 block mb-1.5">From Date</label>
-                <input
-                  type="date"
+                <FormattedDateInput
                   name="from_date"
                   value={formData.from_date}
                   onChange={handleInputChange}
@@ -210,8 +212,7 @@ export default function Announcements() {
 
               <div>
                 <label className="text-sm font-semibold text-slate-600 block mb-1.5">To Date</label>
-                <input
-                  type="date"
+                <FormattedDateInput
                   name="to_date"
                   value={formData.to_date}
                   onChange={handleInputChange}

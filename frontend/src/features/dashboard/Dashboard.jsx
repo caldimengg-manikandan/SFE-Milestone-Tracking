@@ -51,7 +51,7 @@ export default function Dashboard() {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const y = date.getFullYear();
-    return `${d}-${m}-${y}`;
+    return `${m}-${d}-${y}`;
   };
 
   const getWeekPositions = (startDateStr, endDateStr, startMonth, duration, yearVal, fromM, toM) => {
@@ -666,9 +666,7 @@ export default function Dashboard() {
                           {expandedTaskId === task.id && task.items && task.items.length > 0 && task.items.map((item, iIdx) => {
                             const subBarPosition = item.start_date && item.end_date
                               ? getWeekPositions(item.start_date, item.end_date, 0, 1, selectedYear, fromMonth, toMonth)
-                              : item.ofa_date && (item.erection_date || item.rts_date)
-                                ? getWeekPositions(item.ofa_date, item.erection_date || item.rts_date, 0, 1, selectedYear, fromMonth, toMonth)
-                                : null;
+                              : null;
 
                             return (
                               <div
@@ -702,10 +700,7 @@ export default function Dashboard() {
                                       {isFirstVisibleWeek && subBarPosition && (
                                         <div
                                           className="db-gantt-bar shadow-sm"
-                                          title={item.start_date && item.end_date && item.plant_lead_time_weeks
-                                            ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                            : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
-                                          }
+                                          title={`${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`}
                                           style={{
                                             left: `${(subBarPosition.startCol - Math.floor(subBarPosition.startCol)) * 100}%`,
                                             width: `calc(${subBarPosition.endCol - subBarPosition.startCol} * 100% + ${Math.floor(subBarPosition.endCol) - Math.floor(subBarPosition.startCol)}px)`,
@@ -718,10 +713,7 @@ export default function Dashboard() {
                                           }}
                                         >
                                           <span className="db-gantt-bar-details">
-                                            {item.start_date && item.end_date && item.plant_lead_time_weeks
-                                              ? `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • RTS: ${formatDate(item.start_date)} • Exp. Completion: ${formatDate(item.end_date)}`
-                                              : `${item.project_name || item.job_number} (Seq: ${item.sequence_number}) • OFA: ${formatDate(item.ofa_date)} • Erection/RTS: ${formatDate(item.erection_date || item.rts_date)}`
-                                            }
+                                            {item.project_name || item.job_number} (Seq: {item.sequence_number}) • RTS: {formatDate(item.start_date)} • Exp. Completion: {formatDate(item.end_date)}
                                           </span>
                                         </div>
                                       )}

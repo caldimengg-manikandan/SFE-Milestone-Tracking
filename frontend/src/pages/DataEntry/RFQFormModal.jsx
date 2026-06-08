@@ -3,6 +3,7 @@ import { useMutation } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import { rfqAPI } from '../../api/client'
 import { X } from 'lucide-react'
+import FormattedDateInput from '../../components/forms/FormattedDateInput'
 
 export default function RFQFormModal({ customers, estimators, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -88,7 +89,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             </div>
             <div className="form-group">
               <label className="form-label">Quote Date</label>
-              <input className="form-input" type="date" value={form.quote_date}
+              <FormattedDateInput className="form-input" value={form.quote_date}
                 onChange={e => set('quote_date', e.target.value)} />
             </div>
             <div className="form-group">
@@ -115,7 +116,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             {/* Row 4: Bid Due Date + Bid Due Time + Location */}
             <div className="form-group">
               <label className="form-label">Bid Due Date</label>
-              <input className="form-input" type="date" value={form.bid_due_date}
+              <FormattedDateInput className="form-input" value={form.bid_due_date}
                 onChange={e => set('bid_due_date', e.target.value)} />
             </div>
             <div className="form-group">

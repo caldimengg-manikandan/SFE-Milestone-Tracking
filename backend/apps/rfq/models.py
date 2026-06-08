@@ -3,9 +3,9 @@ Core RFQ models — direct mapping of the Excel 'Data' sheet to PostgreSQL.
 All 'No Fill' (computed) columns are handled in serializers/views, not stored here.
 """
 import re
-from django.db import models
-from django.core.validators import RegexValidator
-from django.core.exceptions import ValidationError
+from django.db import models  # type: ignore
+from django.core.validators import RegexValidator  # type: ignore
+from django.core.exceptions import ValidationError  # type: ignore
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -13,6 +13,7 @@ from django.core.exceptions import ValidationError
 # ─────────────────────────────────────────────────────────────────────────────
 
 class Customer(models.Model):
+    objects = models.Manager()
     name = models.CharField(max_length=200, unique=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -24,6 +25,7 @@ class Customer(models.Model):
 
 
 class Estimator(models.Model):
+    objects = models.Manager()
     initials = models.CharField(max_length=20, unique=True)
     full_name = models.CharField(max_length=100, blank=True)
     is_active = models.BooleanField(default=True)
@@ -40,6 +42,7 @@ class Estimator(models.Model):
 # ─────────────────────────────────────────────────────────────────────────────
 
 class MonthlyBidGoal(models.Model):
+    objects = models.Manager()
     year = models.IntegerField()
     month = models.IntegerField(choices=[(i, i) for i in range(1, 13)])
     goal = models.DecimalField(max_digits=15, decimal_places=2, default=2000000)
@@ -69,6 +72,7 @@ quote_no_validator = RegexValidator(
 # ─────────────────────────────────────────────────────────────────────────────
 
 class RFQMaster(models.Model):
+    objects = models.Manager()
 
     # ── CHOICES ──────────────────────────────────────────────────────────────
     class BudgetType(models.TextChoices):
@@ -314,12 +318,14 @@ class RFQMaster(models.Model):
     @property
     def is_rebid(self):
         """Col C — TRUE if quote_no contains 'R' after the base sequence."""
-        return bool(re.search(r'\d{2}-\d{2}-\d+R', self.quote_no or ''))
+        quote_no_str = str(self.quote_no) if self.quote_no else ''
+        return bool(re.search(r'\d{2}-\d{2}-\d+R', quote_no_str))
 
     @property
     def quote_no_rolled_up(self):
         """Col B — first 8 chars (strips rebid suffix)."""
-        return (self.quote_no or '')[:8]
+        quote_no_str = str(self.quote_no) if self.quote_no else ''
+        return quote_no_str[:8]
 
     @property
     def rebid_label(self):
@@ -327,9 +333,12 @@ class RFQMaster(models.Model):
 
     @property
     def total_tonnage(self):
-        if self.ton_steel is not None and self.ton_joist is not None:
-            return self.ton_steel + self.ton_joist
-        return self.ton_steel or self.ton_joist
+        ton_steel = self.ton_steel
+        ton_joist = self.ton_joist
+        if ton_steel is not None and ton_joist is not None:
+            from decimal import Decimal
+            return Decimal(str(ton_steel)) + Decimal(str(ton_joist))
+        return ton_steel or ton_joist
 
     def _safe_div(self, numerator, denominator):
         """Division guard — return None instead of ZeroDivisionError."""
@@ -370,7 +379,7 @@ class RFQMaster(models.Model):
     def _end_month(self, start, duration):
         if not start or not duration or duration < 1:
             return None
-        from dateutil.relativedelta import relativedelta
+        from dateutil.relativedelta import relativedelta  # type: ignore
         return start + relativedelta(months=duration - 1)
 
     def _avg_hours(self, total_hours, duration):

@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query'
 import { rfqAPI } from '../../api/client'
 import { Printer, Calendar, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react'
 import { formatDate } from '../../utils/formatters'
+import FormattedDateInput from '../../components/forms/FormattedDateInput'
 
 function formatTime(t) {
   if (!t) return '—'
@@ -67,7 +68,7 @@ export default function PrintSetupPage() {
         <Calendar style={{ width: 14, color: 'var(--text-muted)' }} />
         <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <label className="form-label" style={{ whiteSpace: 'nowrap' }}>Bid Due From</label>
-          <input type="date" className="form-input" style={{ width: 150 }} value={dateFrom}
+          <FormattedDateInput className="form-input" style={{ width: 150 }} value={dateFrom}
             onChange={e => {
               setDateFrom(e.target.value)
               setCurrentPage(1)
@@ -75,7 +76,7 @@ export default function PrintSetupPage() {
         </div>
         <div className="form-group" style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <label className="form-label" style={{ whiteSpace: 'nowrap' }}>To</label>
-          <input type="date" className="form-input" style={{ width: 150 }} value={dateTo}
+          <FormattedDateInput className="form-input" style={{ width: 150 }} value={dateTo}
             onChange={e => {
               setDateTo(e.target.value)
               setCurrentPage(1)

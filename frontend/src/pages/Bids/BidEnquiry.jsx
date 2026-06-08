@@ -6,6 +6,7 @@ import {
   Pencil, Download
 } from 'lucide-react';
 import { bidEnquiryAPI, customerAPI, employeeAPI } from '../../services/api';
+import FormattedDateInput from '../../components/forms/FormattedDateInput';
 
 const MONTHS_LIST = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -1009,8 +1010,7 @@ export default function BidEnquiry() {
                       {/* 4: Bid Due Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">4. Due Date (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="bid_due_date"
                           value={formData.bid_due_date || ''}
                           onChange={handleInputChange}
@@ -1150,8 +1150,7 @@ export default function BidEnquiry() {
                       {/* 13: Sent to J&D */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">13. Sent to J&D (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="sent_to_jd"
                           value={formData.sent_to_jd || ''}
                           onChange={handleInputChange}
@@ -1162,8 +1161,7 @@ export default function BidEnquiry() {
                       {/* 14: Sent to Detailing */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">14. Sent to Detailing (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="sent_to_detailing"
                           value={formData.sent_to_detailing || ''}
                           onChange={handleInputChange}
@@ -1174,8 +1172,7 @@ export default function BidEnquiry() {
                       {/* 15: Sent to Erection */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">15. Sent to Erection (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="sent_to_erection"
                           value={formData.sent_to_erection || ''}
                           onChange={handleInputChange}
@@ -1799,8 +1796,7 @@ export default function BidEnquiry() {
                       {/* 56: Quote Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">56. Quote Date (Est)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="quote_date"
                           value={formData.quote_date || ''}
                           onChange={handleInputChange}
@@ -1827,8 +1823,7 @@ export default function BidEnquiry() {
                       {/* 59: Estimator Follow Up Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">59. Follow Up Date (Est)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="estimator_followup_date"
                           value={formData.estimator_followup_date || ''}
                           onChange={handleInputChange}
@@ -1886,8 +1881,7 @@ export default function BidEnquiry() {
                       {/* 62: Awarded Job # Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">62. Awarded Date (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="awarded_job_no_date"
                           value={formData.awarded_job_no_date || ''}
                           onChange={handleInputChange}
@@ -1898,8 +1892,7 @@ export default function BidEnquiry() {
                       {/* 63: Contract Executed Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">63. Contract Executed Date (MB)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="contract_executed_date"
                           value={formData.contract_executed_date || ''}
                           onChange={handleInputChange}
@@ -1918,8 +1911,7 @@ export default function BidEnquiry() {
                       {/* 64: Fabrication Start Date */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">64. Fab Start Date (JF)</label>
-                        <input
-                          type="date"
+                        <FormattedDateInput
                           name="fab_start_date"
                           value={formData.fab_start_date || ''}
                           onChange={handleInputChange}

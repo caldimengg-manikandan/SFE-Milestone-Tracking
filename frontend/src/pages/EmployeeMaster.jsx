@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Users, Plus, Search, Edit2, Trash2, X, ChevronDown, Download, Filter, Loader2, Mail, Phone, MapPin, Briefcase, Eye } from 'lucide-react';
 import { employeeAPI } from '../services/api';
+import FormattedDateInput from '../components/forms/FormattedDateInput';
 
 const departments = ['All', 'Fabrication', 'Design', 'Quality', 'Admin', 'Operations'];
 
@@ -361,10 +362,9 @@ export default function EmployeeMaster() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Date of Birth</label>
-                      <input
+                      <FormattedDateInput
                         required
                         disabled={isViewMode}
-                        type="date"
                         className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none shadow-sm disabled:opacity-75 disabled:bg-slate-50"
                         value={form.dob}
                         onChange={e => setForm({ ...form, dob: e.target.value })}

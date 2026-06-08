@@ -1,6 +1,7 @@
-from django.db import models
+from django.db import models  # type: ignore
 
 class Project(models.Model):
+    objects = models.Manager()
     STATUS_CHOICES = [
         ('Planning', 'Planning'),
         ('In Progress', 'In Progress'),
@@ -35,6 +36,7 @@ class Project(models.Model):
         return f"{self.code} — {self.name}"
 
 class StructuralScheduleItem(models.Model):
+    objects = models.Manager()
     project = models.ForeignKey(Project, related_name='structural_schedules', on_delete=models.CASCADE)
     seq_no = models.CharField(max_length=50)
     tons = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -128,3 +130,21 @@ class DetailerContact(models.Model):
 
     def __str__(self):
         return self.person
+
+
+from django.db.models.signals import post_delete  # type: ignore
+from django.dispatch import receiver  # type: ignore
+
+@receiver(post_delete, sender=StructuralScheduleItem)
+def cleanup_production_items(sender, instance, **kwargs):
+    from production.models import ProductionItem, ProductionPriorityItem
+    # Delete related production schedule items
+    ProductionItem.objects.filter(
+        job_number=instance.project.code,
+        sequence_number=instance.seq_no
+    ).delete()
+    # Delete related production priority items
+    ProductionPriorityItem.objects.filter(
+        job_number=instance.project.code,
+        sequence_number=instance.seq_no
+    ).delete()

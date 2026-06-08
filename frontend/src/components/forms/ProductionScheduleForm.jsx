@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { X, Save, Plus, Trash2, Loader2, ChevronDown } from 'lucide-react';
 import { productionAPI, projectAPI } from '../../services/api';
+import FormattedDateInput from './FormattedDateInput';
 
 const parseLocalDate = (dateStr) => {
   if (!dateStr) return null;
@@ -295,8 +296,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Start Date</label>
-              <input
-                type="date"
+              <FormattedDateInput
                 value={header.startDate}
                 onChange={(e) => setHeader({ ...header, startDate: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
@@ -304,8 +304,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">End Date</label>
-              <input
-                type="date"
+              <FormattedDateInput
                 value={header.endDate}
                 onChange={(e) => setHeader({ ...header, endDate: e.target.value })}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
@@ -461,8 +460,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                             />
                           </td>
                           <td className="p-2">
-                            <input
-                              type="date"
+                            <FormattedDateInput
                               value={row.rtsDate}
                               onChange={(e) => updateRow(index, 'rtsDate', e.target.value)}
                               className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
@@ -476,8 +474,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                             </div>
                           </td>
                           <td className="p-2">
-                            <input
-                              type="date"
+                            <FormattedDateInput
                               value={row.shipDate}
                               onChange={(e) => updateRow(index, 'shipDate', e.target.value)}
                               className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"

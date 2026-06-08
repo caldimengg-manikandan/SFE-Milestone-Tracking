@@ -2,6 +2,7 @@ import { useState, useEffect, Fragment } from 'react';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, ClipboardList, FileText } from "lucide-react";
 import ProductionScheduleForm from '../../components/forms/ProductionScheduleForm';
 import { productionAPI, projectAPI } from '../../services/api';
+import FormattedDateInput from '../../components/forms/FormattedDateInput';
 
 export default function ProductionPrioritySchedule() {
   const [showModal, setShowModal] = useState(false);
@@ -44,7 +45,7 @@ export default function ProductionPrioritySchedule() {
     const d = date.getDate().toString().padStart(2, '0');
     const m = (date.getMonth() + 1).toString().padStart(2, '0');
     const y = date.getFullYear();
-    return `${d}-${m}-${y}`;
+    return `${m}-${d}-${y}`;
   };
 
   const getPlanCreationDates = (item) => {
@@ -482,8 +483,7 @@ export default function ProductionPrioritySchedule() {
                                           </div>
                                         </td>
                                         <td className="px-4 py-2">
-                                          <input
-                                            type="date"
+                                          <FormattedDateInput
                                             value={item.ship_date || ''}
                                             onChange={async (e) => {
                                               const newDate = e.target.value || null;

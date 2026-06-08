@@ -4,5 +4,6 @@
     "${workspaceFolder}/backend"
   ],
   "python.analysis.venvPath": "${workspaceFolder}/backend",
-  "python.analysis.venv": "venv"
+  "python.analysis.venv": "venv",
+  "css.lint.unknownAtRules": "ignore"
 }

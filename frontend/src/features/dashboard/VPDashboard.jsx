@@ -23,7 +23,7 @@ const fmt = (d) => {
   if (!d) return '—';
   const dt = new Date(d);
   if (isNaN(dt)) return '—';
-  return `${String(dt.getDate()).padStart(2,'0')}-${String(dt.getMonth()+1).padStart(2,'0')}-${dt.getFullYear()}`;
+  return `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}-${dt.getFullYear()}`;
 };
 
 const fmtMoney = (v) => {

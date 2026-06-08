@@ -1,7 +1,8 @@
-from django.db import models
-from django.conf import settings
+from django.db import models  # type: ignore
+from django.conf import settings  # type: ignore
 
 class Announcement(models.Model):
+    objects = models.Manager()
     title = models.CharField(max_length=300)
     message = models.TextField()
     from_date = models.DateField()

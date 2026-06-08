@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronRight, ChevronDown, Loader2 } from 'lucide-react';
 import StructuralScheduleForm from './StructuralScheduleForm';
 import { customerAPI, detailerAPI, employeeAPI, rfqAPI } from '../../services/api';
+import FormattedDateInput from './FormattedDateInput';
 
 function SearchableDropdown({ options, value, onChange, placeholder, className, containerClassName = "w-full", loading }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -969,8 +970,7 @@ export default function ProjectForm({
                         })()}
                       </p>
                     ) : (
-                      <input
-                        type="date"
+                      <FormattedDateInput
                         value={form.erection_date || ''}
                         onChange={e => setForm({ ...form, erection_date: e.target.value })}
                         className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"

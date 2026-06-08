@@ -12,6 +12,7 @@ import {
 import { projectAPI, rfqAPI } from '../services/api';
 import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
+import FormattedDateInput from '../components/forms/FormattedDateInput';
 
 function SearchableDropdown({ options, value, onChange, placeholder, className, containerClassName = "w-full", loading }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -2237,8 +2238,7 @@ export default function EstimationModel() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">MATERIAL DATE</label>
-                  <input
-                    type="date"
+                  <FormattedDateInput
                     value={projectInfo.materialDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, materialDate: e.target.value })}
                     className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
@@ -2278,8 +2278,7 @@ export default function EstimationModel() {
               <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DATE</label>
-                  <input
-                    type="date"
+                  <FormattedDateInput
                     value={projectInfo.date}
                     onChange={(e) => setProjectInfo({ ...projectInfo, date: e.target.value })}
                     className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
@@ -2310,8 +2309,7 @@ export default function EstimationModel() {
 
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">START DATE</label>
-                  <input
-                    type="date"
+                  <FormattedDateInput
                     value={projectInfo.startDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, startDate: e.target.value })}
                     className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"

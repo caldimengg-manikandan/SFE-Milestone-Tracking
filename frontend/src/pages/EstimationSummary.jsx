@@ -15,10 +15,15 @@ import {
   Download,
   ChevronLeft,
   ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
   X,
   Loader2,
   AlertCircle,
-  Pen
+  Pen,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown
 } from 'lucide-react';
 import { projectAPI, rfqAPI } from '../services/api';
 
@@ -174,7 +179,62 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const [itemsPerPage, setItemsPerPage] = useState(25);
+  const [sortField, setSortField] = useState(null); // 'quote_date' | 'bid_due_date'
+  const [sortOrder, setSortOrder] = useState(null); // 'asc' | 'desc' | 'urgent'
+
+  const getDaysDifference = (dateStr) => {
+    if (!dateStr) return null;
+    const parts = dateStr.split('T')[0].split('-');
+    if (parts.length !== 3) return null;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    
+    const target = new Date(y, m, d);
+    target.setHours(0, 0, 0, 0);
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const diffTime = target.getTime() - today.getTime();
+    return Math.round(diffTime / (1000 * 60 * 60 * 24));
+  };
+
+  const handleSort = (field) => {
+    setCurrentPage(1);
+    if (field === 'quote_date') {
+      if (sortField !== 'quote_date') {
+        setSortField('quote_date');
+        setSortOrder('desc'); // default to newest first
+      } else if (sortOrder === 'desc') {
+        setSortOrder('asc');
+      } else {
+        setSortField(null);
+        setSortOrder(null);
+      }
+    }
+  };
+
+  const formatShortDate = (dateStr) => {
+    if (!dateStr) return '-';
+    const cleanStr = String(dateStr).split('T')[0];
+    const parts = cleanStr.split(/[-/]/);
+    if (parts.length === 3) {
+      if (parts[0].length === 4) {
+        return `${parts[1]}-${parts[2]}-${parts[0]}`;
+      }
+      if (parts[2].length === 4) {
+        return `${parts[0]}-${parts[1]}-${parts[2]}`;
+      }
+    }
+    const date = new Date(dateStr);
+    if (isNaN(date.getTime())) return dateStr;
+    const d = date.getDate().toString().padStart(2, '0');
+    const m = (date.getMonth() + 1).toString().padStart(2, '0');
+    const y = date.getFullYear();
+    return `${m}-${d}-${y}`;
+  };
 
   useEffect(() => {
     if (isEmbedded) return; // Skip loading if embedded in modal
@@ -184,8 +244,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
         setLoading(true);
         setError('');
         const [projRes, rfqRes] = await Promise.all([
-          projectAPI.getAll({ won_rfq: 'true' }),
-          rfqAPI.getAll({ won_lost: 'Won' })
+          projectAPI.getAll({ page_size: 1000 }),
+          rfqAPI.getAll({ page_size: 1000 })
         ]);
 
         const projData = projRes.data.results || projRes.data;
@@ -193,8 +253,17 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
         if (Array.isArray(projData)) setProjects(projData);
         if (Array.isArray(rfqData)) {
-          // Sort RFQs descending by job number
-          const sorted = [...rfqData].sort((a, b) => (b.sfe_job_no || 0) - (a.sfe_job_no || 0));
+          // Filter RFQs where decision_to_bid is "Yes" or "Bid" (case-insensitive)
+          const filtered = rfqData.filter(rfq => {
+            const dec = (rfq.decision_to_bid || '').toLowerCase().trim();
+            return dec === 'yes' || dec === 'bid';
+          });
+          // Sort RFQs descending by job number or quote number
+          const sorted = [...filtered].sort((a, b) => {
+            const aVal = String(a.sfe_job_no || a.quote_no || '');
+            const bVal = String(b.sfe_job_no || b.quote_no || '');
+            return bVal.localeCompare(aVal, undefined, { numeric: true });
+          });
           setWonRfqs(sorted);
         }
       } catch (err) {
@@ -362,21 +431,32 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     };
   };
 
-  const handleLoadProjectInModel = (proj) => {
-    const info = {
-      projectId: proj.id,
-      project: proj.name,
-      quoteNum: proj.code || '',
-      salesman: proj.project_manager_name || '',
-      startDate: proj.erection_date || '',
-      location: proj.customer_name || ''
-    };
-    // Save project specs info to trigger sync on mount in EstimationModel
-    localStorage.setItem('sfe_est_project', JSON.stringify(info));
-    // Clear out calculated fields so that mount fetches latest state from Project database
-    localStorage.removeItem('sfe_est_bid_enquiry');
-    localStorage.removeItem('sfe_est_sections');
-    
+  const handleLoadProjectInModel = (proj, rfq) => {
+    if (proj) {
+      const info = {
+        projectId: proj.id,
+        project: proj.name,
+        quoteNum: proj.code || '',
+        salesman: proj.project_manager_name || '',
+        startDate: proj.erection_date || '',
+        location: proj.customer_name || ''
+      };
+      localStorage.setItem('sfe_est_project', JSON.stringify(info));
+      localStorage.removeItem('sfe_est_bid_enquiry');
+      localStorage.removeItem('sfe_est_sections');
+    } else if (rfq) {
+      const info = {
+        projectId: '',
+        project: rfq.project_name || '',
+        quoteNum: rfq.sfe_job_no ? String(rfq.sfe_job_no) : (rfq.quote_no || ''),
+        salesman: rfq.primary_estimator ? rfq.primary_estimator.full_name : '',
+        startDate: rfq.contract_executed_date || rfq.awarded_job_date || '',
+        location: rfq.location || ''
+      };
+      localStorage.setItem('sfe_est_project', JSON.stringify(info));
+      localStorage.removeItem('sfe_est_bid_enquiry');
+      localStorage.removeItem('sfe_est_sections');
+    }
     navigate('/estimation');
   };
 
@@ -386,24 +466,41 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   };
 
   const filteredRfqs = wonRfqs.filter(rfq => {
-    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
-    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
-    if (!matchedProj) return false;
-
-    const vals = calculateEstimationValues(matchedProj);
-    if (vals.finalBidAmount <= 0) return false;
-
     const searchLower = search.toLowerCase();
     return (
       (rfq.project_name?.toLowerCase() || '').includes(searchLower) ||
       (String(rfq.sfe_job_no || '')).includes(searchLower) ||
-      (rfq.quote_no?.toLowerCase() || '').includes(searchLower)
+      (rfq.quote_no?.toLowerCase() || '').includes(searchLower) ||
+      (rfq.customer_name?.toLowerCase() || '').includes(searchLower)
     );
+  });
+
+  const sortedRfqs = [...filteredRfqs].sort((a, b) => {
+    if (!sortField) return 0;
+
+    if (sortField === 'quote_date') {
+      const dateA = a.quote_date ? new Date(a.quote_date) : null;
+      const dateB = b.quote_date ? new Date(b.quote_date) : null;
+
+      if (!dateA && !dateB) return 0;
+      if (!dateA) return 1;
+      if (!dateB) return -1;
+
+      return sortOrder === 'asc'
+        ? dateA.getTime() - dateB.getTime()
+        : dateB.getTime() - dateA.getTime();
+    }
+
+    return 0;
   });
 
   const exportToCSV = () => {
     const headers = [
+      "RFQ Date",
       "Project Name",
+      "Customer Name",
+      "Bid Due Date",
+      "Decision to Bid",
       "Standard Grand Total",
       "Misc Summary Total",
       "Total Direct Costs",
@@ -420,13 +517,17 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       return num === 0 ? '0' : num.toFixed(2);
     };
     
-    const rows = filteredRfqs.map(rfq => {
+    const rows = sortedRfqs.map(rfq => {
       const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
       const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
       const vals = calculateEstimationValues(matched);
       const totalDirect = (vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0);
       return [
-        rfq.project_name,
+        formatShortDate(rfq.quote_date),
+        rfq.project_name || '',
+        rfq.customer_name || '',
+        formatShortDate(rfq.bid_due_date),
+        rfq.decision_to_bid || '',
         formatExportVal(vals.finalBidAmount),
         formatExportVal(vals.miscellaneousFinalPrice),
         formatExportVal(totalDirect),
@@ -438,7 +539,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       ];
     });
 
-    const csvContent = [headers, ...rows].map(e => e.map(val => `"${val.replace(/"/g, '""')}"`).join(",")).join("\n");
+    const csvContent = [headers, ...rows].map(e => e.map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(",")).join("\n");
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement("a");
     const url = URL.createObjectURL(blob);
@@ -450,9 +551,9 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     document.body.removeChild(link);
   };
 
-  const totalPages = Math.ceil(filteredRfqs.length / itemsPerPage);
+  const totalPages = Math.ceil(sortedRfqs.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const paginatedRfqs = filteredRfqs.slice(startIndex, startIndex + itemsPerPage);
+  const paginatedRfqs = sortedRfqs.slice(startIndex, startIndex + itemsPerPage);
 
   if (!isEmbedded) {
     return (
@@ -505,31 +606,58 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
         {/* Report Table Grid */}
         <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[1200px]">
+          <div className="overflow-x-auto scrollbar-thin">
+            <table className="w-full text-left border-collapse min-w-[1600px]">
               <thead>
-                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider">
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 min-w-[200px]">Project Name</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Total Bid Amount</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Misc Summary Total</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Total Direct Costs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Drafting & Directs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Overhead on Directs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Buyouts Section</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Overhead on Buyouts</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[120px]">Profit & Misc</th>
+                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider select-none">
+                  {/* Frozen Columns Header */}
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-0 bg-[#d97706] z-20 min-w-[50px] max-w-[50px] text-center whitespace-nowrap">S.No</th>
+                  <th 
+                    onClick={() => handleSort('quote_date')}
+                    className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[50px] bg-[#d97706] hover:bg-[#b55c05] z-20 min-w-[100px] max-w-[100px] text-center cursor-pointer select-none transition-colors group"
+                    title="Click to sort by RFQ Date"
+                  >
+                    <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                      <span>RFQ Date</span>
+                      {sortField === 'quote_date' ? (
+                        sortOrder === 'asc' ? (
+                          <ArrowUp className="w-3.5 h-3.5 text-white animate-fade-in" />
+                        ) : (
+                          <ArrowDown className="w-3.5 h-3.5 text-white animate-fade-in" />
+                        )
+                      ) : (
+                        <ArrowUpDown className="w-3.5 h-3.5 text-white/50 group-hover:text-white/90 transition-colors" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[150px] bg-[#d97706] z-20 min-w-[220px] max-w-[220px] whitespace-nowrap">Project Name</th>
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[370px] bg-[#d97706] z-20 min-w-[180px] max-w-[180px] whitespace-nowrap">Customer Name</th>
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[550px] bg-[#d97706] z-20 min-w-[100px] max-w-[100px] text-center whitespace-nowrap">
+                    Bid Due Date
+                  </th>
+                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[650px] bg-[#d97706] z-20 min-w-[110px] max-w-[110px] text-center border-r-2 border-amber-600/35 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">Decision to Bid</th>
+                  
+                  {/* Scrolling columns */}
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[130px]">Total Bid Amount</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[130px]">Misc Summary Total</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Total Direct Costs</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Drafting & Directs</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Overhead on Directs</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Buyouts Section</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Overhead on Buyouts</th>
+                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Profit & Misc</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-[12px]">
                 {loading ? (
                   <tr>
-                    <td colSpan="9" className="py-20 text-center">
+                    <td colSpan="14" className="py-20 text-center">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
                       <p className="text-xs font-bold text-slate-400">Loading estimation reports...</p>
                     </td>
                   </tr>
                 ) : paginatedRfqs.length > 0 ? (
-                  paginatedRfqs.map((rfq) => {
+                  paginatedRfqs.map((rfq, index) => {
                     const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
                     const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
                     const hasCalc = matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0;
@@ -549,29 +677,82 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                         };
 
                     return (
-                      <tr key={rfq.id} className="transition-colors hover:bg-slate-50/50">
-                        <td className="px-2 py-3 border-r border-slate-100 text-slate-800 break-words leading-tight">
+                      <tr key={rfq.id} className="group transition-colors hover:bg-slate-50/50">
+                        {/* Frozen Columns Body Cells */}
+                        <td className="px-2 py-3 border-r border-slate-100 text-center text-slate-400 font-semibold sticky left-0 bg-white group-hover:bg-slate-50/75 z-10 min-w-[50px] max-w-[50px] whitespace-nowrap">
+                          {startIndex + index + 1}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-center text-slate-600 sticky left-[50px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[100px] max-w-[100px] whitespace-nowrap">
+                          {formatShortDate(rfq.quote_date)}
+                        </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-slate-800 break-words leading-tight sticky left-[150px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[220px] max-w-[220px]">
                           <div className="flex flex-col">
-                            {matchedProj ? (
-                              <button
-                                onClick={() => handleLoadProjectInModel(matchedProj)}
-                                className="text-left font-bold text-slate-800 hover:text-amber-600 transition-colors inline-flex items-center gap-1.5 group/proj w-full"
-                                title={hasCalc ? "Edit Calculations in Model" : "Initialize Model Setup"}
-                              >
-                                <span>{rfq.project_name}</span>
-                                <Pen className={`w-3.5 h-3.5 shrink-0 ${hasCalc ? 'text-black' : 'text-slate-300'} opacity-60 group-hover/proj:opacity-100 transition-opacity`} />
-                              </button>
-                            ) : (
-                              <div className="flex flex-col">
-                                <span className="font-bold text-slate-500 italic">{rfq.project_name}</span>
-                                <span className="text-[9px] text-red-500/80 font-semibold uppercase tracking-wider">Unsynced Project</span>
-                              </div>
-                            )}
+                            <button
+                              onClick={() => handleLoadProjectInModel(matchedProj, rfq)}
+                              className="text-left font-bold text-slate-850 hover:text-amber-600 transition-colors inline-flex items-center gap-1.5 group/proj w-full"
+                              title={hasCalc ? "Edit Calculations in Model" : "Initialize Model Setup"}
+                            >
+                              <span className="truncate max-w-[180px]">{rfq.project_name}</span>
+                              <Pen className={`w-3 h-3 shrink-0 ${hasCalc ? 'text-amber-600 font-bold' : 'text-slate-300'} opacity-70 group-hover/proj:opacity-100 transition-opacity`} />
+                            </button>
                             <span className="text-[9px] font-mono text-slate-400 mt-0.5">
                               {rfq.sfe_job_no ? `Job #${rfq.sfe_job_no}` : `Quote ${rfq.quote_no}`}
                             </span>
                           </div>
                         </td>
+                        <td className="px-2 py-3 border-r border-slate-100 text-slate-600 truncate sticky left-[370px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[180px] max-w-[180px]" title={rfq.customer_name || 'N/A'}>
+                          {rfq.customer_name || '—'}
+                        </td>
+                        {(() => {
+                          const diffDays = getDaysDifference(rfq.bid_due_date);
+                          let dateColorClass = 'text-slate-650';
+                          let dateBgClass = 'bg-white';
+                          let dateBadge = null;
+
+                          if (diffDays !== null) {
+                            if (diffDays === 1) {
+                              dateColorClass = 'text-amber-800 font-bold';
+                              dateBgClass = 'bg-amber-50/70';
+                              dateBadge = (
+                                <span className="block text-[8px] leading-none text-amber-600 font-black uppercase mt-0.5">
+                                  Due Tomorrow
+                                </span>
+                              );
+                            } else if (diffDays === 0) {
+                              dateColorClass = 'text-orange-800 font-bold';
+                              dateBgClass = 'bg-orange-50/70';
+                              dateBadge = (
+                                <span className="block text-[8px] leading-none text-orange-600 font-black uppercase mt-0.5">
+                                  Due Today
+                                </span>
+                              );
+                            } else if (diffDays < 0) {
+                              dateColorClass = 'text-red-800 font-bold';
+                              dateBgClass = 'bg-red-50/70';
+                              dateBadge = null;
+                            }
+                          }
+
+                          return (
+                            <td className={`px-2 py-3 border-r border-slate-100 text-center sticky left-[550px] z-10 min-w-[100px] max-w-[100px] transition-colors group-hover:bg-slate-50/75 ${dateBgClass} ${dateColorClass}`}>
+                              <div className="flex flex-col items-center justify-center">
+                                <span>{formatShortDate(rfq.bid_due_date)}</span>
+                                {dateBadge}
+                              </div>
+                            </td>
+                          );
+                        })()}
+                        <td className="px-2 py-3 text-center sticky left-[650px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[110px] max-w-[110px] border-r-2 border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border ${
+                            (rfq.decision_to_bid || '').toLowerCase().trim() === 'yes'
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                          }`}>
+                            {rfq.decision_to_bid || 'Pending'}
+                          </span>
+                        </td>
+
+                        {/* Scrolling Columns Body Cells */}
                         <td className="px-2 py-3 border-r border-slate-100 text-right font-black text-slate-800">
                           {formatCurrency(vals.finalBidAmount)}
                         </td>
@@ -601,7 +782,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   })
                 ) : (
                   <tr>
-                    <td colSpan="9" className="px-6 py-12 text-center text-slate-500 font-medium italic">No estimated projects found. Use the Estimation Model to perform bid calculations first.</td>
+                    <td colSpan="14" className="px-6 py-12 text-center text-slate-500 font-medium italic">No projects found. Check your RFQ Master and filters.</td>
                   </tr>
                 )}
               </tbody>
@@ -609,39 +790,64 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
           </div>
 
           {/* Pagination Controls */}
-          <div className="bg-slate-50 px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-            <div className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              {filteredRfqs.length} {filteredRfqs.length === 1 ? 'Record' : 'Records'} Found
+          <div className="bg-slate-50 px-4 py-2.5 border-t border-slate-100 flex items-center justify-end gap-6">
+            {/* Page Size Selector */}
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-slate-500">Page Size:</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => { setItemsPerPage(Number(e.target.value)); setCurrentPage(1); }}
+                className="text-xs font-semibold text-slate-700 border border-slate-200 rounded-md px-2 py-1 bg-white outline-none focus:border-amber-400 cursor-pointer"
+              >
+                {[10, 25, 50, 100].map(size => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
             </div>
-            {totalPages > 1 && (
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(prev => prev - 1)}
-                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all cursor-pointer"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <div className="flex items-center gap-1">
-                  {[...Array(totalPages)].map((_, i) => (
-                    <button
-                      key={i}
-                      onClick={() => setCurrentPage(i + 1)}
-                      className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === i + 1 ? 'bg-amber-500 text-white shadow-md' : 'text-slate-600 hover:bg-slate-200 cursor-pointer'}`}
-                    >
-                      {i + 1}
-                    </button>
-                  ))}
-                </div>
-                <button
-                  disabled={currentPage === totalPages}
-                  onClick={() => setCurrentPage(prev => prev + 1)}
-                  className="p-2 rounded-lg border border-slate-200 bg-white text-slate-600 disabled:opacity-40 hover:bg-slate-50 transition-all cursor-pointer"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            )}
+
+            {/* Record Range */}
+            <span className="text-xs font-semibold text-slate-500">
+              {filteredRfqs.length === 0 ? '0 of 0' : `${startIndex + 1} to ${Math.min(startIndex + itemsPerPage, filteredRfqs.length)} of ${filteredRfqs.length.toLocaleString()}`}
+            </span>
+
+            {/* Page Info & Navigation */}
+            <div className="flex items-center gap-1">
+              <span className="text-xs font-semibold text-slate-500 mr-1">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(1)}
+                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-500 disabled:opacity-30 hover:bg-slate-100 transition-all cursor-pointer"
+                title="First Page"
+              >
+                <ChevronsLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                disabled={currentPage === 1}
+                onClick={() => setCurrentPage(prev => prev - 1)}
+                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-500 disabled:opacity-30 hover:bg-slate-100 transition-all cursor-pointer"
+                title="Previous Page"
+              >
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(prev => prev + 1)}
+                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-500 disabled:opacity-30 hover:bg-slate-100 transition-all cursor-pointer"
+                title="Next Page"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
+              <button
+                disabled={currentPage === totalPages || totalPages === 0}
+                onClick={() => setCurrentPage(totalPages)}
+                className="p-1.5 rounded-md border border-slate-200 bg-white text-slate-500 disabled:opacity-30 hover:bg-slate-100 transition-all cursor-pointer"
+                title="Last Page"
+              >
+                <ChevronsRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
