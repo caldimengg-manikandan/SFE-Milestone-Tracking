@@ -25,6 +25,16 @@ import EstimationSummary from './pages/EstimationSummary';
 import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 
+// ── Estimation Erection Imports ──────────────────────────────────────────────
+import EstimationErectionLayout from './pages/EstimationErection/EstimationErectionLayout';
+import ErectionTakeoffTab from './pages/EstimationErection/ErectionTakeoffTab';
+import FieldMomentConnTab from './pages/EstimationErection/FieldMomentConnTab';
+import MiscMetalsTab from './pages/EstimationErection/MiscMetalsTab';
+import BreakdownTab from './pages/EstimationErection/BreakdownTab';
+import EstimateDataTab from './pages/EstimationErection/EstimateDataTab';
+import CoreTab from './pages/EstimationErection/CoreTab';
+
+
 // ── RFQ Module & Dashboard Integrations ───────────────────────────────────────
 import RFQLayout from './pages/DataEntry/RFQLayout';
 import DataEntryPage from './pages/DataEntry/DataEntryPage';
@@ -101,6 +111,18 @@ export default function App() {
             <Route path="capacity" element={<FutureCapacityPage />} />
           </Route>
           <Route path="rfq/print" element={<div className="rfq-scope w-full h-full"><PrintSetupPage /></div>} />
+
+          {/* Integrated Estimation Erection */}
+          <Route path="estimation-erection" element={<EstimationErectionLayout />}>
+            <Route index element={<Navigate to="erection-takeoff" replace />} />
+            <Route path="erection-takeoff" element={<ErectionTakeoffTab />} />
+            <Route path="fmc" element={<FieldMomentConnTab />} />
+            <Route path="misc-metals" element={<MiscMetalsTab />} />
+            <Route path="breakdown" element={<BreakdownTab />} />
+            <Route path="estimate-data" element={<EstimateDataTab />} />
+            <Route path="contacts" element={<CoreTab />} />
+          </Route>
+
 
           <Route path="settings" element={<Settings />} />
           <Route path="announcements" element={<Announcements />} />

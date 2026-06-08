@@ -12,25 +12,23 @@ class User(AbstractUser):
         ('readonly', 'Read-Only'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
-
-    @property
-    def is_manager(self):
-        """Return True if user is admin or manager."""
-        return self.role in ('admin', 'manager')
-
-    @property
-    def can_edit(self):
-        """Return True if user can create/edit RFQs (admin, manager, estimator)."""
-        return self.role in ('admin', 'manager', 'estimator')
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_expiry = models.DateTimeField(blank=True, null=True)
 
+    # Soft-lock: set when someone is actively editing a project
+    editing_project_id = models.IntegerField(null=True, blank=True)
+    editing_since = models.DateTimeField(null=True, blank=True)
+
     class Meta:
         db_table = 'users'
         ordering = ['-date_joined']
+
+    @property
+    def is_admin(self):
+        return self.role == 'admin' or self.is_superuser
 
     @property
     def is_manager(self):
@@ -48,5 +46,10 @@ class User(AbstractUser):
     def can_edit(self):
         return self.role != 'readonly'
 
+    @property
+    def can_annotate(self):
+        return self.role in ('admin', 'manager', 'estimator')
+
     def __str__(self):
         return f"{self.get_full_name()} ({self.email})"
+

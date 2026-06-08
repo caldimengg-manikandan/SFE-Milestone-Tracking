@@ -34,6 +34,13 @@ INSTALLED_APPS = [
     # Integrated Application B modules
     'apps.rfq',
     'apps.dashboards',
+    'apps.core',
+    'apps.bid_summary',
+    'apps.breakdown',
+    'apps.erection_takeoff',
+    'apps.estimate_data',
+    'apps.field_moment_conn',
+    'apps.misc_metals',
 ]
 
 MIDDLEWARE = [

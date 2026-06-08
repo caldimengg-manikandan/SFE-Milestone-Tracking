@@ -61,7 +61,9 @@ export default function Header({ onMenuClick }) {
   const notifRef = useRef(null);
 
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
-  const currentTitle = pageTitles[location.pathname] || 'Estimation Model';
+  const currentTitle = location.pathname.includes('estimation-erection')
+    ? 'Estimation Erection'
+    : (pageTitles[location.pathname] || 'Estimation Model');
   const initials = user.name
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
     : 'SF';

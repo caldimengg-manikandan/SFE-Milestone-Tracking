@@ -1,4 +1,5 @@
 from django.db import models  # type: ignore
+from decimal import Decimal
 
 class Project(models.Model):
     objects = models.Manager()
@@ -34,6 +35,16 @@ class Project(models.Model):
 
     def __str__(self):
         return f"{self.code} — {self.name}"
+
+    @property
+    def rate_config(self):
+        return RateConfigAdapter(self)
+
+    @property
+    def is_finalized(self):
+        return self.status == 'Completed'
+
+
 
 class StructuralScheduleItem(models.Model):
     objects = models.Manager()
@@ -148,3 +159,193 @@ def cleanup_production_items(sender, instance, **kwargs):
         job_number=instance.project.code,
         sequence_number=instance.seq_no
     ).delete()
+
+
+# ─── RATE CONFIG ADAPTER ───
+class RateConfigAdapter:
+    def __init__(self, project):
+        self.project = project
+        self.est_data = project.estimation_data or {}
+        self.bid_enquiry = self.est_data.get('bidEnquiry', {})
+        self.est_sections = self.est_data.get('estimationSections', {})
+
+    def _get_dec(self, dct, key, default):
+        val = dct.get(key)
+        if val is None or str(val).strip() == '':
+            return Decimal(str(default))
+        try:
+            return Decimal(str(val))
+        except Exception:
+            return Decimal(str(default))
+
+    @property
+    def cost_code_labor_rate(self):
+        return Decimal('21.00')
+
+    @property
+    def scrap_rate(self):
+        return self._get_dec(self.bid_enquiry, 'scrapPercent', 5.0) / Decimal('100.0')
+
+    @property
+    def bolt_unit_price(self):
+        return self._get_dec(self.bid_enquiry, 'boltRate', 1.75)
+
+    @property
+    def paint_unit_price(self):
+        return self._get_dec(self.bid_enquiry, 'paintRate', 22.20)
+
+    @property
+    def galv_unit_price(self):
+        return self._get_dec(self.bid_enquiry, 'galvanizingRate', 0.40)
+
+    @property
+    def use_tax_rate(self):
+        return self._get_dec(self.bid_enquiry, 'taxPercent', 6.0) / Decimal('100.0')
+
+    @property
+    def shop_labor_rate(self):
+        return self._get_dec(self.est_sections, 'hourlyLaborRate', 60.0)
+
+    @property
+    def shipping_hourly_rate(self):
+        return self._get_dec(self.est_sections, 'shippingRate', 195.0)
+
+    @property
+    def overhead_rate(self):
+        return self._get_dec(self.est_sections, 'overheadPercent', 12.0) / Decimal('100.0')
+
+    @property
+    def profit_rate(self):
+        return self._get_dec(self.est_sections, 'profitPercent', 10.0) / Decimal('100.0')
+
+    @property
+    def labor_billing_rate(self):
+        return self._get_dec(self.est_sections, 'miscellaneousLaborRate', 85.0)
+
+    @property
+    def erection_markup(self):
+        return self._get_dec(self.est_sections, 'miscellaneousErectionMultiplier', 1.12)
+
+    @property
+    def joist_deck_markup(self):
+        return self._get_dec(self.est_sections, 'miscellaneousJoistDeckMultiplier', 1.12)
+
+    @property
+    def other_buyout_markup(self):
+        return self._get_dec(self.est_sections, 'miscellaneousOtherCostMultiplier', 1.12)
+
+    @property
+    def efficiency_factor(self):
+        return self._get_dec(self.est_sections, 'efficiency_factor', 0.50)
+        
+    @property
+    def flange_constant(self):
+        return Decimal('4.38')
+        
+    @property
+    def field_factor(self):
+        return Decimal('1.40')
+        
+    @property
+    def material_lbs_rate(self):
+        return Decimal('0.55')
+        
+    @property
+    def stair_labor_rate(self):
+        return Decimal('65.00')
+
+
+# ─── SYNC BID SUMMARY FROM ESTIMATION DATA ───
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+@receiver(post_save, sender=Project)
+def sync_bid_summary_from_estimation_data(sender, instance, **kwargs):
+    from django.apps import apps
+    try:
+        BidSummary = apps.get_model('bid_summary', 'BidSummary')
+        BidMaterialLine = apps.get_model('bid_summary', 'BidMaterialLine')
+    except (LookupError, ValueError):
+        return
+
+    estimation_data = instance.estimation_data
+    if not estimation_data or not isinstance(estimation_data, dict):
+        return
+
+    project_info = estimation_data.get('projectInfo', {})
+    bid_enquiry = estimation_data.get('bidEnquiry', {})
+    estimation_sections = estimation_data.get('estimationSections', {})
+
+    if not bid_enquiry and not estimation_sections:
+        return
+
+    def to_dec(val, default=0):
+        if val is None or str(val).strip() == '':
+            return Decimal(str(default))
+        try:
+            return Decimal(str(val))
+        except Exception:
+            return Decimal(str(default))
+
+    bid_summary, created = BidSummary.objects.get_or_create(project=instance)
+
+    bid_summary.mill_steel_lbs = to_dec(bid_enquiry.get('millWeight'))
+    bid_summary.mill_steel_total = to_dec(bid_enquiry.get('millAmount'))
+    bid_summary.warehouse_steel_lbs = to_dec(bid_enquiry.get('warehouseWeight'))
+    bid_summary.warehouse_steel_total = to_dec(bid_enquiry.get('warehouseAmount'))
+    bid_summary.bolt_pieces = to_dec(bid_enquiry.get('boltQty'))
+    bid_summary.paint_gallons = to_dec(bid_enquiry.get('paintQty'))
+    bid_summary.galv_lbs = to_dec(bid_enquiry.get('galvanizingWeight'))
+
+    bid_summary.joist_total = to_dec(estimation_sections.get('steelJoistCost'))
+    bid_summary.deck_total = to_dec(estimation_sections.get('deckCost'))
+    
+    bid_summary.freight_out_trucks = to_dec(estimation_sections.get('numTrucks'), default=3)
+    bid_summary.freight_out_hours_each = to_dec(estimation_sections.get('hoursPerTruck'), default=3)
+    bid_summary.freight_galv_trucks = to_dec(estimation_sections.get('galvanizingTrucks'), default=5)
+    bid_summary.freight_galv_hours_each = to_dec(estimation_sections.get('galvHoursPerTruck'), default=5.0)
+
+    bid_summary.shop_fab_hrs = to_dec(estimation_sections.get('plantFabricationHours'))
+    
+    bid_summary.draft_lbs = to_dec(estimation_sections.get('plantFabricationHours'))
+    bid_summary.draft_sub_amount = to_dec(estimation_sections.get('subletDetailingCost'))
+    bid_summary.pe_stamp_cost = to_dec(estimation_sections.get('peStampCost'))
+    bid_summary.shop_subcontract_total = to_dec(estimation_sections.get('otherDirectCosts'))
+
+    mat_date_str = project_info.get('materialDate')
+    if mat_date_str:
+        bid_summary.material_date = mat_date_str
+    else:
+        bid_summary.material_date = None
+
+    budget_pricing_val = project_info.get('budgetPricing')
+    bid_summary.budget_pricing = (budget_pricing_val == 'Y' or budget_pricing_val is True)
+
+    bid_summary.joist_deck_tons = to_dec(estimation_sections.get('steelJoistTons'))
+    bid_summary.sublet_erection = to_dec(estimation_sections.get('subletErectionCost'))
+    bid_summary.misc_metals = to_dec(estimation_sections.get('miscMetalCost'))
+    bid_summary.osha_posts_lf = to_dec(estimation_sections.get('oshaLinearFeet'))
+    
+    safety = to_dec(estimation_sections.get('additionalSafetyCosts'))
+    ccip = to_dec(estimation_sections.get('ccipCosts'))
+    bid_summary.safety_ccip = safety + ccip
+    
+    bid_summary.leed_data = to_dec(estimation_sections.get('leedSubmissionCost'))
+    bid_summary.misc_bid_amount = to_dec(estimation_sections.get('miscCharges'))
+
+    bid_summary.save()
+
+    misc_items = bid_enquiry.get('miscItems', [])
+    if isinstance(misc_items, list):
+        BidMaterialLine.objects.filter(bid_summary=bid_summary).delete()
+        for idx, item in enumerate(misc_items):
+            name = item.get('name')
+            amount = item.get('amount')
+            if (name and str(name).strip() != '') or (amount and str(amount).strip() != ''):
+                BidMaterialLine.objects.create(
+                    bid_summary=bid_summary,
+                    description=name or '',
+                    amount=to_dec(amount),
+                    sort_order=idx
+                )
+

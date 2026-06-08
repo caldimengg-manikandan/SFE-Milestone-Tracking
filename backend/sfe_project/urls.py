@@ -31,6 +31,16 @@ urlpatterns = [
     # Integrated RFQ & Dashboards module APIs
     path('api/rfq/', include('apps.rfq.urls')),
     path('api/rfq-dashboard/', include('apps.dashboards.urls')),
+
+    # Erection Estimation Module APIs
+    path('api/auth/', include('apps.core.urls.auth')),
+    path('api/reference/', include('apps.field_moment_conn.urls.reference')),
+    path('api/projects/<int:project_id>/bid-summary/', include('apps.bid_summary.urls')),
+    path('api/projects/<int:project_id>/breakdown/', include('apps.breakdown.urls')),
+    path('api/projects/<int:project_id>/erection-takeoff/', include('apps.erection_takeoff.urls')),
+    path('api/projects/<int:project_id>/estimate-data/', include('apps.estimate_data.urls')),
+    path('api/projects/<int:project_id>/fmc/', include('apps.field_moment_conn.urls.takeoff')),
+    path('api/projects/<int:project_id>/misc-metals/', include('apps.misc_metals.urls')),
 ]
 
 from django.conf import settings

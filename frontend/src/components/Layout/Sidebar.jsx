@@ -44,6 +44,7 @@ const navSections = [
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
       { name: 'Estimation Model', path: '/estimation', icon: Calculator },
       { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
+      { name: 'Estimation Erection', path: '/estimation-erection', icon: Layers },
     ],
   },
   {
