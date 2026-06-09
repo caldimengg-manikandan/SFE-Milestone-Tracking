@@ -5,6 +5,7 @@ from .serializers import ProjectSerializer, StructuralScheduleItemSerializer
 
 class ProjectViewSet(viewsets.ModelViewSet):
     serializer_class = ProjectSerializer
+    pagination_class = None
     search_fields = ['name', 'code', 'client']
     filterset_fields = ['status']
 

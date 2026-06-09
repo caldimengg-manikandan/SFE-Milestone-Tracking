@@ -43,7 +43,7 @@ const navSections = [
       { name: 'RFQ Master', path: '/rfq', icon: FileSpreadsheet },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
       { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
-      { name: 'Estimation Erection', path: '/estimation-erection', icon: Layers },
+      { name: 'Estimation', path: '/estimation-erection', icon: Layers },
     ],
   },
   {

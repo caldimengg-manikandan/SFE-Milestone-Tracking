@@ -424,12 +424,10 @@ class RFQMaster(models.Model):
     def clean(self):
         errors = {}
 
-        # Bid amount required if decision_to_bid is Yes/Bid
+        # Bid due date required if decision_to_bid is Yes/Bid
         if self.decision_to_bid in ('Yes', 'Bid'):
             if not self.bid_due_date:
                 errors['bid_due_date'] = 'Required when Decision to Bid is Yes/Bid.'
-            if self.bid_amount is None:
-                errors['bid_amount'] = 'Required when Decision to Bid is Yes/Bid.'
 
         # Won jobs require additional fields
         if self.won_lost == 'Won':

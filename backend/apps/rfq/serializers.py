@@ -197,14 +197,12 @@ class RFQMasterSerializer(serializers.ModelSerializer):
         won_lost = data.get('won_lost') or getattr(self.instance, 'won_lost', 'Pending')
         errors = {}
 
-        # Enforce "Yes/Bid" requirements only when creating OR explicitly updating decision/due date/amount
+        # Enforce "Yes/Bid" requirements only when creating OR explicitly updating decision/due date
         if decision in ('Yes', 'Bid'):
-            is_decision_changing = 'decision_to_bid' in data or 'bid_due_date' in data or 'bid_amount' in data
+            is_decision_changing = 'decision_to_bid' in data or 'bid_due_date' in data
             if not self.instance or is_decision_changing:
                 if not data.get('bid_due_date') and not getattr(self.instance, 'bid_due_date', None):
                     errors['bid_due_date'] = 'Required when Decision to Bid is Yes/Bid.'
-                if data.get('bid_amount') is None and getattr(self.instance, 'bid_amount', None) is None:
-                    errors['bid_amount'] = 'Required when Decision to Bid is Yes/Bid.'
 
         # Enforce "Won" requirements only when creating OR explicitly updating status/award amount/job no/award date
         if won_lost == 'Won':

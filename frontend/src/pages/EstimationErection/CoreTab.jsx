@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useOutletContext } from "react-router-dom";
 import api from "../../services/api";
 import { useAutoSave } from "../../hooks/useAutoSave";
@@ -88,6 +88,7 @@ function SelectWithCustom({ label, name, options, value, onChange, disabled }) {
 export default function CoreTab() {
   const { projectId, project, refreshProject } = useOutletContext();
   const isReadOnly = project?.is_finalized || false;
+  const lastLoadedIdRef = useRef(null);
 
   const [users, setUsers] = useState([]);
   const [contacts, setContacts] = useState([]);
@@ -194,9 +195,10 @@ export default function CoreTab() {
     fetchUsersAndContacts();
   }, []);
 
-  // Keep state updated if project changes from outside
+  // Keep state updated if project changes from outside (only on initial load of a new project ID)
   useEffect(() => {
-    if (project) {
+    if (project && String(project.id) !== String(lastLoadedIdRef.current)) {
+      lastLoadedIdRef.current = project.id;
       setForm({
         project_name: project.project_name || "",
         job_number: project.job_number || "",

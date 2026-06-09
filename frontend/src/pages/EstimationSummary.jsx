@@ -465,6 +465,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       localStorage.setItem('sfe_est_project', JSON.stringify(info));
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
+      localStorage.setItem('sfe_erection_project_id', proj.id);
     } else if (rfq) {
       const info = {
         projectId: '',
@@ -477,8 +478,9 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       localStorage.setItem('sfe_est_project', JSON.stringify(info));
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
+      localStorage.setItem('sfe_erection_project_id', `rfq_${rfq.id}`);
     }
-    navigate('/estimation');
+    navigate('/estimation-erection/estimation');
   };
 
   const formatCurrency = (val) => {

@@ -62,7 +62,7 @@ export default function Header({ onMenuClick }) {
 
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const currentTitle = location.pathname.includes('estimation-erection')
-    ? 'Estimation Erection'
+    ? 'Estimation'
     : (pageTitles[location.pathname] || 'Estimation Model');
   const initials = user.name
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)

@@ -300,10 +300,10 @@ def sync_bid_summary_from_estimation_data(sender, instance, **kwargs):
     bid_summary.joist_total = to_dec(estimation_sections.get('steelJoistCost'))
     bid_summary.deck_total = to_dec(estimation_sections.get('deckCost'))
     
-    bid_summary.freight_out_trucks = to_dec(estimation_sections.get('numTrucks'), default=3)
-    bid_summary.freight_out_hours_each = to_dec(estimation_sections.get('hoursPerTruck'), default=3)
-    bid_summary.freight_galv_trucks = to_dec(estimation_sections.get('galvanizingTrucks'), default=5)
-    bid_summary.freight_galv_hours_each = to_dec(estimation_sections.get('galvHoursPerTruck'), default=5.0)
+    bid_summary.freight_out_trucks = to_dec(estimation_sections.get('numTrucks'), default=0)
+    bid_summary.freight_out_hours_each = to_dec(estimation_sections.get('hoursPerTruck'), default=0)
+    bid_summary.freight_galv_trucks = to_dec(estimation_sections.get('galvanizingTrucks'), default=0)
+    bid_summary.freight_galv_hours_each = to_dec(estimation_sections.get('galvHoursPerTruck'), default=0.0)
 
     bid_summary.shop_fab_hrs = to_dec(estimation_sections.get('plantFabricationHours'))
     

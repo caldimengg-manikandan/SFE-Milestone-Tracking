@@ -10,7 +10,7 @@ import {
   Save
 } from 'lucide-react';
 import { projectAPI, rfqAPI } from '../services/api';
-import { useOutletContext } from 'react-router-dom';
+import { useOutletContext, useNavigate } from 'react-router-dom';
 import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
 import FormattedDateInput from '../components/forms/FormattedDateInput';
@@ -170,10 +170,10 @@ const DEFAULT_ESTIMATION_SECTIONS = {
   miscLaborOther2Hours: '',
   totalPieces: '',
   hourlyLaborRate: 60.0,
-  numTrucks: 3,
-  hoursPerTruck: 3,
-  galvanizingTrucks: 5,
-  galvHoursPerTruck: 5.0,
+  numTrucks: 0,
+  hoursPerTruck: 0,
+  galvanizingTrucks: 0,
+  galvHoursPerTruck: 0,
   shippingRate: 195.0,
   subletDetailingCost: '',
   peStampCost: '',
@@ -203,6 +203,7 @@ const DEFAULT_ESTIMATION_SECTIONS = {
 };
 
 export default function EstimationModel() {
+  const navigate = useNavigate();
   const outletContext = useOutletContext();
   const contextProjectId = outletContext?.projectId;
   const contextProject = outletContext?.project;
@@ -301,7 +302,7 @@ export default function EstimationModel() {
     }
     const saved = localStorage.getItem('sfe_est_project');
     const parsed = saved ? JSON.parse(saved) : null;
-    return parsed ? { projectId: '', ...parsed } : DEFAULT_PROJECT_INFO;
+    return parsed ? { ...DEFAULT_PROJECT_INFO, ...parsed, projectId: '' } : DEFAULT_PROJECT_INFO;
   });
 
   // --- State for Bid Enquiry Sheet (Material Section) ---
@@ -323,10 +324,10 @@ export default function EstimationModel() {
       const estData = contextProject.estimation_data || {};
       if (estData.estimationSections) {
         const parsed = estData.estimationSections;
-        if (parsed.numTrucks === '') parsed.numTrucks = 3;
-        if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
-        if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
-        if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
+        if (parsed.numTrucks === '') parsed.numTrucks = 0;
+        if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 0;
+        if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 0;
+        if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 0;
         return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
       }
       return DEFAULT_ESTIMATION_SECTIONS;
@@ -334,10 +335,10 @@ export default function EstimationModel() {
     const saved = localStorage.getItem('sfe_est_sections');
     if (saved) {
       const parsed = JSON.parse(saved);
-      if (parsed.numTrucks === '') parsed.numTrucks = 3;
-      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
-      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
-      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
+      if (parsed.numTrucks === '') parsed.numTrucks = 0;
+      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 0;
+      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 0;
+      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 0;
       return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
     }
     return DEFAULT_ESTIMATION_SECTIONS;
@@ -375,6 +376,26 @@ export default function EstimationModel() {
       } else {
         setProjectInfo(nextProjectInfo);
         setBidEnquiry(DEFAULT_BID_ENQUIRY);
+        setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      }
+    } else if (contextProjectId && String(contextProjectId).startsWith('rfq_') && wonRfqs.length > 0) {
+      const rfqId = String(contextProjectId).replace('rfq_', '');
+      const matchedRfq = wonRfqs.find(r => String(r.id) === String(rfqId));
+      if (matchedRfq) {
+        const code = matchedRfq.sfe_job_no ? String(matchedRfq.sfe_job_no) : matchedRfq.quote_no;
+        setProjectInfo({
+          ...DEFAULT_PROJECT_INFO,
+          projectId: '',
+          project: matchedRfq.project_name || '',
+          quoteNum: code,
+          salesman: matchedRfq.primary_estimator ? (matchedRfq.primary_estimator.full_name || matchedRfq.primary_estimator.initials || '') : '',
+          startDate: matchedRfq.bid_due_date || '',
+          location: matchedRfq.location || '',
+        });
+        setBidEnquiry({
+          ...DEFAULT_BID_ENQUIRY,
+          millWeight: matchedRfq.ton_steel ? String(Math.round(matchedRfq.ton_steel * 2000)) : '',
+        });
         setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
       }
     } else if (contextProjectId === '') {
@@ -589,6 +610,13 @@ export default function EstimationModel() {
           }
         };
         await projectAPI.patch(newProj.id, patchPayload);
+        
+        // Select the newly created project in the layout/session
+        localStorage.setItem('sfe_erection_project_id', newProj.id);
+        if (outletContext?.setSelectedProjectId) {
+          outletContext.setSelectedProjectId(newProj.id);
+        }
+        
         if (status === 'submitted') {
           toast.success('Project created and estimation submitted successfully!');
         } else {
@@ -639,6 +667,8 @@ export default function EstimationModel() {
         setWonRfqs(sortedRfqs);
       }
       
+      // Navigate back to the summary page to show the updated status
+      navigate('/estimation-summary');
     } catch (err) {
       console.error('Failed to save calculations:', err);
       toast.error('Failed to save calculations');
@@ -660,18 +690,7 @@ export default function EstimationModel() {
     localStorage.setItem('sfe_est_sections', JSON.stringify(estimationSections));
   }, [estimationSections]);
 
-  const availableRfqs = wonRfqs.filter(rfq => {
-    if (selectedRfqId && String(rfq.id) === String(selectedRfqId)) {
-      return true;
-    }
-    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
-    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
-    const isSubmitted = matchedProj && 
-                        matchedProj.estimation_data && 
-                        matchedProj.estimation_data.bidEnquiry && 
-                        matchedProj.estimation_data.estimationSections;
-    return !isSubmitted;
-  });
+  const availableRfqs = wonRfqs;
 
   // --- Calculations ---
 
@@ -2358,7 +2377,18 @@ export default function EstimationModel() {
                     <input
                       type="text"
                       disabled
-                      value={contextProject ? `${contextProject.code} — ${contextProject.name}` : 'Loading selected project...'}
+                      value={(() => {
+                        if (String(contextProjectId).startsWith('rfq_')) {
+                          const rfqId = String(contextProjectId).replace('rfq_', '');
+                          const matchedRfq = wonRfqs.find(r => String(r.id) === String(rfqId));
+                          if (matchedRfq) {
+                            const code = matchedRfq.sfe_job_no ? String(matchedRfq.sfe_job_no) : matchedRfq.quote_no;
+                            return `#${code} — ${matchedRfq.project_name} (Unsynced)`;
+                          }
+                          return 'Loading unsynced project...';
+                        }
+                        return contextProject ? `${contextProject.code} — ${contextProject.name}` : 'Loading selected project...';
+                      })()}
                       className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-105 text-sm font-semibold text-slate-500 cursor-not-allowed outline-none"
                     />
                   ) : (
