@@ -7,8 +7,7 @@ import django.db.models.deletion
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('projects', '0020_project_estimation_data'),
-        ('rfq', '0003_rfqmaster_email_sent'),
+        ('rfq', '0004_migrate_customer_data'),
     ]
 
     operations = [
