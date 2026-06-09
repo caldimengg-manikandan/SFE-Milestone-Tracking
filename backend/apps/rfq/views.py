@@ -160,8 +160,8 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['get'], url_path='next-quote-no')
     def next_quote_no(self, request):
-        """Auto-generate next quote number based on the absolute highest/last existing quote number."""
-        qnos = list(RFQMaster.objects.values_list('quote_no', flat=True))
+        """Auto-generate next quote number, reusing gaps in sequences of the last active month."""
+        qnos = list(RFQMaster.objects.filter(deleted_at__isnull=True).values_list('quote_no', flat=True))
         
         parsed = []
         for q in qnos:
@@ -178,7 +178,15 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         if parsed:
             parsed.sort(key=lambda x: (x[0], x[1], x[2]))
             last_yy, last_mm, last_seq = parsed[-1]
-            next_seq = last_seq + 1
+            
+            # Gather all existing sequences in that specific last year and month
+            existing_seqs = {seq for (yy, mm, seq) in parsed if yy == last_yy and mm == last_mm}
+            
+            # Find the first sequence (starting from 1) that is not currently in use
+            next_seq = 1
+            while next_seq in existing_seqs:
+                next_seq += 1
+                
             next_no = f"{last_yy:02d}-{last_mm:02d}-{next_seq:02d}"
         else:
             from django.utils import timezone

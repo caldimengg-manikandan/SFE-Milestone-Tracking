@@ -184,21 +184,20 @@ function ActionsRenderer(params) {
         </span>
       )}
 
-      {/* Delete (manager only) */}
-      {isManager && (
+      {/* Delete (manager or editor) */}
+      {canEdit && (
         <button
           title="Delete"
           onClick={() => onDelete(data)}
           style={{
-            background: 'transparent',
-            border: 'none',
+            background: 'var(--danger-muted, rgba(220, 38, 38, 0.06))',
+            border: '1px solid var(--danger-border, rgba(220, 38, 38, 0.18))',
             borderRadius: 4,
-            padding: '2px 4px',
+            padding: '2px 5px',
             cursor: 'pointer',
-            color: 'var(--text-muted)',
+            color: 'var(--danger, #DC2626)',
             display: 'flex',
             alignItems: 'center',
-            marginLeft: 2,
           }}
         >
           <Trash2 style={{ width: 11, height: 11 }} />
@@ -746,7 +745,7 @@ export default function DataEntryPage() {
   })
 
   function handleDelete(data) {
-    if (!window.confirm(`Delete ${data.quote_no} — ${data.project_name}? This will permanently delete this project's record.`)) return
+    if (!window.confirm(`Do you really want to delete?`)) return
     deleteMutation.mutate(data.id)
   }
 

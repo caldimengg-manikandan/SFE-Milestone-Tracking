@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import * as XLSX from 'xlsx';
 import {
   Calculator,
   ArrowLeftRight,
@@ -26,6 +27,7 @@ import {
   ArrowDown
 } from 'lucide-react';
 import { projectAPI, rfqAPI } from '../services/api';
+import { toast } from 'react-hot-toast';
 
 export default function EstimationSummary({ isEmbedded = false, onEditSection }) {
   const navigate = useNavigate();
@@ -182,6 +184,25 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const [itemsPerPage, setItemsPerPage] = useState(25);
   const [sortField, setSortField] = useState(null); // 'quote_date' | 'bid_due_date'
   const [sortOrder, setSortOrder] = useState(null); // 'asc' | 'desc' | 'urgent'
+  const [rebidConfirmation, setRebidConfirmation] = useState({
+    isOpen: false,
+    project: null,
+    rfq: null
+  });
+
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [customerFilter, setCustomerFilter] = useState('all');
+  const [decisionFilter, setDecisionFilter] = useState('all');
+
+  const uniqueCustomers = useMemo(() => {
+    const custs = wonRfqs.map(r => r.customer_name).filter(Boolean);
+    return Array.from(new Set(custs)).sort();
+  }, [wonRfqs]);
+
+  const uniqueDecisions = useMemo(() => {
+    const decs = wonRfqs.map(r => r.decision_to_bid).filter(Boolean);
+    return Array.from(new Set(decs)).sort();
+  }, [wonRfqs]);
 
   const getDaysDifference = (dateStr) => {
     if (!dateStr) return null;
@@ -466,13 +487,38 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   };
 
   const filteredRfqs = wonRfqs.filter(rfq => {
+    // 1. Search text filter
     const searchLower = search.toLowerCase();
-    return (
+    const matchesSearch = !search || (
       (rfq.project_name?.toLowerCase() || '').includes(searchLower) ||
       (String(rfq.sfe_job_no || '')).includes(searchLower) ||
       (rfq.quote_no?.toLowerCase() || '').includes(searchLower) ||
       (rfq.customer_name?.toLowerCase() || '').includes(searchLower)
     );
+
+    // 2. Customer filter
+    const matchesCustomer = customerFilter === 'all' || rfq.customer_name === customerFilter;
+
+    // 3. Decision filter
+    const matchesDecision = decisionFilter === 'all' || rfq.decision_to_bid === decisionFilter;
+
+    // 4. Status filter
+    let estStatus = 'yet to start';
+    const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+    const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+    if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
+      const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+      if (savedStatus === 'submitted') {
+        estStatus = 'submitted';
+      } else if (savedStatus === 'rebid') {
+        estStatus = 'rebid';
+      } else {
+        estStatus = 'in progress';
+      }
+    }
+    const matchesStatus = statusFilter === 'all' || estStatus === statusFilter;
+
+    return matchesSearch && matchesCustomer && matchesDecision && matchesStatus;
   });
 
   const sortedRfqs = [...filteredRfqs].sort((a, b) => {
@@ -494,13 +540,55 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     return 0;
   });
 
-  const exportToCSV = () => {
+  const getStatusBadge = (status) => {
+    switch (status) {
+      case 'submitted':
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border bg-emerald-50 text-emerald-700 border-emerald-200">
+            Submitted
+          </span>
+        );
+      case 'rebid':
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border bg-purple-50 text-purple-700 border-purple-200">
+            Rebid
+          </span>
+        );
+      case 'in progress':
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border bg-blue-50 text-blue-700 border-blue-200">
+            In Progress
+          </span>
+        );
+      default:
+        return (
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border bg-slate-50 text-slate-500 border-slate-200">
+            Yet to Start
+          </span>
+        );
+    }
+  };
+
+  const handleStatusClick = (status, matchedProj, rfq) => {
+    if (status === 'submitted') {
+      setRebidConfirmation({
+        isOpen: true,
+        project: matchedProj,
+        rfq: rfq
+      });
+    } else {
+      handleLoadProjectInModel(matchedProj, rfq);
+    }
+  };
+
+  const exportToExcel = () => {
     const headers = [
       "RFQ Date",
       "Project Name",
       "Customer Name",
       "Bid Due Date",
       "Decision to Bid",
+      "Estimation Status",
       "Standard Grand Total",
       "Misc Summary Total",
       "Total Direct Costs",
@@ -512,9 +600,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     ];
     
     const formatExportVal = (v) => {
-      if (v === undefined || v === null || isNaN(v)) return '0';
-      const num = Number(v);
-      return num === 0 ? '0' : num.toFixed(2);
+      if (v === undefined || v === null || isNaN(v)) return 0;
+      return Number(v);
     };
     
     const rows = sortedRfqs.map(rfq => {
@@ -522,12 +609,27 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
       const vals = calculateEstimationValues(matched);
       const totalDirect = (vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0);
+      
+      let estStatus = 'yet to start';
+      if (matched && matched.estimation_data && Object.keys(matched.estimation_data).length > 0) {
+        const savedStatus = matched.estimation_data?.projectInfo?.estimationStatus;
+        if (savedStatus === 'submitted') {
+          estStatus = 'submitted';
+        } else if (savedStatus === 'rebid') {
+          estStatus = 'rebid';
+        } else {
+          estStatus = 'in progress';
+        }
+      }
+      const formattedStatus = estStatus === 'submitted' ? 'Submitted' : (estStatus === 'rebid' ? 'Rebid' : (estStatus === 'in progress' ? 'In Progress' : 'Yet to Start'));
+
       return [
         formatShortDate(rfq.quote_date),
         rfq.project_name || '',
         rfq.customer_name || '',
         formatShortDate(rfq.bid_due_date),
         rfq.decision_to_bid || '',
+        formattedStatus,
         formatExportVal(vals.finalBidAmount),
         formatExportVal(vals.miscellaneousFinalPrice),
         formatExportVal(totalDirect),
@@ -539,16 +641,29 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       ];
     });
 
-    const csvContent = [headers, ...rows].map(e => e.map(val => `"${String(val ?? '').replace(/"/g, '""')}"`).join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement("a");
-    const url = URL.createObjectURL(blob);
-    link.setAttribute("href", url);
-    link.setAttribute("download", "Estimation_Summary_Reports.csv");
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const worksheetData = [headers, ...rows];
+    const worksheet = XLSX.utils.aoa_to_sheet(worksheetData);
+    
+    worksheet['!cols'] = [
+      { wch: 12 }, // RFQ Date
+      { wch: 28 }, // Project Name
+      { wch: 24 }, // Customer Name
+      { wch: 12 }, // Bid Due Date
+      { wch: 15 }, // Decision to Bid
+      { wch: 18 }, // Estimation Status
+      { wch: 20 }, // Standard Grand Total
+      { wch: 20 }, // Misc Summary Total
+      { wch: 18 }, // Total Direct Costs
+      { wch: 18 }, // Drafting & Directs
+      { wch: 18 }, // Overhead on Directs
+      { wch: 18 }, // Buyouts Section
+      { wch: 18 }, // Overhead on Buyouts
+      { wch: 18 }  // Profit & Misc
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Estimation Summary");
+    XLSX.writeFile(workbook, `Estimation_Summary_Reports_${new Date().toISOString().slice(0, 10)}.xlsx`);
   };
 
   const totalPages = Math.ceil(sortedRfqs.length / itemsPerPage);
@@ -557,7 +672,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
   if (!isEmbedded) {
     return (
-      <div className="min-h-screen bg-slate-50/30 p-4 lg:p-8 space-y-6 animate-fade-in">
+      <div className="h-[calc(100vh-72px)] -m-4 sm:-m-6 lg:-m-8 p-4 sm:p-6 lg:p-8 bg-slate-50/30 flex flex-col overflow-hidden animate-fade-in gap-4">
         {/* Error notification */}
         {error && (
           <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-bold animate-shake">
@@ -567,91 +682,148 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
         )}
 
         {/* Header Toolbar */}
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search projects by name, job number or quote number..."
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
-              className="w-full pl-10 pr-10 py-2.5 rounded-lg border border-slate-200 text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all font-semibold"
-            />
-            {search && (
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4 bg-white p-3 rounded-lg border border-slate-200 shadow-sm shrink-0">
+          <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 flex-1 min-w-0">
+            {/* Search Input */}
+            <div className="relative flex-1 min-w-[240px] max-w-xs">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search projects by name..."
+                value={search}
+                onChange={(e) => { setSearch(e.target.value); setCurrentPage(1); }}
+                className="w-full pl-9 pr-8 py-2 rounded-lg border border-slate-200 text-xs outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/5 transition-all font-semibold text-slate-700 placeholder-slate-400"
+              />
+              {search && (
+                <button
+                  onClick={() => { setSearch(''); setCurrentPage(1); }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded-md hover:bg-slate-100 text-slate-400"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              )}
+            </div>
+
+            {/* Customer Filter */}
+            <select
+              value={customerFilter}
+              onChange={(e) => { setCustomerFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-650 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/5 transition-all bg-white cursor-pointer max-w-[180px]"
+            >
+              <option value="all">All Customers</option>
+              {uniqueCustomers.map(cust => (
+                <option key={cust} value={cust}>{cust}</option>
+              ))}
+            </select>
+
+            {/* Decision Filter */}
+            <select
+              value={decisionFilter}
+              onChange={(e) => { setDecisionFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-650 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/5 transition-all bg-white cursor-pointer max-w-[150px]"
+            >
+              <option value="all">All Decisions</option>
+              {uniqueDecisions.map(dec => (
+                <option key={dec} value={dec}>{dec}</option>
+              ))}
+            </select>
+
+            {/* Status Filter */}
+            <select
+              value={statusFilter}
+              onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
+              className="px-3 py-2 border border-slate-200 rounded-lg text-xs font-semibold text-slate-650 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/5 transition-all bg-white cursor-pointer max-w-[150px]"
+            >
+              <option value="all">All Statuses</option>
+              <option value="yet to start">Yet to Start</option>
+              <option value="in progress">In Progress</option>
+              <option value="submitted">Submitted</option>
+              <option value="rebid">Rebid</option>
+            </select>
+
+            {/* Clear Filters Button */}
+            {(search || customerFilter !== 'all' || decisionFilter !== 'all' || statusFilter !== 'all') && (
               <button
-                onClick={() => { setSearch(''); setCurrentPage(1); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-md hover:bg-slate-100 text-slate-400"
+                onClick={() => {
+                  setSearch('');
+                  setCustomerFilter('all');
+                  setDecisionFilter('all');
+                  setStatusFilter('all');
+                  setCurrentPage(1);
+                }}
+                className="inline-flex items-center gap-1 px-3 py-2 text-xs font-bold text-amber-600 hover:text-amber-700 bg-amber-50 hover:bg-amber-100/80 rounded-lg transition-colors cursor-pointer"
               >
-                <X className="w-3 h-3" />
+                <X className="w-3.5 h-3.5" /> Clear Filters
               </button>
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             <button
-              onClick={exportToCSV}
+              onClick={exportToExcel}
               disabled={loading || wonRfqs.length === 0}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all disabled:opacity-50 cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-650 text-xs font-bold hover:bg-slate-50 transition-all disabled:opacity-50 cursor-pointer"
             >
-              <Download className="w-4 h-4" /> Export CSV
+              <Download className="w-3.5 h-3.5" /> Download Excel
             </button>
             <button
               onClick={() => navigate('/estimation')}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-sm font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold shadow-lg shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all cursor-pointer"
             >
-              <Calculator className="w-4 h-4" /> Estimation Model
+              <Calculator className="w-3.5 h-3.5" /> Estimation Model
             </button>
           </div>
         </div>
 
         {/* Report Table Grid */}
-        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto scrollbar-thin">
-            <table className="w-full text-left border-collapse min-w-[1600px]">
+        <div className="bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="overflow-x-auto overflow-y-auto flex-1 min-h-0 orange-scrollbar">
+            <table className="w-full text-left border-collapse min-w-[1280px]">
               <thead>
                 <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-black uppercase tracking-wider select-none">
                   {/* Frozen Columns Header */}
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-0 bg-[#d97706] z-20 min-w-[50px] max-w-[50px] text-center whitespace-nowrap">S.No</th>
+                  <th className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-0 top-0 bg-[#d97706] z-30 min-w-[35px] max-w-[35px] text-center whitespace-nowrap">S.No</th>
                   <th 
                     onClick={() => handleSort('quote_date')}
-                    className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[50px] bg-[#d97706] hover:bg-[#b55c05] z-20 min-w-[100px] max-w-[100px] text-center cursor-pointer select-none transition-colors group"
+                    className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-[35px] top-0 bg-[#d97706] hover:bg-[#b55c05] z-30 min-w-[75px] max-w-[75px] text-center cursor-pointer select-none transition-colors group"
                     title="Click to sort by RFQ Date"
                   >
-                    <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                    <div className="flex items-center justify-center gap-1 whitespace-nowrap">
                       <span>RFQ Date</span>
                       {sortField === 'quote_date' ? (
                         sortOrder === 'asc' ? (
-                          <ArrowUp className="w-3.5 h-3.5 text-white animate-fade-in" />
+                          <ArrowUp className="w-3 h-3 text-white animate-fade-in" />
                         ) : (
-                          <ArrowDown className="w-3.5 h-3.5 text-white animate-fade-in" />
+                          <ArrowDown className="w-3 h-3 text-white animate-fade-in" />
                         )
                       ) : (
-                        <ArrowUpDown className="w-3.5 h-3.5 text-white/50 group-hover:text-white/90 transition-colors" />
+                        <ArrowUpDown className="w-3 h-3 text-white/50 group-hover:text-white/90 transition-colors" />
                       )}
                     </div>
                   </th>
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[150px] bg-[#d97706] z-20 min-w-[220px] max-w-[220px] whitespace-nowrap">Project Name</th>
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[370px] bg-[#d97706] z-20 min-w-[180px] max-w-[180px] whitespace-nowrap">Customer Name</th>
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[550px] bg-[#d97706] z-20 min-w-[100px] max-w-[100px] text-center whitespace-nowrap">
-                    Bid Due Date
+                  <th className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-[110px] top-0 bg-[#d97706] z-30 min-w-[140px] max-w-[140px] whitespace-normal">Project Name</th>
+                  <th className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-[250px] top-0 bg-[#d97706] z-30 min-w-[120px] max-w-[120px] whitespace-normal">Customer Name</th>
+                  <th className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-[370px] top-0 bg-[#d97706] z-30 min-w-[75px] max-w-[75px] text-center whitespace-nowrap">
+                    Bid Due
                   </th>
-                  <th className="px-2 py-3 border-b border-white/10 border-r border-white/5 sticky left-[650px] bg-[#d97706] z-20 min-w-[110px] max-w-[110px] text-center border-r-2 border-amber-600/35 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">Decision to Bid</th>
+                  <th className="px-1.5 py-3 border-b border-white/10 border-r border-white/5 sticky left-[445px] top-0 bg-[#d97706] z-30 min-w-[80px] max-w-[80px] text-center border-r-2 border-amber-600/35 shadow-[2px_0_5px_rgba(0,0,0,0.05)] whitespace-nowrap">Decision</th>
                   
                   {/* Scrolling columns */}
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[130px]">Total Bid Amount</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[130px]">Misc Summary Total</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Total Direct Costs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Drafting & Directs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Overhead on Directs</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Buyouts Section</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Overhead on Buyouts</th>
-                  <th className="px-2 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[125px]">Profit & Misc</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-center w-[85px] min-w-[85px] max-w-[85px] whitespace-nowrap sticky top-0 bg-[#d97706] z-20">Status</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">Total Bid</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">Misc Total</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">Direct Costs</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">Drafting</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">OH Directs</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">Buyouts</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[100px] min-w-[100px] max-w-[100px] sticky top-0 bg-[#d97706] z-20">OH Buyouts</th>
+                  <th className="px-1.5 py-3.5 border-b border-white/10 border-r border-white/5 text-right w-[95px] min-w-[95px] max-w-[95px] sticky top-0 bg-[#d97706] z-20">Profit/Misc</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 bg-white text-[12px]">
                 {loading ? (
                   <tr>
-                    <td colSpan="14" className="py-20 text-center">
+                    <td colSpan="15" className="py-20 text-center">
                       <Loader2 className="w-8 h-8 animate-spin mx-auto text-amber-500 mb-2" />
                       <p className="text-xs font-bold text-slate-400">Loading estimation reports...</p>
                     </td>
@@ -679,29 +851,29 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                     return (
                       <tr key={rfq.id} className="group transition-colors hover:bg-slate-50/50">
                         {/* Frozen Columns Body Cells */}
-                        <td className="px-2 py-3 border-r border-slate-100 text-center text-slate-400 font-semibold sticky left-0 bg-white group-hover:bg-slate-50/75 z-10 min-w-[50px] max-w-[50px] whitespace-nowrap">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-center text-slate-400 font-semibold sticky left-0 bg-white group-hover:bg-slate-50/75 z-10 min-w-[35px] max-w-[35px] whitespace-nowrap">
                           {startIndex + index + 1}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-center text-slate-600 sticky left-[50px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[100px] max-w-[100px] whitespace-nowrap">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-center text-slate-600 sticky left-[35px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[75px] max-w-[75px] whitespace-nowrap">
                           {formatShortDate(rfq.quote_date)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-slate-800 break-words leading-tight sticky left-[150px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[220px] max-w-[220px]">
-                          <div className="flex flex-col">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-slate-800 break-words leading-tight sticky left-[110px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[140px] max-w-[140px]">
+                          <div className="flex flex-col min-w-0">
                             <button
-                              onClick={() => handleLoadProjectInModel(matchedProj, rfq)}
-                              className="text-left font-bold text-slate-850 hover:text-amber-600 transition-colors inline-flex items-center gap-1.5 group/proj w-full"
+                               onClick={() => handleLoadProjectInModel(matchedProj, rfq)}
+                              className="text-left font-bold text-slate-850 hover:text-amber-600 transition-colors flex items-start gap-1 group/proj w-full"
                               title={hasCalc ? "Edit Calculations in Model" : "Initialize Model Setup"}
                             >
-                              <span className="truncate max-w-[180px]">{rfq.project_name}</span>
-                              <Pen className={`w-3 h-3 shrink-0 ${hasCalc ? 'text-amber-600 font-bold' : 'text-slate-300'} opacity-70 group-hover/proj:opacity-100 transition-opacity`} />
+                              <span className="line-clamp-2 break-words text-[11px] leading-tight flex-1 whitespace-normal">{rfq.project_name}</span>
+                              <Pen className={`w-3 h-3 shrink-0 mt-0.5 ${hasCalc ? 'text-amber-600 font-bold' : 'text-slate-300'} opacity-70 group-hover/proj:opacity-100 transition-opacity`} />
                             </button>
-                            <span className="text-[9px] font-mono text-slate-400 mt-0.5">
+                            <span className="text-[9px] font-mono text-slate-400 mt-0.5 leading-none">
                               {rfq.sfe_job_no ? `Job #${rfq.sfe_job_no}` : `Quote ${rfq.quote_no}`}
                             </span>
                           </div>
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-slate-600 truncate sticky left-[370px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[180px] max-w-[180px]" title={rfq.customer_name || 'N/A'}>
-                          {rfq.customer_name || '—'}
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-slate-600 sticky left-[250px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[120px] max-w-[120px]" title={rfq.customer_name || 'N/A'}>
+                          <span className="line-clamp-2 break-words text-[11px] leading-tight block whitespace-normal">{rfq.customer_name || '—'}</span>
                         </td>
                         {(() => {
                           const diffDays = getDaysDifference(rfq.bid_due_date);
@@ -734,16 +906,16 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           }
 
                           return (
-                            <td className={`px-2 py-3 border-r border-slate-100 text-center sticky left-[550px] z-10 min-w-[100px] max-w-[100px] transition-colors group-hover:bg-slate-50/75 ${dateBgClass} ${dateColorClass}`}>
+                            <td className={`px-1.5 py-2.5 border-r border-slate-100 text-center sticky left-[370px] z-10 min-w-[75px] max-w-[75px] transition-colors group-hover:bg-slate-50/75 ${dateBgClass} ${dateColorClass}`}>
                               <div className="flex flex-col items-center justify-center">
-                                <span>{formatShortDate(rfq.bid_due_date)}</span>
+                                <span className="text-[11px]">{formatShortDate(rfq.bid_due_date)}</span>
                                 {dateBadge}
                               </div>
                             </td>
                           );
                         })()}
-                        <td className="px-2 py-3 text-center sticky left-[650px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[110px] max-w-[110px] border-r-2 border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border ${
+                        <td className="px-1.5 py-2.5 text-center sticky left-[445px] bg-white group-hover:bg-slate-50/75 z-10 min-w-[80px] max-w-[80px] border-r-2 border-slate-200 shadow-[2px_0_5px_rgba(0,0,0,0.05)]">
+                          <span className={`inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide border ${
                             (rfq.decision_to_bid || '').toLowerCase().trim() === 'yes'
                               ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                               : 'bg-amber-50 text-amber-700 border-amber-200'
@@ -751,30 +923,56 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                             {rfq.decision_to_bid || 'Pending'}
                           </span>
                         </td>
+                        
+                        {(() => {
+                          let estStatus = 'yet to start';
+                          if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
+                            const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+                            if (savedStatus === 'submitted') {
+                              estStatus = 'submitted';
+                            } else if (savedStatus === 'rebid') {
+                              estStatus = 'rebid';
+                            } else {
+                              estStatus = 'in progress';
+                            }
+                          }
+
+                          return (
+                            <td className="px-1.5 py-2.5 border-r border-slate-100 text-center w-[85px] min-w-[85px] max-w-[85px]">
+                              <button
+                                onClick={() => handleStatusClick(estStatus, matchedProj, rfq)}
+                                className="focus:outline-none hover:scale-105 transition-transform cursor-pointer"
+                                title={estStatus === 'submitted' ? "Click to rebid" : "Click to go to estimation module"}
+                              >
+                                {getStatusBadge(estStatus)}
+                              </button>
+                            </td>
+                          );
+                        })()}
 
                         {/* Scrolling Columns Body Cells */}
-                        <td className="px-2 py-3 border-r border-slate-100 text-right font-black text-slate-800">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right font-black text-slate-800 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.finalBidAmount)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right font-extrabold text-amber-600">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right font-extrabold text-amber-600 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.miscellaneousFinalPrice)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency((vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0))}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.draftingAndDirects)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-650">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-650 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.directCostOverhead)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.totalBuyoutCosts)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-650">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-650 w-[100px] min-w-[100px] max-w-[100px]">
                           {formatCurrency(vals.buyoutOverhead)}
                         </td>
-                        <td className="px-2 py-3 border-r border-slate-100 text-right text-slate-700">
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[95px] min-w-[95px] max-w-[95px]">
                           {formatCurrency(vals.profitAndMisc)}
                         </td>
                       </tr>
@@ -782,7 +980,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                   })
                 ) : (
                   <tr>
-                    <td colSpan="14" className="px-6 py-12 text-center text-slate-500 font-medium italic">No projects found. Check your RFQ Master and filters.</td>
+                    <td colSpan="15" className="px-6 py-12 text-center text-slate-500 font-medium italic">No projects found. Check your RFQ Master and filters.</td>
                   </tr>
                 )}
               </tbody>
@@ -850,6 +1048,61 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
             </div>
           </div>
         </div>
+        {/* Rebid Confirmation Modal */}
+        {rebidConfirmation.isOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
+            <div className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-md w-full p-6 animate-scale-in space-y-6">
+              <div className="text-center space-y-2">
+                <h3 className="text-lg font-black text-slate-900">Rebid Project</h3>
+                <p className="text-sm text-slate-500">
+                  Are you sure you want to rebid for <strong className="text-slate-800">{rebidConfirmation.rfq?.project_name}</strong>?
+                </p>
+                <p className="text-xs text-slate-400 italic">
+                  This will change the status to "Rebid" and load it in the estimation module.
+                </p>
+              </div>
+              
+              <div className="flex gap-3 justify-end font-semibold text-xs">
+                <button
+                  onClick={() => setRebidConfirmation({ isOpen: false, project: null, rfq: null })}
+                  className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-650 rounded-xl transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={async () => {
+                    const { project, rfq } = rebidConfirmation;
+                    setRebidConfirmation({ isOpen: false, project: null, rfq: null });
+                    if (project) {
+                      try {
+                        const updatedProjectInfo = {
+                          ...(project.estimation_data?.projectInfo || {}),
+                          estimationStatus: 'rebid'
+                        };
+                        const payload = {
+                          estimation_data: {
+                            ...(project.estimation_data || {}),
+                            projectInfo: updatedProjectInfo
+                          }
+                        };
+                        await projectAPI.patch(project.id, payload);
+                        setProjects(prev => prev.map(p => p.id === project.id ? { ...p, estimation_data: payload.estimation_data } : p));
+                        toast.success('Status updated. Loading project for rebid...');
+                        handleLoadProjectInModel({ ...project, estimation_data: payload.estimation_data }, rfq);
+                      } catch (err) {
+                        console.error('Failed to update status for rebid:', err);
+                        toast.error('Failed to update status for rebid.');
+                      }
+                    }
+                  }}
+                  className="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 hover:from-amber-400 hover:to-orange-400 transition-all cursor-pointer font-bold"
+                >
+                  Yes, Rebid
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

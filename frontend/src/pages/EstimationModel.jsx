@@ -414,11 +414,16 @@ export default function EstimationModel() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleSaveToDatabase = async () => {
+  const handleSaveToDatabase = async (status = 'in progress') => {
     try {
       setIsSaving(true);
       
       let currentProjectId = projectInfo.projectId;
+      
+      const nextProjectInfo = {
+        ...projectInfo,
+        estimationStatus: (status === 'in progress' && projectInfo.estimationStatus === 'rebid') ? 'rebid' : status
+      };
       
       if (!currentProjectId) {
         // Unsynced Project! Create new project first.
@@ -442,7 +447,7 @@ export default function EstimationModel() {
           erection_date: projectInfo.startDate || selectedRfq.contract_executed_date || selectedRfq.awarded_job_date || null,
           status: 'Yet to Start',
           estimation_data: {
-            projectInfo,
+            projectInfo: nextProjectInfo,
             bidEnquiry,
             estimationSections
           }
@@ -454,7 +459,7 @@ export default function EstimationModel() {
         
         // Update local state with the new project ID
         const updatedProjectInfo = {
-          ...projectInfo,
+          ...nextProjectInfo,
           projectId: newProj.id
         };
         setProjectInfo(updatedProjectInfo);
@@ -468,21 +473,30 @@ export default function EstimationModel() {
           }
         };
         await projectAPI.patch(newProj.id, patchPayload);
-        toast.success('Project created and calculations saved');
+        if (status === 'submitted') {
+          toast.success('Project created and estimation submitted successfully!');
+        } else {
+          toast.success('Project created and draft saved successfully!');
+        }
       } else {
         // Existing Project! Just update it.
+        setProjectInfo(nextProjectInfo);
         const payload = {
           total_ton: Math.round(totalTons * 100) / 100,
           total_manhours: Math.round(totalLaborHours * 100) / 100,
           manhour_ton: totalTons > 0 ? Math.round((totalLaborHours / totalTons) * 100) / 100 : 0,
           estimation_data: {
-            projectInfo,
+            projectInfo: nextProjectInfo,
             bidEnquiry,
             estimationSections
           }
         };
         await projectAPI.patch(currentProjectId, payload);
-        toast.success('Calculations successfully saved');
+        if (status === 'submitted') {
+          toast.success('Estimation submitted successfully!');
+        } else {
+          toast.success('Draft saved successfully!');
+        }
       }
       
       // Refresh the local lists to update dropdown filtering
@@ -2141,21 +2155,34 @@ export default function EstimationModel() {
 
         <div className="flex items-center gap-3 shrink-0">
           <button
-            onClick={handleSaveToDatabase}
+            onClick={() => handleSaveToDatabase('in progress')}
             disabled={!selectedRfqId || isSaving}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
-            title="Save calculations"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Save draft (In Progress)"
           >
             {isSaving ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
             ) : (
-              <Save className="w-4 h-4" />
+              <Save className="w-4 h-4 text-slate-500" />
             )}
-            {isSaving ? 'Saving...' : 'Submit'}
+            Save Draft
+          </button>
+          <button
+            onClick={() => handleSaveToDatabase('submitted')}
+            disabled={!selectedRfqId || isSaving}
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+            title="Submit estimation (Submitted)"
+          >
+            {isSaving ? (
+              <Loader2 className="w-4 h-4 animate-spin text-white" />
+            ) : (
+              <Save className="w-4 h-4 text-white" />
+            )}
+            Submit
           </button>
           <button
             onClick={handleClear}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-all border border-slate-200"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-650 font-bold text-xs transition-all border border-slate-200 rounded-lg"
             title="Clear all fields"
           >
             <Trash2 className="w-4 h-4" />
