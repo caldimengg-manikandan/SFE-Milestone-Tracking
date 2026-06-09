@@ -162,27 +162,13 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
               </select>
             </div>
 
-            {/* Row 6: Primary Estimator + Bid Amount + Status */}
+            {/* Row 6: Primary Estimator */}
             <div className="form-group">
               <label className="form-label">Primary Estimator</label>
               <select className="form-select" value={form.primary_estimator}
                 onChange={e => set('primary_estimator', e.target.value)}>
                 <option value="">— Select —</option>
                 {estimators.map(e => <option key={e.id} value={e.id}>{e.initials}</option>)}
-              </select>
-            </div>
-            <div className="form-group">
-              <label className="form-label">Bid Amount</label>
-              <input className="form-input" type="number" value={form.bid_amount}
-                onChange={e => set('bid_amount', e.target.value)} placeholder="0.00" />
-            </div>
-            <div className="form-group">
-              <label className="form-label">Status</label>
-              <select className="form-select" value={form.won_lost}
-                onChange={e => set('won_lost', e.target.value)}>
-                <option value="Won">Won</option>
-                <option value="Lost">Lost</option>
-                <option value="Pending">Pending</option>
               </select>
             </div>
           </div>
