@@ -5,7 +5,7 @@ export default function CollapsibleRightSidebar({ title, children }) {
   const [isOpen, setIsOpen] = useState(true);
 
   return (
-    <div className={`relative transition-all duration-350 ease-in-out shrink-0 ${isOpen ? 'w-full lg:w-[340px]' : 'w-[50px]'} h-fit`}>
+    <div className={`relative lg:sticky lg:top-28 transition-all duration-350 ease-in-out shrink-0 ${isOpen ? 'w-full lg:w-[340px]' : 'w-[50px]'} h-fit self-start`}>
       {/* Toggle Button */}
       <button
         type="button"

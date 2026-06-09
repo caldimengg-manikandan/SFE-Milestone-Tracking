@@ -255,7 +255,7 @@ export default function ErectionTakeoffTab() {
   if (loading) return <div className="text-center font-mono py-8 text-slate-500">Loading Erection Takeoff...</div>;
   if (!takeoff) return <div className="text-center font-mono py-8 text-slate-500">Takeoff details missing.</div>;
 
-  const { computed } = takeoff;
+  const computed = takeoff.computed || {};
 
   // Group member lines from takeoff for layout grouping
   const groupedLines = {};
@@ -583,7 +583,7 @@ export default function ErectionTakeoffTab() {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-slate-500 font-medium">Calculated Decking Weight</span>
-              <span className="font-mono text-slate-800 font-bold">{computed.decking_tonnage_sum.toFixed(2)} Tons</span>
+              <span className="font-mono text-slate-800 font-bold">{(computed.decking_tonnage_sum || 0).toFixed(2)} Tons</span>
             </div>
             <div className="flex justify-between text-sm border-t border-slate-100 pt-3">
               <span className="text-slate-500 font-medium">Unload Trucks (ROUNDUP)</span>
@@ -799,7 +799,7 @@ export default function ErectionTakeoffTab() {
                   </tr>
                   <tr className="border-b border-slate-100 hover:bg-slate-50/50">
                     <td className="px-4 py-2 text-xs font-semibold">Travel Passengers (One Way - Jobs under 2 hrs one-way)</td>
-                    <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{(computed.ironworker_hours / 8).toFixed(2)}</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{((computed.ironworker_hours || 0) / 8).toFixed(2)}</td>
                     <td className="px-4 py-2 text-center text-xs text-slate-400">Days</td>
                     <td className="px-4 py-2 text-right">
                       <input

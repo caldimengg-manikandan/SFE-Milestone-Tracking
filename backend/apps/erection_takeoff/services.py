@@ -190,8 +190,8 @@ def compute_erection_totals(erection_takeoff, rate_config, bid_summary):
             decking_tonnage_sum += Decimal(str(r["crane_picks"]))
 
     # Unload Trucks inputs from Bid Summary
-    freight_out_trucks = Decimal(str(bid_summary.freight_out_trucks or 0))
-    joist_deck_tons = Decimal(str(bid_summary.joist_deck_tons or 0))
+    freight_out_trucks = Decimal(str(bid_summary.freight_out_trucks or 0)) if bid_summary else Decimal("0")
+    joist_deck_tons = Decimal(str(bid_summary.joist_deck_tons or 0)) if bid_summary else Decimal("0")
 
     # A6 Unload Trucks: ROUNDUP(freight_out_trucks + joist_deck_tons/10 + decking_tonnage_sum/10, 0)
     unload_trucks_raw = freight_out_trucks + (joist_deck_tons / Decimal("10")) + (decking_tonnage_sum / Decimal("10"))
@@ -209,7 +209,7 @@ def compute_erection_totals(erection_takeoff, rate_config, bid_summary):
     # Crew constants
     crew_size = erection_takeoff.crew_size or 5
     picks_per_day = erection_takeoff.picks_per_day or 35
-    efficiency = Decimal(str(rate_config.efficiency_factor or "0.50"))
+    efficiency = Decimal(str(rate_config.efficiency_factor or "0.50")) if rate_config else Decimal("0.50")
 
     # O81: Total Crew Days = (total_raw_hours / crew_size) / 8
     crew_days_raw = (total_raw_hours / Decimal(str(crew_size))) / Decimal("8")
@@ -251,7 +251,7 @@ def compute_erection_totals(erection_takeoff, rate_config, bid_summary):
     cable_field_labor_cost = Decimal(str(cable_field_labor_hours)) * Decimal(str(erection_takeoff.perimeter_cable_field_rate))
 
     # Travel & Per Diem
-    travel_hours = Decimal(str(bid_summary.freight_out_hours_each or 0))
+    travel_hours = Decimal(str(bid_summary.freight_out_hours_each or 0)) if bid_summary else Decimal("0")
     # D96 Overnight flag
     is_overnight = "yes" if (travel_hours - Decimal("2")) > Decimal("4") else "no"
 

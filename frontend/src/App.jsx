@@ -77,7 +77,7 @@ export default function App() {
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="dashboard" element={<Dashboard />} />
-          <Route path="estimation" element={<EstimationModel />} />
+          <Route path="estimation" element={<Navigate to="/estimation-erection/estimation" replace />} />
           <Route path="estimation-summary" element={<EstimationSummary />} />
           
           {/* Bid Management Routes */}
@@ -114,7 +114,8 @@ export default function App() {
 
           {/* Integrated Estimation Erection */}
           <Route path="estimation-erection" element={<EstimationErectionLayout />}>
-            <Route index element={<Navigate to="erection-takeoff" replace />} />
+            <Route index element={<Navigate to="estimation" replace />} />
+            <Route path="estimation" element={<EstimationModel />} />
             <Route path="erection-takeoff" element={<ErectionTakeoffTab />} />
             <Route path="fmc" element={<FieldMomentConnTab />} />
             <Route path="misc-metals" element={<MiscMetalsTab />} />

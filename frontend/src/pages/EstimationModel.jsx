@@ -10,6 +10,7 @@ import {
   Save
 } from 'lucide-react';
 import { projectAPI, rfqAPI } from '../services/api';
+import { useOutletContext } from 'react-router-dom';
 import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
 import FormattedDateInput from '../components/forms/FormattedDateInput';
@@ -202,56 +203,40 @@ const DEFAULT_ESTIMATION_SECTIONS = {
 };
 
 export default function EstimationModel() {
+  const outletContext = useOutletContext();
+  const contextProjectId = outletContext?.projectId;
+  const contextProject = outletContext?.project;
+
   // --- State for Modal ---
   const [activeSection, setActiveSection] = useState(null);
-
-  // --- Auto-open Section from Query Param ---
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const section = params.get('section');
-    if (section) {
-      setActiveSection(section);
-      // Clean up search query param
-      window.history.replaceState({}, document.title, window.location.pathname);
-    }
-  }, []);
-
-
-  // --- State for Saving ---
-  const [isSaving, setIsSaving] = useState(false);
-
-  // --- State for Project Info ---
-  const [projectInfo, setProjectInfo] = useState(() => {
-    const saved = localStorage.getItem('sfe_est_project');
-    const parsed = saved ? JSON.parse(saved) : null;
-    return parsed ? { projectId: '', ...parsed } : DEFAULT_PROJECT_INFO;
-  });
-
-  // --- State for Bid Enquiry Sheet (Material Section) ---
-  const [bidEnquiry, setBidEnquiry] = useState(() => {
-    const saved = localStorage.getItem('sfe_est_bid_enquiry');
-    return saved ? JSON.parse(saved) : DEFAULT_BID_ENQUIRY;
-  });
-
-  // --- State for all other 6 Estimation Sections ---
-  const [estimationSections, setEstimationSections] = useState(() => {
-    const saved = localStorage.getItem('sfe_est_sections');
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.numTrucks === '') parsed.numTrucks = 3;
-      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
-      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
-      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
-      return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
-    }
-    return DEFAULT_ESTIMATION_SECTIONS;
-  });
 
   // --- State and Effect for Project Master Dropdown ---
   const [selectedRfqId, setSelectedRfqId] = useState('');
   const [projects, setProjects] = useState([]);
   const [wonRfqs, setWonRfqs] = useState([]);
   const [loadingProjects, setLoadingProjects] = useState(false);
+
+  // Helper function to resolve the project physical location from won RFQs
+  const getProjectLocation = (selectedProj, rfqList = wonRfqs, savedLocation = null) => {
+    if (!selectedProj) return '';
+    const code = selectedProj.code || '';
+    const name = selectedProj.name || '';
+    
+    const matchedRfq = rfqList.find(rfq => {
+      const rfqCode = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+      return (code && rfqCode === code) || (name && rfq.project_name === name);
+    });
+    
+    const rfqLocation = (matchedRfq && matchedRfq.location) ? matchedRfq.location : '';
+    
+    if (savedLocation) {
+      if (savedLocation !== selectedProj.customer_name) {
+        return savedLocation;
+      }
+    }
+    
+    return rfqLocation || selectedProj.customer_name || '';
+  };
 
   useEffect(() => {
     const fetchDropdownData = async () => {
@@ -285,6 +270,120 @@ export default function EstimationModel() {
     fetchDropdownData();
   }, []);
 
+  // --- State for Project Info ---
+  const [projectInfo, setProjectInfo] = useState(() => {
+    if (contextProject) {
+      const selected = contextProject;
+      const estData = selected.estimation_data || {};
+      const resolvedLocation = getProjectLocation(selected, wonRfqs, estData.projectInfo?.location);
+      const nextProjectInfo = {
+        ...DEFAULT_PROJECT_INFO,
+        projectId: selected.id,
+        project: selected.name,
+        quoteNum: selected.code || '',
+        salesman: selected.project_manager_name || '',
+        startDate: selected.erection_date || '',
+        location: resolvedLocation
+      };
+      if (estData.bidEnquiry && estData.estimationSections) {
+        return {
+          ...nextProjectInfo,
+          ...estData.projectInfo,
+          projectId: selected.id,
+          project: selected.name,
+          quoteNum: selected.code || '',
+          salesman: selected.project_manager_name || '',
+          startDate: selected.erection_date || '',
+          location: resolvedLocation
+        };
+      }
+      return nextProjectInfo;
+    }
+    const saved = localStorage.getItem('sfe_est_project');
+    const parsed = saved ? JSON.parse(saved) : null;
+    return parsed ? { projectId: '', ...parsed } : DEFAULT_PROJECT_INFO;
+  });
+
+  // --- State for Bid Enquiry Sheet (Material Section) ---
+  const [bidEnquiry, setBidEnquiry] = useState(() => {
+    if (contextProject) {
+      const estData = contextProject.estimation_data || {};
+      if (estData.bidEnquiry) {
+        return estData.bidEnquiry;
+      }
+      return DEFAULT_BID_ENQUIRY;
+    }
+    const saved = localStorage.getItem('sfe_est_bid_enquiry');
+    return saved ? JSON.parse(saved) : DEFAULT_BID_ENQUIRY;
+  });
+
+  // --- State for all other 6 Estimation Sections ---
+  const [estimationSections, setEstimationSections] = useState(() => {
+    if (contextProject) {
+      const estData = contextProject.estimation_data || {};
+      if (estData.estimationSections) {
+        const parsed = estData.estimationSections;
+        if (parsed.numTrucks === '') parsed.numTrucks = 3;
+        if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
+        if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
+        if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
+        return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
+      }
+      return DEFAULT_ESTIMATION_SECTIONS;
+    }
+    const saved = localStorage.getItem('sfe_est_sections');
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.numTrucks === '') parsed.numTrucks = 3;
+      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 3;
+      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 5;
+      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 5.0;
+      return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
+    }
+    return DEFAULT_ESTIMATION_SECTIONS;
+  });
+
+  // --- Effect to sync projectInfo when context changes or wonRfqs are fetched ---
+  useEffect(() => {
+    if (contextProject) {
+      const selected = contextProject;
+      const estData = selected.estimation_data || {};
+      const resolvedLocation = getProjectLocation(selected, wonRfqs, estData.projectInfo?.location);
+      const nextProjectInfo = {
+        ...DEFAULT_PROJECT_INFO,
+        projectId: selected.id,
+        project: selected.name,
+        quoteNum: selected.code || '',
+        salesman: selected.project_manager_name || '',
+        startDate: selected.erection_date || '',
+        location: resolvedLocation
+      };
+      
+      if (estData.bidEnquiry && estData.estimationSections) {
+        setProjectInfo({
+          ...nextProjectInfo,
+          ...estData.projectInfo,
+          projectId: selected.id,
+          project: selected.name,
+          quoteNum: selected.code || '',
+          salesman: selected.project_manager_name || '',
+          startDate: selected.erection_date || '',
+          location: resolvedLocation
+        });
+        setBidEnquiry(estData.bidEnquiry);
+        setEstimationSections(estData.estimationSections);
+      } else {
+        setProjectInfo(nextProjectInfo);
+        setBidEnquiry(DEFAULT_BID_ENQUIRY);
+        setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      }
+    } else if (contextProjectId === '') {
+      setProjectInfo(DEFAULT_PROJECT_INFO);
+      setBidEnquiry(DEFAULT_BID_ENQUIRY);
+      setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+    }
+  }, [contextProject, contextProjectId, wonRfqs]);
+
   // Sync selectedRfqId with projectInfo and wonRfqs
   useEffect(() => {
     if (wonRfqs.length > 0) {
@@ -299,6 +398,20 @@ export default function EstimationModel() {
       }
     }
   }, [wonRfqs, projectInfo.quoteNum, projectInfo.project]);
+
+  // --- Auto-open Section from Query Param ---
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const section = params.get('section');
+    if (section) {
+      setActiveSection(section);
+      // Clean up search query param
+      window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  // --- State for Saving ---
+  const [isSaving, setIsSaving] = useState(false);
 
   const handleProjectChange = async (e) => {
     const rfqId = e.target.value;
@@ -327,6 +440,9 @@ export default function EstimationModel() {
         const res = await projectAPI.getById(matchedProj.id);
         const selected = res.data;
         if (selected) {
+          const estData = selected.estimation_data || {};
+          const resolvedLocation = getProjectLocation(selected, wonRfqs, estData.projectInfo?.location);
+          
           const nextProjectInfo = {
             ...DEFAULT_PROJECT_INFO,
             projectId: selected.id,
@@ -334,10 +450,9 @@ export default function EstimationModel() {
             quoteNum: selected.code || '',
             salesman: selected.project_manager_name || '',
             startDate: selected.erection_date || '',
-            location: selected.customer_name || ''
+            location: resolvedLocation
           };
           
-          const estData = selected.estimation_data || {};
           if (estData.bidEnquiry && estData.estimationSections) {
             setProjectInfo({
               ...nextProjectInfo,
@@ -346,7 +461,8 @@ export default function EstimationModel() {
               project: selected.name,
               quoteNum: selected.code || '',
               salesman: selected.project_manager_name || '',
-              startDate: selected.erection_date || ''
+              startDate: selected.erection_date || '',
+              location: resolvedLocation
             });
             setBidEnquiry(estData.bidEnquiry);
             setEstimationSections(estData.estimationSections);
@@ -381,38 +497,6 @@ export default function EstimationModel() {
       toast.success(`Pre-filled details for unsynced project: ${selectedRfq.project_name}`);
     }
   };
-
-  // Sync latest calculations from DB on mount if project is already selected
-  useEffect(() => {
-    const syncProjectOnMount = async () => {
-      if (projectInfo.projectId) {
-        try {
-          const res = await projectAPI.getById(projectInfo.projectId);
-          const selected = res.data;
-          if (selected && selected.estimation_data) {
-            const estData = selected.estimation_data;
-            if (estData.bidEnquiry && estData.estimationSections) {
-              setProjectInfo(prev => ({
-                ...prev,
-                ...estData.projectInfo,
-                projectId: selected.id,
-                project: selected.name,
-                quoteNum: selected.code || '',
-                salesman: selected.project_manager_name || '',
-                startDate: selected.erection_date || ''
-              }));
-              setBidEnquiry(estData.bidEnquiry);
-              setEstimationSections(estData.estimationSections);
-            }
-          }
-        } catch (err) {
-          console.error('Failed to sync project calculations on mount:', err);
-        }
-      }
-    };
-    syncProjectOnMount();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const handleSaveToDatabase = async () => {
     try {
@@ -483,6 +567,9 @@ export default function EstimationModel() {
         };
         await projectAPI.patch(currentProjectId, payload);
         toast.success('Calculations successfully saved');
+        if (outletContext?.refreshProject) {
+          await outletContext.refreshProject();
+        }
       }
       
       // Refresh the local lists to update dropdown filtering
@@ -2129,13 +2216,14 @@ export default function EstimationModel() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 p-2 animate-fade-in">
+    <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full text-slate-800 animate-fade-in">
 
       {/* ── Header Area ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-5">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 pb-4">
         <div>
-          <p className="text-sm font-medium text-slate-500 mt-1">
-            Perform detailed bid estimations using Excel-aligned calculation logic.
+          <h2 className="text-sm font-bold text-slate-800 tracking-wider uppercase">Estimation & Bid Model</h2>
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider mt-1">
+            Perform detailed bid estimations using Excel-aligned calculation logic
           </p>
         </div>
 
@@ -2143,7 +2231,7 @@ export default function EstimationModel() {
           <button
             onClick={handleSaveToDatabase}
             disabled={!selectedRfqId || isSaving}
-            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20 rounded-xl"
             title="Save calculations"
           >
             {isSaving ? (
@@ -2155,7 +2243,7 @@ export default function EstimationModel() {
           </button>
           <button
             onClick={handleClear}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-all border border-slate-200"
+            className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-all border border-slate-200 rounded-xl"
             title="Clear all fields"
           >
             <Trash2 className="w-4 h-4" />
@@ -2166,21 +2254,21 @@ export default function EstimationModel() {
 
       {/* ── KPI Summary Cards ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Tonnage</span>
             <h4 className="text-xl font-extrabold text-slate-800 mt-1">{formatTons(totalTons)} Tons</h4>
           </div>
           <Calculator className="w-8 h-8 text-amber-500 bg-amber-50 p-1.5 rounded-xl animate-pulse" />
         </div>
-        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex items-center justify-between">
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Direct Costs</span>
             <h4 className="text-xl font-extrabold text-slate-800 mt-1">${totalDirectCosts.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h4>
           </div>
           <Calculator className="w-8 h-8 text-blue-500 bg-blue-50 p-1.5 rounded-xl" />
         </div>
-        <div className="bg-white rounded border border-slate-500 shadow-sm p-5 flex items-center justify-between border-l-4 border-l-amber-500">
+        <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-5 flex items-center justify-between border-l-4 border-l-amber-500">
           <div>
             <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest">Final Bid Amount</span>
             <h4 className="text-xl font-black text-amber-600 mt-1">${finalBidAmount.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</h4>
@@ -2195,10 +2283,10 @@ export default function EstimationModel() {
         {/* Left Side: Project Specifications */}
         <div className="lg:col-span-2 space-y-6">
           {/* Card 1: Project Specifications */}
-          <div className="bg-white rounded border border-slate-500 shadow-sm p-6 md:p-8 space-y-6">
-            <div className="flex items-center gap-3 border-b border-slate-100 pb-4">
-              <FileText className="w-6 h-6 text-amber-500" />
-              <h3 className="text-lg font-bold text-slate-900">Project Specifications</h3>
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 md:p-8 space-y-6">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+              <FileText className="w-4 h-4 text-amber-500" />
+              <h3 className="text-xs font-bold uppercase text-amber-600 tracking-wider">Project Specifications</h3>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-5">
@@ -2207,22 +2295,31 @@ export default function EstimationModel() {
               <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">PROJECT</label>
-                  <SearchableDropdown
-                    options={availableRfqs.map(rfq => {
-                      const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
-                      const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
-                      const isSynced = !!matchedProj;
-                      return {
-                        id: rfq.id,
-                        label: `#${code} - ${rfq.project_name}${!isSynced ? ' (Unsynced)' : ''}`
-                      };
-                    })}
-                    value={selectedRfqId || ''}
-                    onChange={handleProjectChange}
-                    placeholder="Select Project"
-                    className="w-full px-5 py-3.5 rounded border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
-                    loading={loadingProjects}
-                  />
+                  {contextProjectId ? (
+                    <input
+                      type="text"
+                      disabled
+                      value={contextProject ? `${contextProject.code} — ${contextProject.name}` : 'Loading selected project...'}
+                      className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-105 text-sm font-semibold text-slate-500 cursor-not-allowed outline-none"
+                    />
+                  ) : (
+                    <SearchableDropdown
+                      options={availableRfqs.map(rfq => {
+                        const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
+                        const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
+                        const isSynced = !!matchedProj;
+                        return {
+                          id: rfq.id,
+                          label: `#${code} - ${rfq.project_name}${!isSynced ? ' (Unsynced)' : ''}`
+                        };
+                      })}
+                      value={selectedRfqId || ''}
+                      onChange={handleProjectChange}
+                      placeholder="Select Project"
+                      className="w-full px-5 py-3.5 rounded border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-750 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                      loading={loadingProjects}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -2232,7 +2329,7 @@ export default function EstimationModel() {
                     value={projectInfo.location}
                     placeholder="Enter site location..."
                     onChange={(e) => setProjectInfo({ ...projectInfo, location: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2241,7 +2338,7 @@ export default function EstimationModel() {
                   <FormattedDateInput
                     value={projectInfo.materialDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, materialDate: e.target.value })}
-                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2281,7 +2378,7 @@ export default function EstimationModel() {
                   <FormattedDateInput
                     value={projectInfo.date}
                     onChange={(e) => setProjectInfo({ ...projectInfo, date: e.target.value })}
-                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2292,7 +2389,7 @@ export default function EstimationModel() {
                     value={projectInfo.salesman}
                     placeholder="Enter sales representative..."
                     onChange={(e) => setProjectInfo({ ...projectInfo, salesman: e.target.value })}
-                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2303,7 +2400,7 @@ export default function EstimationModel() {
                     value={projectInfo.quoteNum}
                     placeholder="e.g. SFE-2026-904"
                     onChange={(e) => setProjectInfo({ ...projectInfo, quoteNum: e.target.value })}
-                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
 
@@ -2312,7 +2409,7 @@ export default function EstimationModel() {
                   <FormattedDateInput
                     value={projectInfo.startDate}
                     onChange={(e) => setProjectInfo({ ...projectInfo, startDate: e.target.value })}
-                    className="w-full px-5 py-3.5 border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-755 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
               </div>
@@ -2323,7 +2420,7 @@ export default function EstimationModel() {
           {/* Button 9: Summary */}
           <button
             onClick={() => setActiveSection('summary')}
-            className={`w-full flex items-center justify-between p-4 border font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'summary' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-500 text-slate-700'}`}
+            className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'summary' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
           >
             <div className="flex items-center gap-3">
               <BarChart3 className={`w-5 h-5 ${activeSection === 'summary' ? 'text-white' : 'text-slate-500'}`} />
@@ -2335,7 +2432,7 @@ export default function EstimationModel() {
 
         {/* Right Side: Estimation Sections Navigation */}
         <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white border border-slate-500 shadow-sm p-6 space-y-4">
+          <div className="bg-white border border-slate-200 rounded-xl shadow-sm p-6 space-y-4">
             <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">
               Estimation Sections
             </h3>
@@ -2343,7 +2440,7 @@ export default function EstimationModel() {
               {/* Button 1: Material Section */}
               <button
                 onClick={() => setActiveSection('material')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'material' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'material' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'material' ? 'text-white' : 'text-slate-500'}`} />
@@ -2355,7 +2452,7 @@ export default function EstimationModel() {
               {/* Button 2: plant Labor */}
               <button
                 onClick={() => setActiveSection('plantLabor')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'plantLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'plantLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-500'}`} />
@@ -2367,7 +2464,7 @@ export default function EstimationModel() {
               {/* Button 3: Drafting */}
               <button
                 onClick={() => setActiveSection('drafting')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'drafting' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'drafting' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'drafting' ? 'text-white' : 'text-slate-500'}`} />
@@ -2379,7 +2476,7 @@ export default function EstimationModel() {
               {/* Button 4: Profit on Direct Costs */}
               <button
                 onClick={() => setActiveSection('profitDirect')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitDirect' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitDirect' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'profitDirect' ? 'text-white' : 'text-slate-500'}`} />
@@ -2391,7 +2488,7 @@ export default function EstimationModel() {
               {/* Button 5: Buyouts */}
               <button
                 onClick={() => setActiveSection('buyouts')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'buyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'buyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'buyouts' ? 'text-white' : 'text-slate-500'}`} />
@@ -2403,7 +2500,7 @@ export default function EstimationModel() {
               {/* Button 6: Profit on Buyouts */}
               <button
                 onClick={() => setActiveSection('profitBuyouts')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitBuyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'profitBuyouts' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'profitBuyouts' ? 'text-white' : 'text-slate-500'}`} />
@@ -2415,7 +2512,7 @@ export default function EstimationModel() {
               {/* Button 7: Final Totals */}
               <button
                 onClick={() => setActiveSection('finalTotals')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'finalTotals' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'finalTotals' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'finalTotals' ? 'text-white' : 'text-slate-500'}`} />
@@ -2427,7 +2524,7 @@ export default function EstimationModel() {
               {/* Button 8: miscellaneous */}
               <button
                 onClick={() => setActiveSection('miscellaneous')}
-                className={`w-full flex items-center justify-between p-4 border rounded-2xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'miscellaneous' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'miscellaneous' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-500'}`} />

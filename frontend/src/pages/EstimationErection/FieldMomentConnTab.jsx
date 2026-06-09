@@ -29,7 +29,7 @@ export default function FieldMomentConnTab() {
 
   const fetchTakeoff = async () => {
     try {
-      const res = await api.get(`projects/${projectId}/field-moment-conn/`);
+      const res = await api.get(`projects/${projectId}/fmc/`);
       setTakeoff(res.data);
     } catch (err) {
       console.error("Failed to load FMC takeoff details:", err);
@@ -64,7 +64,7 @@ export default function FieldMomentConnTab() {
     e.preventDefault();
     if (!selectedSection || !quantity) return;
     try {
-      await api.post(`projects/${projectId}/field-moment-conn/lines/`, {
+      await api.post(`projects/${projectId}/fmc/lines/`, {
         aisc_section: selectedSection.id,
         quantity: parseInt(quantity),
       });
@@ -108,7 +108,7 @@ export default function FieldMomentConnTab() {
 
     if (!isReadOnly) {
       triggerSave(async () => {
-        await api.patch(`projects/${projectId}/field-moment-conn/lines/${lineId}/`, {
+        await api.patch(`projects/${projectId}/fmc/lines/${lineId}/`, {
           quantity: valNum,
         });
         fetchTakeoff();
@@ -118,7 +118,7 @@ export default function FieldMomentConnTab() {
 
   const handleDeleteLine = async (lineId) => {
     try {
-      await api.delete(`projects/${projectId}/field-moment-conn/lines/${lineId}/`);
+      await api.delete(`projects/${projectId}/fmc/lines/${lineId}/`);
       fetchTakeoff();
     } catch (err) {
       alert("Failed to delete line.");

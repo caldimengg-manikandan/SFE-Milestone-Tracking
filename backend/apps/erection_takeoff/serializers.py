@@ -74,8 +74,14 @@ class ErectionTakeoffSerializer(serializers.ModelSerializer):
     def get_computed(self, obj):
         try:
             from apps.erection_takeoff.services import compute_erection_totals
-            rate = obj.project.rate_config
-            bid = obj.project.bid_summary
+            try:
+                rate = obj.project.rate_config
+            except Exception:
+                rate = None
+            try:
+                bid = obj.project.bid_summary
+            except Exception:
+                bid = None
             totals = compute_erection_totals(obj, rate, bid)
             # Remove the rows — already in member_lines
             totals.pop("rows", None)

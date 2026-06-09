@@ -188,7 +188,7 @@ export default function MiscMetalsTab() {
   if (loading) return <div className="text-center font-mono py-8 text-slate-500">Loading Misc Metals module...</div>;
   if (!estimate) return <div className="text-center font-mono py-8 text-slate-500">Estimate details missing.</div>;
 
-  const { computed } = estimate;
+  const computed = estimate.computed || {};
 
   return (
     <div className="p-6 space-y-6 max-w-[1600px] mx-auto w-full text-slate-800">

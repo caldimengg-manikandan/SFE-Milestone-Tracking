@@ -18,12 +18,13 @@ export default function EstimationErectionLayout() {
 
   // Tab items
   const tabs = [
+    { name: 'Contracts', path: 'contacts' },
+    { name: 'Estimation Model', path: 'estimation' },
     { name: 'Erection Take-off', path: 'erection-takeoff' },
     { name: 'Field Moment Conn.', path: 'fmc' },
     { name: 'Misc Metals', path: 'misc-metals' },
     { name: 'Breakdown', path: 'breakdown' },
     { name: 'Estimate Datas', path: 'estimate-data' },
-    { name: 'Contacts', path: 'contacts' },
   ];
 
   // Fetch all projects

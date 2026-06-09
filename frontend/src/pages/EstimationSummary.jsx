@@ -439,7 +439,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
         quoteNum: proj.code || '',
         salesman: proj.project_manager_name || '',
         startDate: proj.erection_date || '',
-        location: proj.customer_name || ''
+        location: rfq?.location || proj.customer_name || ''
       };
       localStorage.setItem('sfe_est_project', JSON.stringify(info));
       localStorage.removeItem('sfe_est_bid_enquiry');
