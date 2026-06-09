@@ -1050,8 +1050,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1.5 font-bold text-slate-505">
                   <span>@</span>
-                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-28 text-right">
-                    ${Number(bidEnquiry.boltRate).toFixed(2)}
+                  <span className="relative flex items-center">
+                    <span className="absolute left-2 font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={bidEnquiry.boltRate}
+                      onChange={(e) => setBidEnquiry({ ...bidEnquiry, boltRate: e.target.value })}
+                      className="w-28 pl-5 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right transition-all"
+                    />
                   </span>
                   <span>/Pc</span>
                 </div>
@@ -1087,8 +1094,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1.5 font-bold text-slate-505">
                   <span>@</span>
-                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-28 text-right">
-                    ${Number(bidEnquiry.paintRate).toFixed(2)}
+                  <span className="relative flex items-center">
+                    <span className="absolute left-2 font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={bidEnquiry.paintRate}
+                      onChange={(e) => setBidEnquiry({ ...bidEnquiry, paintRate: e.target.value })}
+                      className="w-28 pl-5 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right transition-all"
+                    />
                   </span>
                   <span>/Gallon</span>
                 </div>
@@ -1124,8 +1138,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1.5 font-bold text-slate-505">
                   <span>@</span>
-                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-28 text-right">
-                    ${Number(bidEnquiry.galvanizingRate).toFixed(2)}
+                  <span className="relative flex items-center">
+                    <span className="absolute left-2 font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={bidEnquiry.galvanizingRate}
+                      onChange={(e) => setBidEnquiry({ ...bidEnquiry, galvanizingRate: e.target.value })}
+                      className="w-28 pl-5 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right transition-all"
+                    />
                   </span>
                   <span>/Lb</span>
                 </div>
@@ -1344,8 +1365,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1 font-bold text-slate-500">
                   <span>@</span>
-                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-20 text-right text-slate-500">
-                    ${Number(estimationSections.hourlyLaborRate || 60).toFixed(0)}
+                  <span className="relative flex items-center">
+                    <span className="absolute left-2 font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={estimationSections.hourlyLaborRate}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, hourlyLaborRate: e.target.value })}
+                      className="w-20 pl-5 pr-2 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right transition-all"
+                    />
                   </span>
                   <span className="ml-1">/Hr</span>
                 </div>
@@ -1445,8 +1473,15 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex items-center gap-1 font-bold text-slate-500">
                   <span>@</span>
-                  <span className="px-3 py-2 border border-slate-200 rounded-xl bg-white w-20 text-right text-slate-500">
-                    ${Number(estimationSections.shippingRate || 195).toFixed(0)}
+                  <span className="relative flex items-center">
+                    <span className="absolute left-2 font-bold text-slate-500">$</span>
+                    <input
+                      type="number"
+                      step="any"
+                      value={estimationSections.shippingRate}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, shippingRate: e.target.value })}
+                      className="w-20 pl-5 pr-2 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 rounded-xl outline-none font-bold text-right transition-all"
+                    />
                   </span>
                   <span className="ml-1">/Hr</span>
                 </div>
