@@ -12,16 +12,6 @@ from django.core.exceptions import ValidationError  # type: ignore
 # LOOKUP / REFERENCE TABLES  (replace Excel dropdown validation lists)
 # ─────────────────────────────────────────────────────────────────────────────
 
-class Customer(models.Model):
-    objects = models.Manager()
-    name = models.CharField(max_length=200, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['name']
-
-    def __str__(self):
-        return self.name
 
 
 class Estimator(models.Model):
@@ -158,7 +148,7 @@ class RFQMaster(models.Model):
     # CUSTOMER & TEAM  (Excel cols Z–AF)
     # ═════════════════════════════════════════════════════════════════════════
     customer = models.ForeignKey(
-        Customer,
+        'projects.Customer',
         on_delete=models.SET_NULL,
         null=True, blank=True,
         related_name='rfqs',

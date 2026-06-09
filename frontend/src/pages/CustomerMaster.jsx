@@ -17,6 +17,10 @@ export default function CustomerMaster() {
     country: 'India',
     name: '',
     code: '',
+    street: '',
+    state: '',
+    address: '',
+    designation: '',
     contacts: [{ person: '', email: '', phone: '+91 ' }]
   });
 
@@ -53,6 +57,10 @@ export default function CustomerMaster() {
       country: 'India',
       name: '',
       code: '',
+      street: '',
+      state: '',
+      address: '',
+      designation: '',
       contacts: [{ person: '', email: '', phone: '+91 ' }]
     });
     setShowModal(true);
@@ -336,6 +344,50 @@ export default function CustomerMaster() {
                     <option value="UAE">UAE</option>
                     <option value="Other">Other</option>
                   </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Street</label>
+                  <input
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    placeholder="Street"
+                    value={form.street}
+                    onChange={e => setForm({ ...form, street: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">State</label>
+                  <input
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    placeholder="State"
+                    value={form.state}
+                    onChange={e => setForm({ ...form, state: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Address</label>
+                  <input
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    placeholder="Address"
+                    value={form.address}
+                    onChange={e => setForm({ ...form, address: e.target.value })}
+                  />
+                </div>
+
+                <div className="space-y-1.5 md:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Designation</label>
+                  <input
+                    disabled={isViewMode}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    placeholder="Designation"
+                    value={form.designation}
+                    onChange={e => setForm({ ...form, designation: e.target.value })}
+                  />
                 </div>
               </div>
 

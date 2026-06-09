@@ -80,7 +80,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Customer
-        fields = ['id', 'name', 'code', 'category', 'country', 'contacts', 'created_at', 'updated_at']
+        fields = ['id', 'name', 'code', 'category', 'country', 'street', 'state', 'address', 'designation', 'contacts', 'created_at', 'updated_at']
 
     def create(self, validated_data):
         contacts_data = validated_data.pop('contacts', [])
@@ -95,6 +95,10 @@ class CustomerSerializer(serializers.ModelSerializer):
         instance.code = validated_data.get('code', instance.code)
         instance.category = validated_data.get('category', instance.category)
         instance.country = validated_data.get('country', instance.country)
+        instance.street = validated_data.get('street', instance.street)
+        instance.state = validated_data.get('state', instance.state)
+        instance.address = validated_data.get('address', instance.address)
+        instance.designation = validated_data.get('designation', instance.designation)
         instance.save()
 
         if contacts_data is not None:

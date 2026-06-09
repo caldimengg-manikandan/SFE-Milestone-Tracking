@@ -92,6 +92,10 @@ class Customer(models.Model):
     code = models.CharField(max_length=100, blank=True)
     category = models.CharField(max_length=100, default='Domestic')
     country = models.CharField(max_length=100, default='India')
+    street = models.CharField(max_length=200, blank=True)
+    state = models.CharField(max_length=100, blank=True)
+    address = models.TextField(blank=True)
+    designation = models.CharField(max_length=100, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

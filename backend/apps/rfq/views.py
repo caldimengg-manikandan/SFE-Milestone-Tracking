@@ -12,7 +12,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as df_filters
-from .models import RFQMaster, Customer, Estimator, MonthlyBidGoal
+from .models import RFQMaster, Estimator, MonthlyBidGoal
+from projects.models import Customer
 from .serializers import (
     RFQMasterSerializer, RFQListSerializer, PrintSetupSerializer,
     CustomerSerializer, EstimatorSerializer, MonthlyBidGoalSerializer,
@@ -606,11 +607,15 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
                         quote_no = rec['quote_no']
                         
                         # Get or create customer
+                        # Attempt to find an existing customer by name; do NOT create new customers from Excel data
                         customer_obj = None
                         cname = rec.get('_customer_name')
                         if cname:
-                            customer_obj, _ = Customer.objects.get_or_create(name=cname)
-                            
+                            try:
+                                customer_obj = Customer.objects.get(name=cname)
+                            except Customer.DoesNotExist:
+                                # If customer not found in master, leave as None (will be ignored or cause validation error)
+                                customer_obj = None
                         # Get or create estimator
                         estimator_obj = None
                         einit = rec.get('_estimator_initials')

@@ -1,12 +1,5 @@
 from django.contrib import admin
-from .models import RFQMaster, Customer, Estimator, MonthlyBidGoal
-
-
-@admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'created_at']
-    search_fields = ['name']
-
+from .models import RFQMaster, Estimator, MonthlyBidGoal
 
 @admin.register(Estimator)
 class EstimatorAdmin(admin.ModelAdmin):

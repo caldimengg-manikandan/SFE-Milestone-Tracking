@@ -1,6 +1,7 @@
 from datetime import datetime, date
 from rest_framework import serializers
-from .models import RFQMaster, Customer, Estimator, MonthlyBidGoal
+from .models import RFQMaster, Estimator, MonthlyBidGoal
+from projects.models import Customer
 
 
 class CustomerSerializer(serializers.ModelSerializer):
