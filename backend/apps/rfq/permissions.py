@@ -13,12 +13,11 @@ class IsManagerOrReadOnly(permissions.BasePermission):
 
 
 class CanEditRFQ(permissions.BasePermission):
-    """Estimators and above can create/edit RFQs (not delete)."""
+    """Estimators and above can create/edit/delete RFQs."""
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
         if request.method in permissions.SAFE_METHODS:
             return True
-        if request.method == 'DELETE':
-            return request.user.is_manager
         return request.user.can_edit
+
