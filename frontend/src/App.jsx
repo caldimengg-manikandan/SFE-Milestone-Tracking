@@ -24,6 +24,7 @@ import EstimationModel from './pages/EstimationModel';
 import EstimationSummary from './pages/EstimationSummary';
 import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
+import HolidayCalendar from './pages/Bids/HolidayCalendar';
 
 // ── Estimation Erection Imports ──────────────────────────────────────────────
 import EstimationErectionLayout from './pages/EstimationErection/EstimationErectionLayout';
@@ -83,6 +84,7 @@ export default function App() {
           {/* Bid Management Routes */}
           <Route path="bids/enquiry" element={<BidEnquiry />} />
           <Route path="bids/schedule" element={<InternalBidSchedule />} />
+          <Route path="bids/holidays" element={<HolidayCalendar />} />
 
           <Route path="employees" element={<EmployeeMaster />} />
           <Route path="customers" element={<CustomerMaster />} />

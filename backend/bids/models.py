@@ -3,6 +3,37 @@ from decimal import Decimal
 from projects.models import Customer
 from employees.models import Employee
 
+
+# ─── Holiday Model ───────────────────────────────────────────────────────────
+class Holiday(models.Model):
+    objects = models.Manager()
+
+    TIMEZONE_CHOICES = [
+        ('America/Chicago', 'US (CST)'),
+    ]
+
+    TYPE_CHOICES = [
+        ('Public', 'Public'),
+        ('Company', 'Company'),
+        ('Optional', 'Optional'),
+    ]
+
+    date = models.DateField()
+    description = models.CharField(max_length=300)
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='Public')
+    timezone = models.CharField(max_length=50, choices=TIMEZONE_CHOICES, default='America/Chicago')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'holidays'
+        ordering = ['date']
+        unique_together = ('date', 'timezone')
+
+    def __str__(self):
+        return f"{self.date} — {self.description} ({self.timezone})"
+
+
 MONTH_MAP = {
     'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
     'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12,

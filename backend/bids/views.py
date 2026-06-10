@@ -1,10 +1,32 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
-from .models import BidEnquiry
-from .serializers import BidEnquirySerializer
+from rest_framework.permissions import IsAuthenticated
+from .models import BidEnquiry, Holiday
+from .serializers import BidEnquirySerializer, HolidaySerializer
 
 from django.core.mail import send_mail
 from django.conf import settings
+
+
+class HolidayViewSet(viewsets.ModelViewSet):
+    """CRUD for company holidays, filterable by timezone and year."""
+    queryset = Holiday.objects.all()
+    serializer_class = HolidaySerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering = ['date']
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = Holiday.objects.all()
+        timezone = self.request.query_params.get('timezone')
+        year = self.request.query_params.get('year')
+        if timezone:
+            qs = qs.filter(timezone=timezone)
+        if year:
+            qs = qs.filter(date__year=year)
+        return qs
+
 
 class BidEnquiryViewSet(viewsets.ModelViewSet):
     queryset = BidEnquiry.objects.all()
