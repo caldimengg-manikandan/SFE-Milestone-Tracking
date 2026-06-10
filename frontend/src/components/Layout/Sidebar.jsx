@@ -27,6 +27,7 @@ import {
   CalendarRange,
   DollarSign,
   TrendingUp,
+  CalendarCheck,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -42,6 +43,7 @@ const navSections = [
     items: [
       { name: 'RFQ Master', path: '/rfq', icon: FileSpreadsheet },
       { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
+      { name: 'Holiday Calendar', path: '/bids/holidays', icon: CalendarCheck },
       { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
       { name: 'Estimation', path: '/estimation-erection', icon: Layers },
     ],

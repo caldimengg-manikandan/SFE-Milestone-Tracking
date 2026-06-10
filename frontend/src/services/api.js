@@ -172,3 +172,11 @@ export const rfqAPI = {
   getAll: (params = {}) => api.get('/rfq/rfq/', { params }),
   getEstimators: () => api.get('/rfq/estimators/'),
 };
+
+/* ── Holiday API ── */
+export const holidayAPI = {
+  getAll: (params = {}) => api.get('/bids/holidays/', { params }),
+  create: (data) => api.post('/bids/holidays/', data),
+  update: (id, data) => api.put(`/bids/holidays/${id}/`, data),
+  delete: (id) => api.delete(`/bids/holidays/${id}/`),
+};

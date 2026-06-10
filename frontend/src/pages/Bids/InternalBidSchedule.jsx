@@ -1,47 +1,16 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Loader2, ChevronRight, ChevronLeft, ChevronDown,
   AlertTriangle, CheckCircle2, Calendar, Clock, Columns,
-  FileSpreadsheet, AlertCircle, X, Inbox
+  FileSpreadsheet, AlertCircle, X, Inbox, CalendarCheck
 } from 'lucide-react';
-import { rfqAPI, customerAPI } from '../../services/api';
+import { rfqAPI, customerAPI, holidayAPI } from '../../services/api';
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December'
 ];
-
-const HOLIDAYS = {
-  '01-01': "New Year's Day (UK, US, CAN)",
-  '07-04': "Independence Day",
-  '12-25': "Christmas Day",
-  '12-26': "Boxing Day",
-};
-
-function getHoliday(date) {
-  const m = String(date.getMonth() + 1).padStart(2, '0');
-  const d = String(date.getDate()).padStart(2, '0');
-  const mmdd = `${m}-${d}`;
-  if (HOLIDAYS[mmdd]) return HOLIDAYS[mmdd];
-
-  const y = date.getFullYear();
-  const dateStr = `${y}-${m}-${d}`;
-  
-  if (y === 2026) {
-    if (dateStr === '2026-05-25') return 'Memorial Day';
-    if (dateStr === '2026-09-07') return 'Labor Day';
-    if (dateStr === '2026-11-26') return 'Thanksgiving Day';
-  } else if (y === 2025) {
-    if (dateStr === '2025-05-26') return 'Memorial Day';
-    if (dateStr === '2025-09-01') return 'Labor Day';
-    if (dateStr === '2025-11-27') return 'Thanksgiving Day';
-  } else if (y === 2027) {
-    if (dateStr === '2027-05-31') return 'Memorial Day';
-    if (dateStr === '2027-09-06') return 'Labor Day';
-    if (dateStr === '2027-11-25') return 'Thanksgiving Day';
-  }
-  return null;
-}
 
 function getBidStatus(bid) {
   const today = new Date();
@@ -175,8 +144,10 @@ const STATUS_CONFIG = {
 };
 
 export default function InternalBidSchedule() {
+  const navigate = useNavigate();
   const [bids, setBids] = useState([]);
   const [estimators, setEstimators] = useState([]);
+  const [holidays, setHolidays] = useState({});  // { 'yyyy-MM-dd': 'Description' }
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -212,12 +183,17 @@ export default function InternalBidSchedule() {
       if (filterEstimator) params.estimator = filterEstimator;
       if (filterDecision) params.decision_to_bid = filterDecision;
 
-      const [bidsRes, empRes] = await Promise.all([
+      const [bidsRes, empRes, holidayRes] = await Promise.all([
         rfqAPI.getAll(params),
         rfqAPI.getEstimators(),
+        holidayAPI.getAll(),
       ]);
       setBids(bidsRes.data.results || bidsRes.data);
       setEstimators(empRes.data.results || empRes.data);
+      // Build a date → description lookup map
+      const holidayMap = {};
+      (holidayRes.data || []).forEach(h => { holidayMap[h.date] = h.description; });
+      setHolidays(holidayMap);
     } catch (err) {
       console.error(err);
       setError('Failed to load bid schedule data.');
@@ -302,12 +278,18 @@ export default function InternalBidSchedule() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <button
-              onClick={exportToCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
-            >
-              <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
-            </button>
+              <button
+                onClick={() => navigate('/bids/holidays')}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-emerald-200 bg-emerald-50 text-xs font-bold text-emerald-700 hover:bg-emerald-100 transition-all"
+              >
+                <CalendarCheck className="w-3.5 h-3.5" /> Holidays
+              </button>
+              <button
+                onClick={exportToCSV}
+                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 transition-all"
+              >
+                <FileSpreadsheet className="w-3.5 h-3.5" /> Export CSV
+              </button>
             <button
               onClick={() => setShowFilters(!showFilters)}
               className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-bold transition-all ${showFilters ? 'bg-amber-50 text-amber-600 border-amber-200 shadow-inner' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'}`}
@@ -478,7 +460,7 @@ export default function InternalBidSchedule() {
                       {week.map((day) => {
                         const dateStr = day.formattedDate;
                         const dayBids = getDayBids(dateStr);
-                        const holiday = getHoliday(day.date);
+                        const holiday = holidays[dateStr] || null;
                         const isToday = formatDateYYYYMMDD(new Date()) === dateStr;
                         const isOtherMonth = !day.isCurrentMonth;
 

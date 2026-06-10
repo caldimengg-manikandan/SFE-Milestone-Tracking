@@ -550,7 +550,7 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
                     continue
 
             # Build record dict
-            rec = {'quote_no': quote_no}
+            rec: dict = {'quote_no': quote_no}
             
             for letter, field in EXCEL_COLUMN_MAP.items():
                 if field.startswith('_'):
@@ -568,7 +568,7 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
                 elif field in INT_FIELDS:
                     rec[field] = coerce_int(raw)
                 elif field == 'won_lost':
-                    rec[field] = WON_LOST_MAP.get(raw, 'Pending')
+                    rec[field] = WON_LOST_MAP.get(raw, 'Pending')  # type: ignore
                 elif field == 'bid_due_time':
                     rec[field] = coerce_time(raw)
                 else:
@@ -644,13 +644,13 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
                             # Update existing
                             for k, v in defaults.items():
                                 setattr(rfq_inst, k, v)
-                            rfq_inst.updated_by = request.user.username or 'excel_upload'
+                            rfq_inst.updated_by = str(request.user.username or 'excel_upload')
                             rfq_inst.save()
                         else:
                             # Create new
                             rfq_inst = RFQMaster(**defaults)
-                            rfq_inst.created_by = request.user.username or 'excel_upload'
-                            rfq_inst.updated_by = request.user.username or 'excel_upload'
+                            rfq_inst.created_by = str(request.user.username or 'excel_upload')
+                            rfq_inst.updated_by = str(request.user.username or 'excel_upload')
                             rfq_inst.save()
             except Exception as e:
                 return Response({

@@ -1,5 +1,12 @@
 from rest_framework import serializers
-from .models import BidEnquiry
+from .models import BidEnquiry, Holiday
+
+
+class HolidaySerializer(serializers.ModelSerializer):
+    class Meta:  # type: ignore
+        model = Holiday
+        fields = '__all__'
+        read_only_fields = ['id', 'created_at', 'updated_at']
 
 class BidEnquirySerializer(serializers.ModelSerializer):
     customer_name_str = serializers.CharField(source='customer_name.name', read_only=True)
