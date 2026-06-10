@@ -29,7 +29,7 @@ export default function Login() {
 
   // If already logged in, redirect
   useEffect(() => {
-    if (sessionStorage.getItem('token')) navigate('/dashboard', { replace: true });
+    if (sessionStorage.getItem('user')) navigate('/dashboard', { replace: true });
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -57,7 +57,7 @@ export default function Login() {
         setForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
       } else {
         const res = await authAPI.login({ email: form.email, password: form.password });
-        sessionStorage.setItem('token', res.data.token);
+        // The token is set inside a secure HttpOnly cookie automatically
         sessionStorage.setItem('user', JSON.stringify(res.data.user));
         navigate('/dashboard', { replace: true });
       }

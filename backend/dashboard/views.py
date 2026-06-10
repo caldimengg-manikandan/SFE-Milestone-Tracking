@@ -202,6 +202,8 @@ class DashboardStatsView(APIView):
         
         won_rfqs = RFQMaster.objects.filter(won_lost='Won', deleted_at__isnull=True)
         total_won_tonnage = sum(float(r.total_tonnage or 0) for r in won_rfqs)
+        total_won_structural_tonnage = sum(float(r.ton_steel or 0) for r in won_rfqs)
+        total_won_joist_tonnage = sum(float(r.ton_joist or 0) for r in won_rfqs)
         manpower_entries = Manpower.objects.all()
 
         def is_schedule_active_in_month(start_month_date, duration_months, target_month_idx):
@@ -252,6 +254,17 @@ class DashboardStatsView(APIView):
             required_hours = struct_fab + misc_fab + struct_erect + misc_erect
             remaining = available_hours - required_hours
             
+            # Tonnage distribution by month
+            struct_ton = 0.0
+            joist_ton = 0.0
+            for r in won_rfqs:
+                if is_schedule_active_in_month(r.struct_fab_start_month, r.struct_fab_duration_months, idx):
+                    r_ton_steel = float(r.ton_steel or 0)
+                    r_ton_joist = float(r.ton_joist or 0)
+                    dur = float(r.struct_fab_duration_months or 1)
+                    struct_ton += r_ton_steel / dur if dur > 0 else r_ton_steel
+                    joist_ton += r_ton_joist / dur if dur > 0 else r_ton_joist
+            
             bar_data.append({
                 'name': m_short,
                 'capacity': round(available_hours, 2),
@@ -260,7 +273,10 @@ class DashboardStatsView(APIView):
                 'struct_fab': round(struct_fab, 2),
                 'misc_fab': round(misc_fab, 2),
                 'struct_erect': round(struct_erect, 2),
-                'misc_erect': round(misc_erect, 2)
+                'misc_erect': round(misc_erect, 2),
+                'struct_ton': round(struct_ton, 2),
+                'joist_ton': round(joist_ton, 2),
+                'total_ton': round(struct_ton + joist_ton, 2)
             })
 
         # 5. Recent Activities (Recent Projects)
@@ -323,7 +339,9 @@ class DashboardStatsView(APIView):
             'barData': bar_data,
             'recentActivities': recent_activities,
             'announcements': announcements_list,
-            'total_won_tonnage': round(total_won_tonnage, 2)
+            'total_won_tonnage': round(total_won_tonnage, 2),
+            'total_won_structural_tonnage': round(total_won_structural_tonnage, 2),
+            'total_won_joist_tonnage': round(total_won_joist_tonnage, 2)
         })
 
 

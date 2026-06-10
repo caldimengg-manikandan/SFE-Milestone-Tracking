@@ -1,5 +1,5 @@
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes, parser_classes
+from rest_framework.decorators import api_view, permission_classes, parser_classes, authentication_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -13,16 +13,17 @@ from .models import User
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
-    """Authenticate user and return JWT token."""
+    """Authenticate user and return JWT token inside HttpOnly cookie."""
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.validated_data['user']
     refresh = RefreshToken.for_user(user)
-    return Response({
-        'token': str(refresh.access_token),
-        'refresh': str(refresh),
+    
+    response = Response({
+        'token': str(refresh.access_token),  # Keep as fallback for non-cookie header clients
         'user': {
             'id': user.id,
             'name': user.get_full_name() or user.username,
@@ -30,19 +31,49 @@ def login_view(request):
             'role': user.role,
         },
     })
+    
+    response.set_cookie(
+        key='access_token',
+        value=str(refresh.access_token),
+        httponly=True,
+        secure=not settings.DEBUG,  # HTTPS only in production
+        samesite='Lax',
+        max_age=24 * 60 * 60,  # 1 day
+    )
+    return response
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def register_view(request):
-    """Register a new user."""
+    """Register a new user and set cookie."""
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.save()
     refresh = RefreshToken.for_user(user)
-    return Response({
+    
+    response = Response({
         'token': str(refresh.access_token),
         'user': UserSerializer(user).data,
     }, status=status.HTTP_201_CREATED)
+    
+    response.set_cookie(
+        key='access_token',
+        value=str(refresh.access_token),
+        httponly=True,
+        secure=not settings.DEBUG,
+        samesite='Lax',
+        max_age=24 * 60 * 60,
+    )
+    return response
+
+@api_view(['POST'])
+@permission_classes([AllowAny])
+def logout_view(request):
+    """Log out user by deleting the access_token cookie."""
+    response = Response({'message': 'Logged out successfully.'})
+    response.delete_cookie('access_token')
+    return response
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -51,6 +82,7 @@ def me_view(request):
     return Response(UserSerializer(request.user).data)
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def forgot_password_view(request):
     """Send OTP to user for password reset."""
@@ -81,6 +113,7 @@ def forgot_password_view(request):
         return Response({'message': 'If an account exists, an OTP has been sent.'})
 
 @api_view(['POST'])
+@authentication_classes([])
 @permission_classes([AllowAny])
 def reset_password_view(request):
     """Reset user password using OTP."""

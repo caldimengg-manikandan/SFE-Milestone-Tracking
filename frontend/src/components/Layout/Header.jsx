@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 import {
   Menu,
   Search,
@@ -82,7 +83,12 @@ export default function Header({ onMenuClick }) {
     return () => document.removeEventListener('mousedown', handleClick);
   }, []);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     sessionStorage.clear();
     navigate('/login');
   };
@@ -201,7 +207,7 @@ export default function Header({ onMenuClick }) {
           >
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center text-xs font-bold text-white shadow-sm overflow-hidden">
               {user.profile_picture ? (
-                <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '')}${user.profile_picture}`} alt="User" className="w-full h-full object-cover" />
+                <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${window.location.origin}${user.profile_picture}`} alt="User" className="w-full h-full object-cover" />
               ) : (
                 initials
               )}

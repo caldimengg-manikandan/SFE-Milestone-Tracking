@@ -28,7 +28,9 @@ export default function Dashboard() {
     pieData: [],
     barData: [],
     recentActivities: [],
-    total_won_tonnage: 0
+    total_won_tonnage: 0,
+    total_won_structural_tonnage: 0,
+    total_won_joist_tonnage: 0
   });
   const [error, setError] = useState('');
   const [expandedTaskId, setExpandedTaskId] = useState(null);
@@ -742,10 +744,10 @@ export default function Dashboard() {
             </div>
           </div>
 
-          {/* Activities Row */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Bar Chart */}
-            <div className="lg:col-span-2 bg-white border border-slate-300 p-8 flex flex-col gap-6">
+          {/* Charts Row (Parallel 50/50 Split) */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Capacity Utilization Summary Card */}
+            <div className="bg-white border border-slate-300 p-8 flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Capacity Utilization Summary</h3>
@@ -1017,52 +1019,125 @@ export default function Dashboard() {
               )}
             </div>
 
-            <div className="space-y-6">
-              {/* Recent Activity */}
-              <div className="bg-white border border-slate-300 p-8">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Operations Log</h3>
-                <div className="space-y-5">
-                  {data.recentActivities.map((a) => (
-                    <div key={a.id} className="flex items-start gap-4">
-                      <div className={`w-8 h-8 flex items-center justify-center shrink-0 mt-0.5 ${a.type === 'success' ? 'bg-emerald-50' : a.type === 'warning' ? 'bg-amber-50' : 'bg-slate-50'
-                        }`}>
-                        {a.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> :
-                          a.type === 'warning' ? <AlertTriangle className="w-4 h-4 text-amber-600" /> :
-                            <Clock className="w-4 h-4 text-slate-600" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{a.action}</p>
-                        <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{a.project} · {a.time}</p>
-                      </div>
-                    </div>
-                  ))}
+            {/* Tonnage Loading Summary Card */}
+            <div className="bg-white border border-slate-300 p-8 flex flex-col gap-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Tonnage Loading Summary</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Tonnage Loading</p>
                 </div>
               </div>
 
-              {/* Announcements */}
-              <div className="bg-white border border-slate-300 p-8">
-                <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
-                <div className="space-y-4">
-                  {data.announcements && data.announcements.length > 0 ? (
-                    data.announcements.map((a) => (
-                      <div
-                        key={a.id}
-                        className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
-                        onClick={() => setSelectedNotice(a)}
-                        title="Click to view details"
-                      >
-                        <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${
-                          a.priority === 'high' ? 'bg-red-500' :
-                          a.priority === 'medium' ? 'bg-amber-500' :
-                          'bg-slate-400'
-                        }`} />
-                        <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center py-4">No active notices</p>
-                  )}
+              {/* The 3 KPI Cards inside Tonnage Loading Summary Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Card 1: Structural Tonnage */}
+                <div className="bg-blue-50/50 p-4 border border-blue-200 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-blue-100 flex items-center justify-center text-blue-600 rounded">
+                    <Box className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-blue-600/90 uppercase tracking-wider">Structural Tonnage</p>
+                    <h4 className="text-lg font-black text-slate-800 mt-0.5">
+                      {data.total_won_structural_tonnage ? data.total_won_structural_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
+                    </h4>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                  </div>
                 </div>
+
+                {/* Card 2: Joist Tonnage */}
+                <div className="bg-amber-50/50 p-4 border border-amber-200 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-amber-100 flex items-center justify-center text-amber-600 rounded">
+                    <TrendingUp className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-amber-600/90 uppercase tracking-wider">Joist Tonnage</p>
+                    <h4 className="text-lg font-black text-slate-800 mt-0.5">
+                      {data.total_won_joist_tonnage ? data.total_won_joist_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
+                    </h4>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                  </div>
+                </div>
+
+                {/* Card 3: Total Tonnage */}
+                <div className="bg-violet-50/50 p-4 border border-violet-200 flex items-center gap-4">
+                  <div className="w-10 h-10 bg-violet-100 flex items-center justify-center text-violet-600 rounded">
+                    <Scale className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-violet-600/90 uppercase tracking-wider">Total Tonnage</p>
+                    <h4 className="text-lg font-black text-slate-800 mt-0.5">
+                      {data.total_won_tonnage ? data.total_won_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
+                    </h4>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex-1 min-h-[380px] w-full relative">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ComposedChart data={data.barData} barGap={6} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                    <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1.5} />
+                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
+                    <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+                    
+                    {/* Stacked Bars for monthly Structural Tons and Joist Tons */}
+                    <Bar dataKey="struct_ton" stackId="tonnage" name="Structural Tons" fill="#6366f1" radius={0} />
+                    <Bar dataKey="joist_ton" stackId="tonnage" name="Joist Tons" fill="#fbbf24" radius={0} />
+                  </ComposedChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+
+          {/* Logs & Notices Row */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Recent Activity */}
+            <div className="lg:col-span-2 bg-white border border-slate-300 p-8">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Operations Log</h3>
+              <div className="space-y-5">
+                {data.recentActivities.map((a) => (
+                  <div key={a.id} className="flex items-start gap-4">
+                    <div className={`w-8 h-8 flex items-center justify-center shrink-0 mt-0.5 ${a.type === 'success' ? 'bg-emerald-50' : a.type === 'warning' ? 'bg-amber-50' : 'bg-slate-50'
+                      }`}>
+                      {a.type === 'success' ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> :
+                        a.type === 'warning' ? <AlertTriangle className="w-4 h-4 text-amber-600" /> :
+                          <Clock className="w-4 h-4 text-slate-600" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-black text-slate-800 uppercase tracking-widest">{a.action}</p>
+                      <p className="text-[9px] text-slate-400 font-bold uppercase tracking-tighter mt-1">{a.project} · {a.time}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Announcements */}
+            <div className="bg-white border border-slate-300 p-8">
+              <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em] mb-6">Internal Notices</h3>
+              <div className="space-y-4">
+                {data.announcements && data.announcements.length > 0 ? (
+                  data.announcements.map((a) => (
+                    <div
+                      key={a.id}
+                      className="flex items-start gap-3 cursor-pointer hover:bg-slate-50 p-1.5 -mx-1.5 rounded transition-colors"
+                      onClick={() => setSelectedNotice(a)}
+                      title="Click to view details"
+                    >
+                      <div className={`w-1.5 h-1.5 mt-1.5 shrink-0 rounded-full ${
+                        a.priority === 'high' ? 'bg-red-500' :
+                        a.priority === 'medium' ? 'bg-amber-500' :
+                        'bg-slate-400'
+                      }`} />
+                      <p className="text-[10px] text-slate-600 font-bold uppercase tracking-wide leading-relaxed">{a.title}</p>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider text-center py-4">No active notices</p>
+                )}
               </div>
             </div>
           </div>

@@ -1,8 +1,9 @@
 import axios from 'axios';
 
 const api = axios.create({
-  // Use /SFE-api/ for production proxying, fallback to localhost for dev
-  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/SFE-api/' : 'http://localhost:8000/api'),
+  // Use /SFE-api/ for production proxying, fallback to local proxy /api for dev
+  baseURL: import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/SFE-api/' : '/api'),
+  withCredentials: true,
 });
 
 // Add a request interceptor to include the JWT token from sessionStorage
@@ -25,7 +26,8 @@ api.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       sessionStorage.clear();
-      window.location.href = '/login';
+      const base = import.meta.env.BASE_URL || '/';
+      window.location.href = base.endsWith('/') ? `${base}login` : `${base}/login`;
     }
     return Promise.reject(error);
   }
@@ -34,6 +36,7 @@ api.interceptors.response.use(
 /* ── Authentication API ── */
 export const authAPI = {
   login: (data) => api.post('/auth/login/', data),
+  logout: () => api.post('/auth/logout/'),
   register: (data) => api.post('/auth/register/', data),
   forgotPassword: (email) => api.post('/auth/forgot-password/', { email }),
   resetPassword: (data) => api.post('/auth/reset-password/', data),

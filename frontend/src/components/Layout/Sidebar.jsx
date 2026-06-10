@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { authAPI } from '../../services/api';
 import {
   LayoutDashboard,
   Users,
@@ -117,7 +118,12 @@ export default function Sidebar({
         .slice(0, 2)
     : 'SF';
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authAPI.logout();
+    } catch (e) {
+      console.error('Logout error:', e);
+    }
     sessionStorage.clear();
     navigate('/login');
   };
@@ -277,7 +283,7 @@ export default function Sidebar({
             <div className="relative shrink-0">
               <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center text-[13px] font-bold text-white ring-2 ring-white/10 overflow-hidden">
                 {user.profile_picture ? (
-                  <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${(import.meta.env.VITE_API_URL || 'http://localhost:8000/api').replace('/api', '')}${user.profile_picture}`} alt="Avatar" className="w-full h-full object-cover" />
+                  <img src={user.profile_picture.startsWith('http') ? user.profile_picture : `${window.location.origin}${user.profile_picture}`} alt="Avatar" className="w-full h-full object-cover" />
                 ) : (
                   initials
                 )}

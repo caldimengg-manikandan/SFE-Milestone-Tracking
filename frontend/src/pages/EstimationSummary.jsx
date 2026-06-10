@@ -504,18 +504,23 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     // 3. Decision filter
     const matchesDecision = decisionFilter === 'all' || rfq.decision_to_bid === decisionFilter;
 
-    // 4. Status filter
     let estStatus = 'yet to start';
     const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
     const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
     if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
-      const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
-      if (savedStatus === 'submitted') {
-        estStatus = 'submitted';
-      } else if (savedStatus === 'rebid') {
-        estStatus = 'rebid';
+      const vals = calculateEstimationValues(matchedProj);
+      const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
+      if (isZero) {
+        estStatus = 'yet to start';
       } else {
-        estStatus = 'in progress';
+        const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+        if (savedStatus === 'submitted') {
+          estStatus = 'submitted';
+        } else if (savedStatus === 'rebid') {
+          estStatus = 'rebid';
+        } else {
+          estStatus = 'in progress';
+        }
       }
     }
     const matchesStatus = statusFilter === 'all' || estStatus === statusFilter;
@@ -614,13 +619,18 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       
       let estStatus = 'yet to start';
       if (matched && matched.estimation_data && Object.keys(matched.estimation_data).length > 0) {
-        const savedStatus = matched.estimation_data?.projectInfo?.estimationStatus;
-        if (savedStatus === 'submitted') {
-          estStatus = 'submitted';
-        } else if (savedStatus === 'rebid') {
-          estStatus = 'rebid';
+        const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
+        if (isZero) {
+          estStatus = 'yet to start';
         } else {
-          estStatus = 'in progress';
+          const savedStatus = matched.estimation_data?.projectInfo?.estimationStatus;
+          if (savedStatus === 'submitted') {
+            estStatus = 'submitted';
+          } else if (savedStatus === 'rebid') {
+            estStatus = 'rebid';
+          } else {
+            estStatus = 'in progress';
+          }
         }
       }
       const formattedStatus = estStatus === 'submitted' ? 'Submitted' : (estStatus === 'rebid' ? 'Rebid' : (estStatus === 'in progress' ? 'In Progress' : 'Yet to Start'));
@@ -850,6 +860,23 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           profitAndMisc: 0
                         };
 
+                    let estStatus = 'yet to start';
+                    if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
+                      const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
+                      if (isZero) {
+                        estStatus = 'yet to start';
+                      } else {
+                        const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+                        if (savedStatus === 'submitted') {
+                          estStatus = 'submitted';
+                        } else if (savedStatus === 'rebid') {
+                          estStatus = 'rebid';
+                        } else {
+                          estStatus = 'in progress';
+                        }
+                      }
+                    }
+
                     return (
                       <tr key={rfq.id} className="group transition-colors hover:bg-slate-50/50">
                         {/* Frozen Columns Body Cells */}
@@ -926,56 +953,40 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           </span>
                         </td>
                         
-                        {(() => {
-                          let estStatus = 'yet to start';
-                          if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
-                            const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
-                            if (savedStatus === 'submitted') {
-                              estStatus = 'submitted';
-                            } else if (savedStatus === 'rebid') {
-                              estStatus = 'rebid';
-                            } else {
-                              estStatus = 'in progress';
-                            }
-                          }
-
-                          return (
-                            <td className="px-1.5 py-2.5 border-r border-slate-100 text-center w-[85px] min-w-[85px] max-w-[85px]">
-                              <button
-                                onClick={() => handleStatusClick(estStatus, matchedProj, rfq)}
-                                className="focus:outline-none hover:scale-105 transition-transform cursor-pointer"
-                                title={estStatus === 'submitted' ? "Click to rebid" : "Click to go to estimation module"}
-                              >
-                                {getStatusBadge(estStatus)}
-                              </button>
-                            </td>
-                          );
-                        })()}
+                        <td className="px-1.5 py-2.5 border-r border-slate-100 text-center w-[85px] min-w-[85px] max-w-[85px]">
+                          <button
+                            onClick={() => handleStatusClick(estStatus, matchedProj, rfq)}
+                            className="focus:outline-none hover:scale-105 transition-transform cursor-pointer"
+                            title={estStatus === 'submitted' ? "Click to rebid" : "Click to go to estimation module"}
+                          >
+                            {getStatusBadge(estStatus)}
+                          </button>
+                        </td>
 
                         {/* Scrolling Columns Body Cells */}
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right font-black text-slate-800 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.finalBidAmount)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.finalBidAmount)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right font-extrabold text-amber-600 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.miscellaneousFinalPrice)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.miscellaneousFinalPrice)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency((vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0))}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency((vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0))}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.draftingAndDirects)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.draftingAndDirects)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-650 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.directCostOverhead)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.directCostOverhead)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.totalBuyoutCosts)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.totalBuyoutCosts)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-650 w-[100px] min-w-[100px] max-w-[100px]">
-                          {formatCurrency(vals.buyoutOverhead)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.buyoutOverhead)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[95px] min-w-[95px] max-w-[95px]">
-                          {formatCurrency(vals.profitAndMisc)}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency(vals.profitAndMisc)}
                         </td>
                       </tr>
                     );

@@ -1,11 +1,12 @@
 import axios from 'axios'
 import { useAuthStore } from '../store/authStore'
 
-const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/SFE-api/' : 'http://localhost:8000/api')
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/SFE-api/' : '/api')
 
 export const api = axios.create({
   baseURL: BASE_URL,
   headers: { 'Content-Type': 'application/json' },
+  withCredentials: true,
 })
 
 // Attach JWT token to every request
@@ -23,6 +24,8 @@ api.interceptors.response.use(
     if (error.response?.status === 401 && !original._retry) {
       original._retry = true
       const { refreshToken, updateToken, logout } = useAuthStore.getState()
+      const base = import.meta.env.BASE_URL || '/';
+      const loginPath = base.endsWith('/') ? `${base}login` : `${base}/login`;
       if (refreshToken) {
         try {
           const { data } = await axios.post(`${BASE_URL}/api/auth/token/refresh/`, {
@@ -33,11 +36,11 @@ api.interceptors.response.use(
           return api(original)
         } catch {
           logout()
-          window.location.href = '/login'
+          window.location.href = loginPath
         }
       } else {
         logout()
-        window.location.href = '/login'
+        window.location.href = loginPath
       }
     }
     return Promise.reject(error)
@@ -49,6 +52,7 @@ api.interceptors.response.use(
 // Auth
 export const authAPI = {
   login: (credentials) => api.post('/rfq/accounts/login/', credentials),
+  logout: () => api.post('/rfq/accounts/logout/'),
   me: () => api.get('/rfq/accounts/me/'),
 }
 

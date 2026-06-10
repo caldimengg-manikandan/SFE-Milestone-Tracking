@@ -432,7 +432,7 @@ export default function EstimationModel() {
   }, []);
 
   // --- State for Saving ---
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSaving, setIsSaving] = useState(null);
 
   const handleProjectChange = async (e) => {
     const rfqId = e.target.value;
@@ -552,14 +552,25 @@ export default function EstimationModel() {
   }, []);
 
   const handleSaveToDatabase = async (status = 'in progress') => {
+    const isZero = totalTons === 0 && totalLaborHours === 0 && totalDirectCosts === 0 && finalBidAmount === 0 && miscellaneousFinalPrice === 0;
+    const finalStatus = isZero ? 'yet to start' : status;
+
+    if (status === 'submitted') {
+      const confirmMsg = isZero 
+        ? "Are you sure you want to submit? Since all values are 0, this will reset the project status to Yet to Start."
+        : "Are you sure you want to submit? This will save the changes and submit the estimation.";
+      if (!window.confirm(confirmMsg)) {
+        return;
+      }
+    }
     try {
-      setIsSaving(true);
+      setIsSaving(status);
       
       let currentProjectId = projectInfo.projectId;
       
       const nextProjectInfo = {
         ...projectInfo,
-        estimationStatus: (status === 'in progress' && projectInfo.estimationStatus === 'rebid') ? 'rebid' : status
+        estimationStatus: finalStatus === 'yet to start' ? 'yet to start' : ((status === 'in progress' && projectInfo.estimationStatus === 'rebid') ? 'rebid' : status)
       };
       
       if (!currentProjectId) {
@@ -567,7 +578,7 @@ export default function EstimationModel() {
         const selectedRfq = wonRfqs.find(r => String(r.id) === String(selectedRfqId));
         if (!selectedRfq) {
           toast.error('No project/RFQ selected');
-          setIsSaving(false);
+          setIsSaving(null);
           return;
         }
         
@@ -618,9 +629,9 @@ export default function EstimationModel() {
         }
         
         if (status === 'submitted') {
-          toast.success('Project created and estimation submitted successfully!');
+          toast.success(isZero ? 'Project created and reset to Yet to Start!' : 'Project created and estimation submitted successfully!');
         } else {
-          toast.success('Project created and draft saved successfully!');
+          toast.success(isZero ? 'Project created and reset to Yet to Start!' : 'Project created and draft saved successfully!');
         }
       } else {
         // Existing Project! Just update it.
@@ -635,11 +646,14 @@ export default function EstimationModel() {
             estimationSections
           }
         };
+        if (isZero) {
+          payload.status = 'Yet to Start';
+        }
         await projectAPI.patch(currentProjectId, payload);
         if (status === 'submitted') {
-          toast.success('Estimation submitted successfully!');
+          toast.success(isZero ? 'Project reset to Yet to Start!' : 'Estimation submitted successfully!');
         } else {
-          toast.success('Draft saved successfully!');
+          toast.success(isZero ? 'Project reset to Yet to Start!' : 'Draft saved successfully!');
         }
         if (outletContext?.refreshProject) {
           await outletContext.refreshProject();
@@ -673,7 +687,7 @@ export default function EstimationModel() {
       console.error('Failed to save calculations:', err);
       toast.error('Failed to save calculations');
     } finally {
-      setIsSaving(false);
+      setIsSaving(null);
     }
   };
 
@@ -2330,11 +2344,11 @@ export default function EstimationModel() {
         <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => handleSaveToDatabase('in progress')}
-            disabled={!selectedRfqId || isSaving}
+            disabled={!selectedRfqId || !!isSaving}
             className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-300 rounded-lg shadow-sm transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed rounded-xl"
             title="Save draft (In Progress)"
           >
-            {isSaving ? (
+            {isSaving === 'in progress' ? (
               <Loader2 className="w-4 h-4 animate-spin text-slate-500" />
             ) : (
               <Save className="w-4 h-4 text-slate-500" />
@@ -2343,11 +2357,11 @@ export default function EstimationModel() {
           </button>
           <button
             onClick={() => handleSaveToDatabase('submitted')}
-            disabled={!selectedRfqId || isSaving}
+            disabled={!selectedRfqId || !!isSaving}
             className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white font-bold text-xs shadow-md shadow-amber-500/10 hover:shadow-amber-500/20 rounded-lg transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-amber-500/20"
             title="Submit estimation (Submitted)"
           >
-            {isSaving ? (
+            {isSaving === 'submitted' ? (
               <Loader2 className="w-4 h-4 animate-spin text-white" />
             ) : (
               <Save className="w-4 h-4 text-white" />
