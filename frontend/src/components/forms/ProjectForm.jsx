@@ -208,7 +208,7 @@ export default function ProjectForm({
 
     const showFieldMeasure = (form.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
 
-    const headersList = ["SEQ #", "Tons", "Item Description", "Category", "Scheduled OFA", "Actual OFA", "Scheduled BFA", "Actual BFA"];
+    const headersList = ["SEQ #", "Tons", "Item Description", "Scheduled OFA", "Actual OFA", "Scheduled BFA", "Actual BFA"];
     if (showFieldMeasure) {
       headersList.push("Field Measure");
     }
@@ -227,7 +227,6 @@ export default function ProjectForm({
         s.seq_no,
         s.tons,
         s.item_description,
-        s.category || '',
         s.scheduled_ofa_date,
         s.actual_ofa_date || '-',
         s.scheduled_bfa_date,
@@ -255,7 +254,6 @@ export default function ProjectForm({
       { cellWidth: 8, halign: 'center' },   // SEQ #
       { cellWidth: 9, halign: 'center' },  // Tons
       { cellWidth: 'auto' }, // Item Description
-      { cellWidth: 14 },  // Category
       { cellWidth: 12, halign: 'center' },  // Scheduled OFA Date
       { cellWidth: 12, halign: 'center' },  // Actual OFA Date
       { cellWidth: 12, halign: 'center' },  // Scheduled BFA Date
@@ -634,7 +632,7 @@ export default function ProjectForm({
         doc.setFontSize(6.5);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(100, 116, 139); // Slate 500
-        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons | ${s.category || 'N/A'}`, 14, yRow + 8.5);
+        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons`, 14, yRow + 8.5);
 
         // Draw Gantt Bar
         const { start, end } = getSequenceRange(s);

@@ -133,16 +133,24 @@ class Capacity(models.Model):
     manpower_assigned = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     process = models.CharField(max_length=200, blank=True, null=True)
     capacity_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    capacity_per_month = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    capacity_per_year = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     rate_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     @property
     def rate_per_month(self):
+        # Use stored capacity_per_month if set, else compute from rate_per_day
+        if self.capacity_per_month and float(str(self.capacity_per_month)) > 0:
+            return float(str(self.capacity_per_month))
         return float(str(self.rate_per_day)) * 30
 
     @property
     def rate_per_year(self):
+        # Use stored capacity_per_year if set, else compute from rate_per_day
+        if self.capacity_per_year and float(str(self.capacity_per_year)) > 0:
+            return float(str(self.capacity_per_year))
         return float(str(self.rate_per_day)) * 360
 
     def __str__(self):
