@@ -5,118 +5,8 @@ import { Download, X, Save, FolderKanban, LayoutTemplate, CalendarDays, ChevronR
 import StructuralScheduleForm from './StructuralScheduleForm';
 import { customerAPI, detailerAPI, employeeAPI, rfqAPI } from '../../services/api';
 import FormattedDateInput from './FormattedDateInput';
+import SearchableDropdown from '../SearchableDropdown';
 
-function SearchableDropdown({ options, value, onChange, placeholder, className, containerClassName = "w-full", loading }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
-  
-  const selectedOption = options.find(opt => String(opt.id) === String(value));
-  
-  useEffect(() => {
-    if (selectedOption) {
-      setSearchTerm(selectedOption.label);
-    } else {
-      setSearchTerm('');
-    }
-  }, [value, selectedOption]);
-
-  const filteredOptions = options.filter(opt =>
-    (opt.label || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleSelect = (opt) => {
-    onChange({ target: { value: opt.id } });
-    setSearchTerm(opt.label);
-    setIsOpen(false);
-  };
-
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (!event.target.closest('.searchable-dropdown-container')) {
-        setIsOpen(false);
-        if (selectedOption) {
-          setSearchTerm(selectedOption.label);
-        } else {
-          setSearchTerm('');
-        }
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [selectedOption]);
-
-  return (
-    <div className={`relative searchable-dropdown-container ${containerClassName}`}>
-      <div className="relative flex items-center">
-        <input
-          type="text"
-          placeholder={placeholder}
-          value={searchTerm}
-          onChange={(e) => {
-            setSearchTerm(e.target.value);
-            setIsOpen(true);
-            if (e.target.value === '') {
-              onChange({ target: { value: '' } });
-            }
-          }}
-          onFocus={() => setIsOpen(true)}
-          onClick={() => setIsOpen(true)}
-          className={`w-full pr-16 ${className}`}
-        />
-        <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1 text-slate-400">
-          {value && (
-            <button
-              type="button"
-              onClick={(e) => {
-                e.stopPropagation();
-                onChange({ target: { value: '' } });
-                setSearchTerm('');
-                setIsOpen(false);
-              }}
-              className="p-1 hover:bg-slate-100 rounded text-slate-400 hover:text-slate-600 focus:outline-none"
-              title="Clear selection"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          )}
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              setIsOpen(!isOpen);
-            }}
-            className="p-1 hover:bg-slate-50 rounded focus:outline-none text-slate-400 focus:outline-none"
-          >
-            {loading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-        </div>
-      </div>
-
-      {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-1.5 max-h-60 overflow-y-auto bg-white border border-slate-200 rounded-[1.25rem] shadow-xl divide-y divide-slate-100 animate-fade-in">
-          {filteredOptions.length > 0 ? (
-            filteredOptions.map((opt) => (
-              <button
-                key={opt.id}
-                type="button"
-                onClick={() => handleSelect(opt)}
-                className={`w-full text-left px-4 py-3 text-xs font-bold transition-all hover:bg-slate-50 ${String(opt.id) === String(value) ? 'bg-amber-50 text-amber-600' : 'text-slate-700'}`}
-              >
-                {opt.label}
-              </button>
-            ))
-          ) : (
-            <p className="px-4 py-3 text-xs text-slate-400 italic text-center">No matching options found</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
-}
 
 export default function ProjectForm({
   schedules,
@@ -927,33 +817,27 @@ export default function ProjectForm({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Detailer Name</label>
-                    <select
+                    <SearchableDropdown
+                      options={detailers.map(d => d.name)}
                       value={form.detailer_name || ''}
                       disabled={mode === 'view'}
                       onChange={e => setForm({ ...form, detailer_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                    >
-                      <option value="">Select Detailer</option>
-                      {detailers.map(d => (
-                        <option key={d.id} value={d.name}>{d.name}</option>
-                      ))}
-                    </select>
+                      placeholder="Select Detailer"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none transition-all"
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Manager</label>
-                    <select
+                    <SearchableDropdown
+                      options={employees
+                        .filter(emp => emp.designation === 'Project Manager')
+                        .map(emp => emp.name)}
                       value={form.project_manager_name || ''}
                       disabled={mode === 'view'}
                       onChange={e => setForm({ ...form, project_manager_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                    >
-                      <option value="">Select PM</option>
-                      {employees
-                        .filter(emp => emp.designation === 'Project Manager')
-                        .map((emp) => (
-                          <option key={emp.id} value={emp.name}>{emp.name}</option>
-                        ))}
-                    </select>
+                      placeholder="Select PM"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none transition-all"
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Erection Date</label>
@@ -979,29 +863,25 @@ export default function ProjectForm({
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Priority</label>
-                    <select
+                    <SearchableDropdown
+                      options={['Low', 'Medium', 'High']}
                       value={form.priority}
                       disabled={mode === 'view'}
                       onChange={e => setForm({ ...form, priority: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                    >
-                      <option value="Low">Low</option>
-                      <option value="Medium">Medium</option>
-                      <option value="High">High</option>
-                    </select>
+                      placeholder="Select Priority"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none transition-all"
+                    />
                   </div>
                   <div>
                     <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 ml-1">Project Status</label>
-                    <select
+                    <SearchableDropdown
+                      options={['In Progress', 'Yet to Start', 'Completed']}
                       value={form.status}
                       disabled={mode === 'view'}
                       onChange={e => setForm({ ...form, status: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none"
-                    >
-                      <option value="In Progress">In Progress</option>
-                      <option value="Yet to Start">Yet to Start</option>
-                      <option value="Completed">Completed</option>
-                    </select>
+                      placeholder="Select Status"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none transition-all"
+                    />
                   </div>
                   <div className="lg:col-span-2 grid grid-cols-3 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                     <div>
@@ -1034,29 +914,25 @@ export default function ProjectForm({
                   <div className="lg:col-span-2 grid grid-cols-2 gap-4 p-4 rounded-2xl bg-amber-50/50 border border-amber-100">
                     <div className="flex flex-col justify-between">
                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">plant Name</label>
-                      <select
+                      <SearchableDropdown
+                        options={['plant1', 'plant2', 'plant3']}
                         value={form.plant_name || ''}
                         disabled={mode === 'view'}
                         onChange={e => setForm({ ...form, plant_name: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
-                      >
-                        <option value="">Select plant</option>
-                        <option value="plant1">plant1</option>
-                        <option value="plant2">plant2</option>
-                        <option value="plant3">plant3</option>
-                      </select>
+                        placeholder="Select plant"
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none transition-all"
+                      />
                     </div>
                     <div className="flex flex-col justify-between">
                       <label className="block text-[10px] font-bold text-amber-700 uppercase mb-1.5">Is Scheduled Field Measure Date Required?</label>
-                      <select
+                      <SearchableDropdown
+                        options={['Yes', 'No']}
                         value={form.schedule_field_measure_required || 'Yes'}
                         disabled={mode === 'view'}
                         onChange={e => setForm({ ...form, schedule_field_measure_required: e.target.value })}
-                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none focus:border-amber-400 appearance-none"
-                      >
-                        <option value="Yes">Yes</option>
-                        <option value="No">No</option>
-                      </select>
+                        placeholder="Select Option"
+                        className="w-full px-4 py-3 rounded-xl border border-amber-200 bg-white text-sm outline-none transition-all"
+                      />
                     </div>
                   </div>
                 </div>

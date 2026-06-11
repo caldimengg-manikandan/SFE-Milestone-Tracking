@@ -4,6 +4,8 @@ import api from "../../services/api";
 import { useAutoSave } from "../../hooks/useAutoSave";
 import AutoSaveIndicator from "../../components/AutoSaveIndicator";
 import { FileText, Users, FileSignature, DollarSign, Eye, List } from "lucide-react";
+import SearchableDropdown from "../../components/SearchableDropdown";
+
 
 // Reusable custom select component that allows a write-in fallback
 function SelectWithCustom({ label, name, options, value, onChange, disabled }) {
@@ -64,21 +66,15 @@ function SelectWithCustom({ label, name, options, value, onChange, disabled }) {
             )}
           </div>
         ) : (
-          <select
+          <SearchableDropdown
             name={`${name}_select`}
             disabled={disabled}
-            className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all cursor-pointer"
+            className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all cursor-pointer"
             value={value || ""}
             onChange={handleSelectChange}
-          >
-            <option value="">-- Select --</option>
-            {options.map((opt) => (
-              <option key={opt} value={opt}>
-                {opt}
-              </option>
-            ))}
-            <option value="__custom__">Other (Custom)...</option>
-          </select>
+            options={[...options, { id: '__custom__', label: 'Other (Custom)...' }]}
+            placeholder="-- Select --"
+          />
         )}
       </div>
     </div>
@@ -470,40 +466,30 @@ export default function CoreTab() {
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Sales Representative / PM
                 </label>
-                <select
+                <SearchableDropdown
                   name="salesman"
                   disabled={isReadOnly}
-                  className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all"
+                  options={users.map(u => ({ id: u.id, label: `${u.first_name} ${u.last_name || u.username}` }))}
                   value={form.salesman || ""}
                   onChange={handleChange}
-                >
-                  <option value="">Select Rep</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.first_name} {u.last_name || u.username}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select Rep"
+                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all"
+                />
               </div>
 
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
                   Project Manager (PM)
                 </label>
-                <select
+                <SearchableDropdown
                   name="pm"
                   disabled={isReadOnly}
-                  className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all"
+                  options={users.map(u => ({ id: u.id, label: `${u.first_name} ${u.last_name || u.username}` }))}
                   value={form.pm || ""}
                   onChange={handleChange}
-                >
-                  <option value="">Select PM</option>
-                  {users.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.first_name} {u.last_name || u.username}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Select PM"
+                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all"
+                />
               </div>
             </div>
 
@@ -538,20 +524,15 @@ export default function CoreTab() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div className="sm:col-span-2">
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Foreman User</label>
-                    <select
+                    <SearchableDropdown
                       name="site_foreman"
                       disabled={isReadOnly}
-                      className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
+                      options={users.map(u => ({ id: u.id, label: `${u.first_name} ${u.last_name || u.username}` }))}
                       value={form.site_foreman || ""}
                       onChange={(e) => handleForemanChange(e.target.value)}
-                    >
-                      <option value="">Select Foreman</option>
-                      {users.map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.first_name} {u.last_name || u.username}
-                        </option>
-                      ))}
-                    </select>
+                      placeholder="Select Foreman"
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
+                    />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Phone</label>
@@ -606,22 +587,17 @@ export default function CoreTab() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Company</label>
-                    <select
+                    <SearchableDropdown
                       name="customer"
                       disabled={isReadOnly}
-                      className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
+                      options={contacts
+                        .filter((c) => c.contact_type === "customer")
+                        .map((c) => ({ id: c.id, label: `${c.company} (${c.name})` }))}
                       value={form.customer || ""}
                       onChange={(e) => handleContactChange("customer", e.target.value)}
-                    >
-                      <option value="">Select Customer</option>
-                      {contacts
-                        .filter((c) => c.contact_type === "customer")
-                        .map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.company} ({c.name})
-                          </option>
-                        ))}
-                    </select>
+                      placeholder="Select Customer"
+                      className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-1.5 text-xs outline-none transition-all"
+                    />
                   </div>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-slate-500">Contact Person</label>

@@ -5,6 +5,8 @@ import { useAutoSave } from "../../hooks/useAutoSave";
 import AutoSaveIndicator from "../../components/AutoSaveIndicator";
 import CollapsibleRightSidebar from "../../components/CollapsibleRightSidebar";
 import { Plus, Trash } from "lucide-react";
+import SearchableDropdown from "../../components/SearchableDropdown";
+
 
 export default function MiscMetalsTab() {
   const { projectId, project } = useOutletContext();
@@ -488,18 +490,20 @@ export default function MiscMetalsTab() {
             <form onSubmit={handleAddStair} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Stair Type</label>
-                <select
-                  className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono"
+                <SearchableDropdown
+                  options={[
+                    { id: 'picket_rail', label: 'Stair w/ Picket Rail' },
+                    { id: 'mesh_rail', label: 'Stair w/ Mesh Rail' },
+                    { id: 'heavy_rail', label: 'Stair w/ Rail Heavy (MC12×20.7)' },
+                    { id: 'ts_rail', label: 'Stair w/ Rail TS' },
+                    { id: 'mesh_heavy_rail', label: 'Stair w/ Mesh Rail Heavy (MC12×20.7)' },
+                    { id: 'no_rail', label: 'Stair (MC12×10.6)' }
+                  ]}
                   value={stairForm.stair_type}
                   onChange={(e) => setStairForm({ ...stairForm, stair_type: e.target.value })}
-                >
-                  <option value="picket_rail">Stair w/ Picket Rail</option>
-                  <option value="mesh_rail">Stair w/ Mesh Rail</option>
-                  <option value="heavy_rail">Stair w/ Rail Heavy (MC12×20.7)</option>
-                  <option value="ts_rail">Stair w/ Rail TS</option>
-                  <option value="mesh_heavy_rail">Stair w/ Mesh Rail Heavy (MC12×20.7)</option>
-                  <option value="no_rail">Stair (MC12×10.6)</option>
-                </select>
+                  placeholder="Select Stair Type"
+                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono"
+                />
               </div>
 
               <div>
@@ -622,20 +626,22 @@ export default function MiscMetalsTab() {
             <form onSubmit={handleAddItem} className="space-y-4">
               <div>
                 <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">Category</label>
-                <select
-                  className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono"
+                <SearchableDropdown
+                  options={[
+                    { id: 'grating', label: 'Grating' },
+                    { id: 'ladder', label: 'Ladders' },
+                    { id: 'platform', label: 'Platforms' },
+                    { id: 'safety_cage', label: 'Safety Cages' },
+                    { id: 'bollard', label: 'Bollards' },
+                    { id: 'hatch_frame', label: 'Hatch Frames' },
+                    { id: 'railing', label: 'Railings' },
+                    { id: 'other', label: 'Other' }
+                  ]}
                   value={itemForm.category}
                   onChange={(e) => setItemForm({ ...itemForm, category: e.target.value })}
-                >
-                  <option value="grating">Grating</option>
-                  <option value="ladder">Ladders</option>
-                  <option value="platform">Platforms</option>
-                  <option value="safety_cage">Safety Cages</option>
-                  <option value="bollard">Bollards</option>
-                  <option value="hatch_frame">Hatch Frames</option>
-                  <option value="railing">Railings</option>
-                  <option value="other">Other</option>
-                </select>
+                  placeholder="Select Category"
+                  className="w-full bg-white border border-slate-200 text-slate-800 rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono"
+                />
               </div>
 
               <div>

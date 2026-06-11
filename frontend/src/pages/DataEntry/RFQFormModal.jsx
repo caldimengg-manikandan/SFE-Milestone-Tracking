@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import { rfqAPI } from '../../api/client'
 import { X } from 'lucide-react'
 import FormattedDateInput from '../../components/forms/FormattedDateInput'
+import SearchableDropdown from '../../components/SearchableDropdown'
 
 export default function RFQFormModal({ customers, estimators, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -82,10 +83,13 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             </div>
             <div className="form-group">
               <label className="form-label">Type</label>
-              <select className="form-select" value={form.budget_type}
-                onChange={e => set('budget_type', e.target.value)}>
-                {['Budget','Final','Rebid'].map(v => <option key={v}>{v}</option>)}
-              </select>
+              <SearchableDropdown
+                options={['Budget','Final','Rebid']}
+                value={form.budget_type}
+                onChange={e => set('budget_type', e.target.value)}
+                placeholder="Select Type"
+                className="form-input"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Quote Date</label>
@@ -138,38 +142,50 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             </div>
             <div className="form-group">
               <label className="form-label">Customer</label>
-              <select className="form-select" value={form.customer}
-                onChange={e => set('customer', e.target.value)}>
-                <option value="">— Select —</option>
-                {customers.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <SearchableDropdown
+                options={customers.map(c => ({ id: c.id, label: c.name }))}
+                value={form.customer}
+                onChange={e => set('customer', e.target.value)}
+                placeholder="— Select Customer —"
+                className="form-input"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Decision to Bid</label>
-              <select className="form-select" value={form.decision_to_bid}
-                onChange={e => set('decision_to_bid', e.target.value)}>
-                {['Yes','No','NoBid','Bid'].map(v => <option key={v}>{v}</option>)}
-              </select>
+              <SearchableDropdown
+                options={['Yes','No','NoBid','Bid']}
+                value={form.decision_to_bid}
+                onChange={e => set('decision_to_bid', e.target.value)}
+                placeholder="Select Decision"
+                className="form-input"
+              />
             </div>
             <div className="form-group">
               <label className="form-label">Scope of work</label>
-              <select className="form-select" value={form.scope_of_work}
-                onChange={e => set('scope_of_work', e.target.value)}>
-                <option value="">None</option>
-                <option value="Detailing">Detailing</option>
-                <option value="Fabrication">Fabrication</option>
-                <option value="Erection">Erection</option>
-              </select>
+              <SearchableDropdown
+                options={[
+                  { id: '', label: 'None' },
+                  { id: 'Detailing', label: 'Detailing' },
+                  { id: 'Fabrication', label: 'Fabrication' },
+                  { id: 'Erection', label: 'Erection' }
+                ]}
+                value={form.scope_of_work}
+                onChange={e => set('scope_of_work', e.target.value)}
+                placeholder="Select Scope"
+                className="form-input"
+              />
             </div>
 
             {/* Row 6: Primary Estimator */}
             <div className="form-group">
               <label className="form-label">Primary Estimator</label>
-              <select className="form-select" value={form.primary_estimator}
-                onChange={e => set('primary_estimator', e.target.value)}>
-                <option value="">— Select —</option>
-                {estimators.map(e => <option key={e.id} value={e.id}>{e.initials}</option>)}
-              </select>
+              <SearchableDropdown
+                options={estimators.map(e => ({ id: e.id, label: e.initials }))}
+                value={form.primary_estimator}
+                onChange={e => set('primary_estimator', e.target.value)}
+                placeholder="— Select Estimator —"
+                className="form-input"
+              />
             </div>
           </div>
 

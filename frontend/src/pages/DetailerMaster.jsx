@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Layers, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2, ChevronDown, Eye } from 'lucide-react';
 import { detailerAPI } from '../services/api';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 export default function DetailerMaster() {
   const [detailers, setDetailers] = useState([]);
@@ -129,32 +130,24 @@ export default function DetailerMaster() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Name Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(detailers.map(d => d.name))].filter(Boolean)]}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Detailers</option>
-            {[...new Set(detailers.map(d => d.name))].filter(Boolean).map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Detailers"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
 
         {/* Code Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(detailers.map(d => d.code))].filter(Boolean)]}
             value={codeFilter}
             onChange={(e) => setCodeFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Codes</option>
-            {[...new Set(detailers.map(d => d.code))].filter(Boolean).map(code => (
-              <option key={code} value={code}>{code}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Codes"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
       </div>
 

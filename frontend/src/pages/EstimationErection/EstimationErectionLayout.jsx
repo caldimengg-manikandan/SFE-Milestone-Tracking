@@ -3,6 +3,8 @@ import { Outlet, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { projectAPI, rfqAPI } from '../../services/api';
 import { Layers, Loader2, HelpCircle } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import SearchableDropdown from '../../components/SearchableDropdown';
+
 
 export default function EstimationErectionLayout() {
   const [projects, setProjects] = useState([]);
@@ -156,18 +158,14 @@ export default function EstimationErectionLayout() {
               Loading...
             </div>
           ) : (
-            <select
+            <SearchableDropdown
+              options={dropdownOptions}
               value={selectedProjectId}
               onChange={handleProjectChange}
-              className="w-full md:w-64 px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none transition-all cursor-pointer"
-            >
-              <option value="">-- Choose Project --</option>
-              {dropdownOptions.map((opt) => (
-                <option key={opt.id} value={opt.id}>
-                  {opt.label}
-                </option>
-              ))}
-            </select>
+              placeholder="-- Choose Project --"
+              containerClassName="w-full md:w-64"
+              className="px-3 py-2 text-xs font-bold text-slate-700 bg-white border border-slate-200 outline-none transition-all cursor-pointer"
+            />
           )}
         </div>
       </div>

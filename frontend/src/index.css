@@ -664,3 +664,32 @@ tr[class*="hover:bg-"]:hover {
   scrollbar-width: thin;
   scrollbar-color: rgba(249, 115, 22, 0.6) rgba(249, 115, 22, 0.04);
 }
+
+/* ============================================
+   CUSTOM SEARCHABLE DROPDOWN SCROLLBAR
+   ============================================ */
+.dropdown-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  background-color: transparent;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 99px;
+  margin: 6px 0;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border: 2.5px solid #f1f5f9;
+  border-radius: 99px;
+}
+
+.dropdown-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+.dropdown-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}

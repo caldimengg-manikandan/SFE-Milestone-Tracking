@@ -803,57 +803,57 @@ export default function Dashboard() {
 
               {/* The 5 KPI Cards inside Capacity Utilization Summary Card */}
               {selectedMonthData && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
                   {/* Card 1: Manhours Available */}
-                  <div className="bg-blue-50/50 p-4 border border-blue-200 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-blue-100 flex items-center justify-center text-blue-600 rounded">
-                      <Clock className="w-5 h-5" />
+                  <div className="bg-blue-50/50 p-3 border border-blue-200 flex items-center gap-2.5">
+                    <div className="w-9 h-9 bg-blue-100 flex items-center justify-center text-blue-600 rounded shrink-0">
+                      <Clock className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-blue-600/90 uppercase tracking-wider">Manhours Available</p>
-                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{selectedMonthData.capacity} Hours</h4>
-                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Per Month (Workforce)</p>
+                      <p className="text-[9px] font-bold text-blue-600/90 uppercase tracking-normal">Available Hours</p>
+                      <h4 className="text-md font-black text-slate-800 mt-0.5">{selectedMonthData.capacity} h</h4>
+                      <p className="text-[8px] text-slate-400 font-medium leading-none mt-0.5">Workforce Cap.</p>
                     </div>
                   </div>
 
                   {/* Card 2: Manhours Required */}
-                  <div className="bg-amber-50/50 p-4 border border-amber-200 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-amber-100 flex items-center justify-center text-amber-600 rounded">
-                      <Box className="w-5 h-5" />
+                  <div className="bg-amber-50/50 p-3 border border-amber-200 flex items-center gap-2.5">
+                    <div className="w-9 h-9 bg-amber-100 flex items-center justify-center text-amber-600 rounded shrink-0">
+                      <Box className="w-4.5 h-4.5" />
                     </div>
                     <div>
-                      <p className="text-[9px] font-bold text-amber-600/90 uppercase tracking-wider">Manhours Required</p>
-                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{selectedMonthData.allocated} Hours</h4>
-                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Active in {monthsNames[capacityMonth - 1]}</p>
+                      <p className="text-[9px] font-bold text-amber-600/90 uppercase tracking-normal">Required Hours</p>
+                      <h4 className="text-md font-black text-slate-800 mt-0.5">{selectedMonthData.allocated} h</h4>
+                      <p className="text-[8px] text-slate-400 font-medium leading-none mt-0.5">Active Load</p>
                     </div>
                   </div>
 
                   {/* Card 3: Surplus/Shortage */}
-                  <div className={`${selectedMonthData.remaining >= 0 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'} p-4 border flex items-center gap-4`}>
-                    <div className={`w-10 h-10 ${selectedMonthData.remaining >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'} flex items-center justify-center rounded`}>
-                      {selectedMonthData.remaining >= 0 ? <CheckCircle2 className="w-5 h-5" /> : <AlertTriangle className="w-5 h-5" />}
+                  <div className={`${selectedMonthData.remaining >= 0 ? 'bg-emerald-50/50 border-emerald-200' : 'bg-rose-50/50 border-rose-200'} p-3 border flex items-center gap-2.5`}>
+                    <div className={`w-9 h-9 ${selectedMonthData.remaining >= 0 ? 'bg-emerald-100 text-emerald-600' : 'bg-rose-100 text-rose-600'} flex items-center justify-center rounded shrink-0`}>
+                      {selectedMonthData.remaining >= 0 ? <CheckCircle2 className="w-4.5 h-4.5" /> : <AlertTriangle className="w-4.5 h-4.5" />}
                     </div>
                     <div>
-                      <p className={`text-[9px] font-bold ${selectedMonthData.remaining >= 0 ? 'text-emerald-600/90' : 'text-rose-600/90'} uppercase tracking-wider`}>
-                        {selectedMonthData.remaining >= 0 ? 'Surplus Manhours' : 'Shortage of Manhours'}
+                      <p className={`text-[9px] font-bold ${selectedMonthData.remaining >= 0 ? 'text-emerald-600/90' : 'text-rose-600/90'} uppercase tracking-normal`}>
+                        {selectedMonthData.remaining >= 0 ? 'Surplus Hours' : 'Shortage Hours'}
                       </p>
-                      <h4 className="text-lg font-black text-slate-800 mt-0.5">{Math.abs(selectedMonthData.remaining)} Hours</h4>
-                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">
-                        {selectedMonthData.remaining >= 0 ? 'We have surplus hours' : 'We need more manhours'}
+                      <h4 className="text-md font-black text-slate-800 mt-0.5">{Math.abs(selectedMonthData.remaining)} h</h4>
+                      <p className="text-[8px] text-slate-400 font-medium leading-none mt-0.5">
+                        {selectedMonthData.remaining >= 0 ? 'Surplus' : 'Deficit'}
                       </p>
                     </div>
                   </div>
 
                   {/* Card 4: Capacity Utilization Gauge */}
-                  <div className="bg-slate-50/50 p-4 border border-slate-200 flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-4">
-                      <div className="relative flex items-center justify-center">
-                        <svg className="w-16 h-16 transform -rotate-90">
-                          <circle cx="32" cy="32" r="26" stroke="#e2e8f0" strokeWidth="5" fill="transparent" />
+                  <div className="bg-slate-50/50 p-3 border border-slate-200 flex items-center gap-2.5">
+                    <div className="flex items-center gap-2.5">
+                      <div className="relative flex items-center justify-center shrink-0">
+                        <svg className="w-12 h-12 transform -rotate-90">
+                          <circle cx="24" cy="24" r="20" stroke="#e2e8f0" strokeWidth="4" fill="transparent" />
                           <circle
-                            cx="32"
-                            cy="32"
-                            r="26"
+                            cx="24"
+                            cy="24"
+                            r="20"
                             stroke={
                               utilizationRate === 0 ? '#94a3b8' :
                               utilizationRate <= 75 ? '#10b981' :
@@ -861,19 +861,19 @@ export default function Dashboard() {
                               utilizationRate <= 100 ? '#f59e0b' :
                               '#ef4444'
                             }
-                            strokeWidth="5"
+                            strokeWidth="4"
                             fill="transparent"
-                            strokeDasharray={2 * Math.PI * 26}
-                            strokeDashoffset={2 * Math.PI * 26 * (1 - Math.min(utilizationRate, 100) / 100)}
+                            strokeDasharray={2 * Math.PI * 20}
+                            strokeDashoffset={2 * Math.PI * 20 * (1 - Math.min(utilizationRate, 100) / 100)}
                             strokeLinecap="round"
                             className="transition-all duration-500 ease-out"
                           />
                         </svg>
-                        <span className="absolute text-[10px] font-black text-slate-800">{utilizationRate}%</span>
+                        <span className="absolute text-[9px] font-black text-slate-800">{utilizationRate}%</span>
                       </div>
                       <div>
-                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">Capacity Utilization</p>
-                        <h4 className={`text-[10px] font-black uppercase tracking-wider mt-1 ${
+                        <p className="text-[9px] font-bold text-slate-500 uppercase tracking-normal">Capacity Util.</p>
+                        <h4 className={`text-[10px] font-black uppercase tracking-normal mt-0.5 ${
                           utilizationRate === 0 ? 'text-slate-500' :
                           utilizationRate <= 75 ? 'text-emerald-600' :
                           utilizationRate <= 90 ? 'text-indigo-600' :
@@ -886,22 +886,8 @@ export default function Dashboard() {
                            utilizationRate <= 100 ? 'High Load' :
                            'Overloaded'}
                         </h4>
-                        <p className="text-[8px] text-slate-400 font-medium mt-0.5">Allocated vs Capacity</p>
+                        <p className="text-[8px] text-slate-400 font-medium leading-none mt-0.5">Allocated vs Cap</p>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Card 5: Total Won Tonnage */}
-                  <div className="bg-violet-50/50 p-4 border border-violet-200 flex items-center gap-4">
-                    <div className="w-10 h-10 bg-violet-100 flex items-center justify-center text-violet-600 rounded">
-                      <Scale className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <p className="text-[9px] font-bold text-violet-600/90 uppercase tracking-wider">Total Tonnage</p>
-                      <h4 className="text-lg font-black text-slate-800 mt-0.5">
-                        {data.total_won_tonnage ? data.total_won_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
-                      </h4>
-                      <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
                     </div>
                   </div>
                 </div>

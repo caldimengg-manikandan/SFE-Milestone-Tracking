@@ -4,6 +4,7 @@ import autoTable from 'jspdf-autotable';
 import { Plus, Search, Edit2, Trash2, Eye, Filter, Download, ChevronLeft, ChevronRight, X, FileText, Loader2, AlertCircle } from 'lucide-react';
 import { projectAPI, scheduleAPI, rfqAPI } from '../services/api';
 import ProjectForm from '../components/forms/ProjectForm';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 export default function ProjectMaster() {
   const [projects, setProjects] = useState([]);
@@ -1181,16 +1182,14 @@ export default function ProjectMaster() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <select
+            <SearchableDropdown
+              options={['All', 'In Progress', 'Yet to Start', 'Completed']}
               value={statusFilter}
               onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-              className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold outline-none focus:border-amber-400 transition-all"
-            >
-              <option value="All">All Statuses</option>
-              <option value="In Progress">In Progress</option>
-              <option value="Yet to Start">Yet to Start</option>
-              <option value="Completed">Completed</option>
-            </select>
+              placeholder="All Statuses"
+              containerClassName="w-48"
+              className="px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold outline-none transition-all"
+            />
             <button
               onClick={exportToCSV}
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-slate-200 bg-white text-slate-600 text-sm font-semibold hover:bg-slate-50 transition-all"

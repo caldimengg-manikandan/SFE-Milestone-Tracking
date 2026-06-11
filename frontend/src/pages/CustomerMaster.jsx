@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Building2, Plus, Search, Edit2, Trash2, X, Phone, User as UserIcon, Loader2, ChevronDown, Eye } from 'lucide-react';
 import { customerAPI } from '../services/api';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 export default function CustomerMaster() {
   const [customers, setCustomers] = useState([]);
@@ -167,47 +168,35 @@ export default function CustomerMaster() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Name Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(customers.map(c => c.name))].filter(Boolean)]}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Customers</option>
-            {[...new Set(customers.map(c => c.name))].filter(Boolean).map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Customers"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
 
         {/* Code Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(customers.map(c => c.code))].filter(Boolean)]}
             value={codeFilter}
             onChange={(e) => setCodeFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Codes</option>
-            {[...new Set(customers.map(c => c.code))].filter(Boolean).map(code => (
-              <option key={code} value={code}>{code}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Codes"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
 
         {/* Country Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', 'India', 'USA', 'UK', 'UAE', 'Other']}
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Countries</option>
-            {['India', 'USA', 'UK', 'UAE', 'Other'].map(country => (
-              <option key={country} value={country}>{country}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Countries"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
       </div>
 
@@ -332,18 +321,14 @@ export default function CustomerMaster() {
 
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Country</label>
-                  <select
+                  <SearchableDropdown
                     disabled={isViewMode}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 focus:ring-4 focus:ring-amber-500/10 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                    options={['India', 'USA', 'UK', 'UAE', 'Other']}
                     value={form.country}
                     onChange={handleCountryChange}
-                  >
-                    <option value="India">India</option>
-                    <option value="USA">USA</option>
-                    <option value="UK">UK</option>
-                    <option value="UAE">UAE</option>
-                    <option value="Other">Other</option>
-                  </select>
+                    placeholder="Select Country"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm font-medium focus:border-amber-400 outline-none transition-all disabled:opacity-75 disabled:bg-slate-50"
+                  />
                 </div>
 
                 <div className="space-y-1.5">

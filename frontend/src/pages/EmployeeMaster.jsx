@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Users, Plus, Search, Edit2, Trash2, X, ChevronDown, Download, Filter, Loader2, Mail, Phone, MapPin, Briefcase, Eye } from 'lucide-react';
 import { employeeAPI } from '../services/api';
 import FormattedDateInput from '../components/forms/FormattedDateInput';
+import SearchableDropdown from '../components/SearchableDropdown';
 
 const departments = ['All', 'Fabrication', 'Design', 'Quality', 'Admin', 'Operations'];
 
@@ -150,46 +151,35 @@ export default function EmployeeMaster() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         {/* Name Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(employees.map(e => e.name))].filter(Boolean)]}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Employees</option>
-            {[...new Set(employees.map(e => e.name))].filter(Boolean).map(name => (
-              <option key={name} value={name}>{name}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Employees"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
 
         {/* Designation Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={['All', ...[...new Set(employees.map(e => e.designation))].filter(Boolean)]}
             value={designationFilter}
             onChange={(e) => setDesignationFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            <option value="All">All Designations</option>
-            {[...new Set(employees.map(e => e.designation))].filter(Boolean).map(desig => (
-              <option key={desig} value={desig}>{desig}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Designations"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
 
         {/* Department Filter */}
         <div className="relative">
-          <select
+          <SearchableDropdown
+            options={departments.map(d => ({ id: d, label: d === 'All' ? 'All Departments' : d }))}
             value={deptFilter}
             onChange={(e) => setDeptFilter(e.target.value)}
-            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all appearance-none cursor-pointer"
-          >
-            {departments.map((d) => (
-              <option key={d} value={d}>{d === 'All' ? 'All Departments' : d}</option>
-            ))}
-          </select>
-          <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+            placeholder="All Departments"
+            className="w-full pl-4 pr-10 py-2.5 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 outline-none transition-all cursor-pointer"
+          />
         </div>
       </div>
 
@@ -372,18 +362,15 @@ export default function EmployeeMaster() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Gender</label>
-                      <select
+                      <SearchableDropdown
                         required
                         disabled={isViewMode}
+                        options={['Male', 'Female', 'Other']}
                         value={form.gender}
                         onChange={e => setForm({ ...form, gender: e.target.value })}
-                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm disabled:opacity-75 disabled:bg-slate-50"
-                      >
-                        <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
-                        <option value="Other">Other</option>
-                      </select>
+                        placeholder="Select Gender"
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 outline-none transition-all shadow-sm disabled:opacity-75 disabled:bg-slate-50"
+                      />
                     </div>
                   </div>
                 ) : (
@@ -412,31 +399,26 @@ export default function EmployeeMaster() {
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
-                      <select
+                      <SearchableDropdown
                         required
                         disabled={isViewMode}
+                        options={departments.filter(d => d !== 'All')}
                         value={form.department}
                         onChange={e => setForm({ ...form, department: e.target.value })}
-                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm disabled:opacity-75 disabled:bg-slate-50"
-                      >
-                        <option value="">Select Dept</option>
-                        {departments.filter(d => d !== 'All').map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
-                      </select>
+                        placeholder="Select Dept"
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 outline-none transition-all shadow-sm disabled:opacity-75 disabled:bg-slate-50"
+                      />
                     </div>
                     <div className="space-y-2">
                       <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Current Status</label>
-                      <select
+                      <SearchableDropdown
                         disabled={isViewMode}
+                        options={['Active', 'On Leave', 'Inactive']}
                         value={form.status}
                         onChange={e => setForm({ ...form, status: e.target.value })}
-                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none appearance-none shadow-sm disabled:opacity-75 disabled:bg-slate-50"
-                      >
-                        <option value="Active">Active</option>
-                        <option value="On Leave">On Leave</option>
-                        <option value="Inactive">Inactive</option>
-                      </select>
+                        placeholder="Select Status"
+                        className="w-full px-5 py-4 rounded-2xl border border-slate-300 bg-white text-sm font-bold text-slate-700 outline-none transition-all shadow-sm disabled:opacity-75 disabled:bg-slate-50"
+                      />
                     </div>
                   </div>
                 )}
