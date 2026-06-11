@@ -253,12 +253,13 @@ export default function StructuralScheduleForm({
                     </td>
                   )}
                   <td className="px-1 py-1 border-r border-b border-slate-200">
-                    <FormattedDateInput
-                      readOnly={isViewOnly}
-                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all"
-                      value={row.rts_date}
-                      onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)}
-                    />
+                      <FormattedDateInput
+                        readOnly={isViewOnly}
+                        required
+                        className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-black text-amber-600 focus:border-amber-400 bg-transparent transition-all"
+                        value={row.rts_date}
+                        onChange={e => handleRowChange(row.id, 'rts_date', e.target.value)}
+                      />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200 bg-amber-500/5">
                     <input

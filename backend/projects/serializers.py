@@ -3,6 +3,7 @@ from .models import Project, StructuralScheduleItem
 
 class StructuralScheduleItemSerializer(serializers.ModelSerializer):
     plant_lead_time_weeks = serializers.IntegerField(source='shop_lead_time_weeks', required=False, default=0)
+    rts_date = serializers.DateField(required=True)
     budget_plant_hours = serializers.DecimalField(source='budget_shop_hours', max_digits=12, decimal_places=2, required=False, default=0)
     actual_plant_hours = serializers.DecimalField(source='actual_shop_hours', max_digits=12, decimal_places=2, required=False, default=0)
     outlook_completion_date = serializers.SerializerMethodField()
