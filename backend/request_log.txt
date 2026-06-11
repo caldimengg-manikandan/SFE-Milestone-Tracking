@@ -174,3 +174,11 @@ Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWN
 Status: 200
 Content: {"count":0,"next":null,"previous":null,"results":[]}
 
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgxMDgyMDA3LCJpYXQiOjE3ODA5OTU2MDcsImp0aSI6IjE1NWE1YmVhZjI0MzQ1ODI4ZTdhNTU5M2UxZmYzZjBmIiwidXNlcl9pZCI6IjEifQ.JZCZ19yIPUQqQoRIlQvwzE-FSAZ4n0E1NamSKCJYAQE
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+

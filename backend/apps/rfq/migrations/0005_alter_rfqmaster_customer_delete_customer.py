@@ -16,7 +16,12 @@ class Migration(migrations.Migration):
             name='customer',
             field=models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='rfqs', to='projects.customer'),
         ),
-        migrations.DeleteModel(
-            name='Customer',
+        migrations.RunSQL(
+            "DROP TABLE IF EXISTS rfq_customer;",
+            state_operations=[
+                migrations.DeleteModel(
+                    name='Customer',
+                ),
+            ]
         ),
     ]
