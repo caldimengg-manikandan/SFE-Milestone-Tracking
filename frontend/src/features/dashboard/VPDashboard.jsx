@@ -15,21 +15,21 @@ import { projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../..
    CONSTANTS & HELPERS
 ───────────────────────────────────────────────────────── */
 const TODAY = new Date();
-const MONTHS     = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-const MONTHS_FULL = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DAYS_SHORT  = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const MONTHS_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAYS_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
 const fmt = (d) => {
   if (!d) return '—';
   const dt = new Date(d);
   if (isNaN(dt)) return '—';
-  return `${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}-${dt.getFullYear()}`;
+  return `${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}-${dt.getFullYear()}`;
 };
 
 const fmtMoney = (v) => {
   const n = parseFloat(v) || 0;
-  if (n >= 1_000_000) return `$${(n/1_000_000).toFixed(1)}M`;
-  if (n >= 1_000)     return `$${(n/1_000).toFixed(0)}K`;
+  if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
+  if (n >= 1_000) return `$${(n / 1_000).toFixed(0)}K`;
   return `$${n.toFixed(0)}`;
 };
 
@@ -42,12 +42,12 @@ const parseMonthYear = (str) => {
   const lower = str.toLowerCase().trim();
   let month = null;
   for (let i = 0; i < MONTHS_FULL.length; i++) {
-    if (lower.startsWith(MONTHS_FULL[i].slice(0,3).toLowerCase())) { month = i; break; }
+    if (lower.startsWith(MONTHS_FULL[i].slice(0, 3).toLowerCase())) { month = i; break; }
   }
   const ym = str.match(/\d{4}|\d{2}/);
   if (!ym || month === null) return null;
-  const y = parseInt(ym[0]); 
-  return { month, year: y < 100 ? 2000+y : y };
+  const y = parseInt(ym[0]);
+  return { month, year: y < 100 ? 2000 + y : y };
 };
 
 /* Classify project delay based on its sequences */
@@ -73,7 +73,7 @@ const classifyProject = (project, schedules) => {
   }
 
   if (delayed) return 'delayed';
-  if (light)   return 'light_delay';
+  if (light) return 'light_delay';
 
   const allCompleted = seqs.every(s => s.actual_rts_date);
   if (allCompleted) return 'completed';
@@ -107,14 +107,14 @@ const classifySeq = (seq) => {
    STATUS CONFIG — matching existing app palette
 ───────────────────────────────────────────────────────── */
 const S = {
-  completed:  { label:'Completed',       dot:'bg-emerald-500', badge:'bg-emerald-50 text-emerald-700 border-emerald-100',  row:'',              blink:'' },
-  completed_delayed: { label:'Completed with Delay', dot:'bg-red-500', badge:'bg-red-50 text-red-700 border-red-100', row:'',              blink:'' },
-  on_track:   { label:'On Track',        dot:'bg-blue-500',    badge:'bg-blue-50 text-blue-700 border-blue-100',            row:'',              blink:'' },
-  light_delay:{ label:'Likely Delay',     dot:'bg-amber-500',   badge:'bg-amber-50 text-amber-700 border-amber-200',         row:'bg-amber-50/30',blink:'animate-blink-amber' },
-  delayed:    { label:'Delayed',         dot:'bg-red-500',     badge:'bg-red-50 text-red-700 border-red-100',               row:'bg-red-50/20',  blink:'animate-blink-red' },
-  yet_to_start:{ label:'Yet to Start',    dot:'bg-slate-400',   badge:'bg-slate-50 text-slate-600 border-slate-200',         row:'',              blink:'' },
+  completed: { label: 'Completed', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-100', row: '', blink: '' },
+  completed_delayed: { label: 'Completed with Delay', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-100', row: '', blink: '' },
+  on_track: { label: 'On Track', dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-100', row: '', blink: '' },
+  light_delay: { label: 'Likely Delay', dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200', row: 'bg-amber-50/30', blink: 'animate-blink-amber' },
+  delayed: { label: 'Delayed', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-100', row: 'bg-red-50/20', blink: 'animate-blink-red' },
+  yet_to_start: { label: 'Yet to Start', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 border-slate-200', row: '', blink: '' },
 };
-const STATUS_ORDER = ['yet_to_start','on_track','completed','delayed','light_delay'];
+const STATUS_ORDER = ['yet_to_start', 'on_track', 'completed', 'delayed', 'light_delay'];
 
 /* ─────────────────────────────────────────────────────────
    TOOLTIP
@@ -124,12 +124,12 @@ const ChartTooltip = ({ active, payload, label }) => {
   return (
     <div className="bg-white border border-slate-200 rounded px-3 py-2 shadow-lg text-[10px]">
       <p className="font-black text-slate-500 uppercase tracking-widest mb-1.5">{label}</p>
-      {payload.map((p,i) => (
+      {payload.map((p, i) => (
         <div key={i} className="flex items-center gap-2 mb-0.5">
-          <span className="w-2 h-2 rounded-full shrink-0" style={{background:p.color}}/>
+          <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
           <span className="font-bold text-slate-600">{p.name}:</span>
           <span className="font-black text-slate-900">
-            {typeof p.value==='number' && p.value>999 ? fmtMoney(p.value) : p.value}
+            {typeof p.value === 'number' && p.value > 999 ? fmtMoney(p.value) : p.value}
           </span>
         </div>
       ))}
@@ -140,7 +140,7 @@ const ChartTooltip = ({ active, payload, label }) => {
 /* ─────────────────────────────────────────────────────────
    PANEL WRAPPER — matches Operations dashboard card style
 ───────────────────────────────────────────────────────── */
-const Panel = ({ children, className='' }) => (
+const Panel = ({ children, className = '' }) => (
   <div className={`bg-white border border-slate-300 ${className}`}>{children}</div>
 );
 
@@ -157,10 +157,10 @@ const PanelHeader = ({ title, sub, children }) => (
 /* Toggle button pair matching the existing selects/buttons in the app */
 const ToggleGroup = ({ options, value, onChange }) => (
   <div className="flex border border-slate-300 rounded overflow-hidden">
-    {options.map(([k,lbl]) => (
+    {options.map(([k, lbl]) => (
       <button key={k} onClick={() => onChange(k)}
         className={`px-3 py-1.5 text-[9px] font-black uppercase tracking-widest transition-colors border-r border-slate-300 last:border-r-0
-          ${value===k ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
+          ${value === k ? 'bg-slate-800 text-white' : 'bg-white text-slate-500 hover:bg-slate-50'}`}>
         {lbl}
       </button>
     ))}
@@ -173,25 +173,25 @@ const ToggleGroup = ({ options, value, onChange }) => (
    MAIN COMPONENT
 ───────────────────────────────────────────────────────── */
 export default function VPDashboard() {
-  const [loading, setLoading]       = useState(true);
-  const [projects, setProjects]     = useState([]);
-  const [schedules, setSchedules]   = useState([]);
-  const [bids, setBids]             = useState([]);
-  const [manpower, setManpower]     = useState([]);
-  const [capData, setCapData]       = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [projects, setProjects] = useState([]);
+  const [schedules, setSchedules] = useState([]);
+  const [bids, setBids] = useState([]);
+  const [manpower, setManpower] = useState([]);
+  const [capData, setCapData] = useState([]);
 
   /* Hierarchy */
   const [activeHierarchyTab, setActiveHierarchyTab] = useState('completed');
   const [openProjects, setOpenProjects] = useState({});
 
   /* Bid chart */
-  const [bidView, setBidView]     = useState('yoy');
+  const [bidView, setBidView] = useState('yoy');
   const [bidMetric, setBidMetric] = useState('value');
-  const [bidYear, setBidYear]     = useState(TODAY.getFullYear());
+  const [bidYear, setBidYear] = useState(TODAY.getFullYear());
 
   /* Capacity */
   const [capMonth, setCapMonth] = useState(TODAY.getMonth());
-  const [capYear, setCapYear]   = useState(TODAY.getFullYear());
+  const [capYear, setCapYear] = useState(TODAY.getFullYear());
 
   /* Activity Feed Filter ('yesterday' | 'today' | 'tomorrow') */
   const [feedFilter, setFeedFilter] = useState('today');
@@ -201,27 +201,28 @@ export default function VPDashboard() {
     (async () => {
       setLoading(true);
       try {
-        const [a,b,c,d,e] = await Promise.allSettled([
+        const [a, b, c, d, e] = await Promise.allSettled([
           projectAPI.getAll(),
-          scheduleAPI.getAll({ page_size:1000 }),
+          scheduleAPI.getAll({ page_size: 1000 }),
           rfqAPI.getAll(),
           manpowerAPI.getAll(),
           capacityAPI.getAll(),
         ]);
-        const safe = r => r.status==='fulfilled' ? (r.value?.data?.results||r.value?.data||[]) : [];
+        const safe = r => r.status === 'fulfilled' ? (r.value?.data?.results || r.value?.data || []) : [];
 
-        const projData  = Array.isArray(safe(a)) ? safe(a) : [];
+        const projData = Array.isArray(safe(a)) ? safe(a) : [];
         const schedData = Array.isArray(safe(b)) ? safe(b) : [];
-        const bidsData  = Array.isArray(safe(c)) ? safe(c) : [];
-        const manData   = Array.isArray(safe(d)) ? safe(d) : [];
-        const capRaw    = Array.isArray(safe(e)) ? safe(e) : [];
+        const bidsData = Array.isArray(safe(c)) ? safe(c) : [];
+        const manData = Array.isArray(safe(d)) ? safe(d) : [];
+        const capRaw = Array.isArray(safe(e)) ? safe(e) : [];
 
         setProjects(projData);
         setSchedules(schedData);
         setBids(bidsData);
         setManpower(manData);
         setCapData(capRaw);
-      } catch(e){ console.error(e);
+      } catch (e) {
+        console.error(e);
         setProjects([]);
         setSchedules([]);
         setBids([]);
@@ -234,7 +235,7 @@ export default function VPDashboard() {
 
 
   /* ── Derived ── */
-  const wonBids = useMemo(() => bids.filter(b=>b.won_lost==='Won'), [bids]);
+  const wonBids = useMemo(() => bids.filter(b => b.won_lost === 'Won'), [bids]);
   const wonBidsCurrentYear = useMemo(() => {
     const curYear = TODAY.getFullYear();
     return wonBids.filter(b => {
@@ -245,139 +246,170 @@ export default function VPDashboard() {
   const wonBidsCurrentYearValue = useMemo(() => {
     return wonBidsCurrentYear.reduce((s, b) => s + parseFloat(b.awarded_amount || b.bid_amount || 0), 0);
   }, [wonBidsCurrentYear]);
-  const latestWins = useMemo(() => [...wonBids].sort((a,b)=>new Date(b.awarded_job_date||b.created_at)-new Date(a.awarded_job_date||a.created_at)).slice(0,6), [wonBids]);
+  const latestWins = useMemo(() => [...wonBids].sort((a, b) => new Date(b.awarded_job_date || b.created_at) - new Date(a.awarded_job_date || a.created_at)).slice(0, 6), [wonBids]);
 
   const kpi = useMemo(() => {
-    const pending  = bids.filter(b=>b.won_lost==='Pending');
-    const atRisk   = projects.filter(p=>{ const s=classifyProject(p,schedules); return s==='delayed'||s==='light_delay'; }).length;
-    const health   = projects.length>0 ? Math.round(((projects.length-atRisk)/projects.length)*100) : 100;
-    const winRate  = bids.length>0 ? Math.round((wonBids.length/bids.length)*100) : 0;
+    const pending = bids.filter(b => b.won_lost === 'Pending');
+    const atRisk = projects.filter(p => { const s = classifyProject(p, schedules); return s === 'delayed' || s === 'light_delay'; }).length;
+    const health = projects.length > 0 ? Math.round(((projects.length - atRisk) / projects.length) * 100) : 100;
+    const winRate = bids.length > 0 ? Math.round((wonBids.length / bids.length) * 100) : 0;
     return {
-      won:    wonBids.length,
+      won: wonBids.length,
       health, atRisk,
-      pipeline: pending.reduce((s,b)=>s+parseFloat(b.bid_amount||0),0),
+      pipeline: pending.reduce((s, b) => s + parseFloat(b.bid_amount || 0), 0),
       winRate,
     };
   }, [bids, wonBids, projects, schedules]);
 
   const grouped = useMemo(() => {
-    const g = {delayed:[],light_delay:[],on_track:[],yet_to_start:[],completed:[]};
-    projects.forEach(p => g[classifyProject(p,schedules)].push(p));
+    const g = { delayed: [], light_delay: [], on_track: [], yet_to_start: [], completed: [] };
+    projects.forEach(p => g[classifyProject(p, schedules)].push(p));
     return g;
   }, [projects, schedules]);
 
   /* Bid chart */
   const bidChart = useMemo(() => {
-    if (bidView==='yoy') {
-      const m={};
+    if (bidView === 'yoy') {
+      const m = {};
       bids.forEach(b => {
-        const yr = new Date(b.awarded_job_date||b.created_at).getFullYear();
-        if (!m[yr]) m[yr]={year:String(yr),quoted:0,won:0,quotedCount:0,wonCount:0};
-        m[yr].quoted += parseFloat(b.bid_amount||0);
+        const yr = new Date(b.awarded_job_date || b.created_at).getFullYear();
+        if (!m[yr]) m[yr] = { year: String(yr), quoted: 0, won: 0, quotedCount: 0, wonCount: 0 };
+        m[yr].quoted += parseFloat(b.bid_amount || 0);
         m[yr].quotedCount += 1;
-        if (b.won_lost==='Won') { m[yr].won+=parseFloat(b.awarded_amount||b.bid_amount||0); m[yr].wonCount+=1; }
+        if (b.won_lost === 'Won') { m[yr].won += parseFloat(b.awarded_amount || b.bid_amount || 0); m[yr].wonCount += 1; }
       });
-      return Object.values(m).sort((a,b)=>a.year-b.year).slice(-6);
+      return Object.values(m).sort((a, b) => a.year - b.year).slice(-6);
     }
-    const rows = MONTHS.map(m=>({month:m,quoted:0,won:0,quotedCount:0,wonCount:0}));
+    const rows = MONTHS.map(m => ({ month: m, quoted: 0, won: 0, quotedCount: 0, wonCount: 0 }));
     bids.forEach(b => {
-      const dt=new Date(b.awarded_job_date||b.created_at);
-      if (dt.getFullYear()!==bidYear) return;
-      const mi=dt.getMonth();
-      rows[mi].quoted+=parseFloat(b.bid_amount||0); rows[mi].quotedCount+=1;
-      if (b.won_lost==='Won'){rows[mi].won+=parseFloat(b.awarded_amount||b.bid_amount||0);rows[mi].wonCount+=1;}
+      const dt = new Date(b.awarded_job_date || b.created_at);
+      if (dt.getFullYear() !== bidYear) return;
+      const mi = dt.getMonth();
+      rows[mi].quoted += parseFloat(b.bid_amount || 0); rows[mi].quotedCount += 1;
+      if (b.won_lost === 'Won') { rows[mi].won += parseFloat(b.awarded_amount || b.bid_amount || 0); rows[mi].wonCount += 1; }
     });
     return rows;
   }, [bids, bidView, bidYear]);
 
+  /* Bid chart dynamic ticks and domain */
+  const { bidTicks, bidDomain } = useMemo(() => {
+    const key = bidMetric === 'value' ? 'quoted' : 'quotedCount';
+    let maxVal = 0;
+    bidChart.forEach(item => {
+      const val = parseFloat(item[key]) || 0;
+      if (val > maxVal) maxVal = val;
+    });
+
+    if (maxVal === 0) {
+      if (bidMetric === 'value') {
+        return { bidTicks: [0, 250_000_000], bidDomain: [0, 250_000_000] };
+      } else {
+        return { bidTicks: [0, 250], bidDomain: [0, 250] };
+      }
+    }
+
+    const step = bidMetric === 'value' ? 250_000_000 : 250;
+    const ticks = [0];
+    let current = 0;
+    while (current < maxVal) {
+      current += step;
+      ticks.push(current);
+    }
+    if (current - maxVal < step * 0.1) {
+      current += step;
+      ticks.push(current);
+    }
+    return { bidTicks: ticks, bidDomain: [0, current] };
+  }, [bidChart, bidMetric]);
+
   /* Capacity chart */
   const capChart = useMemo(() => {
-    const rows = MONTHS.map(m=>({month:m,required:0,available:0}));
+    const rows = MONTHS.map(m => ({ month: m, required: 0, available: 0 }));
     wonBids.forEach(b => {
-      const p=parseMonthYear(b.struct_fab_start_month);
-      if (!p || p.year!==capYear) return;
-      const hrs=parseFloat(b.struct_fab_hours||0);
-      const dur=Math.max(1,parseInt(b.struct_fab_duration_months||1));
-      for (let d=0;d<dur;d++) rows[(p.month+d)%12].required+=hrs/dur;
+      const p = parseMonthYear(b.struct_fab_start_month);
+      if (!p || p.year !== capYear) return;
+      const hrs = parseFloat(b.struct_fab_hours || 0);
+      const dur = Math.max(1, parseInt(b.struct_fab_duration_months || 1));
+      for (let d = 0; d < dur; d++) rows[(p.month + d) % 12].required += hrs / dur;
     });
     manpower.forEach(mp => {
-      const mi=MONTHS_FULL.findIndex(m=>m.toLowerCase()===(mp.month||'').toLowerCase());
-      if (mi<0) return;
-      rows[mi].available+=parseFloat(mp.manhours||8)*22;
+      const mi = MONTHS_FULL.findIndex(m => m.toLowerCase() === (mp.month || '').toLowerCase());
+      if (mi < 0) return;
+      rows[mi].available += parseFloat(mp.manhours || 8) * 22;
     });
     capData.forEach(cap => {
-      const monthly=parseFloat(cap.capacity_per_day||0)*22/12;
-      rows.forEach(r=>r.available+=monthly);
+      const monthly = parseFloat(cap.capacity_per_day || 0) * 22 / 12;
+      rows.forEach(r => r.available += monthly);
     });
-    return rows.map(r=>({...r,required:Math.round(r.required),available:Math.round(r.available),balance:Math.round(r.available-r.required)}));
+    return rows.map(r => ({ ...r, required: Math.round(r.required), available: Math.round(r.available), balance: Math.round(r.available - r.required) }));
   }, [wonBids, manpower, capData, capYear]);
 
   const aiInsight = useMemo(() => {
-    const d=capChart[capMonth]; if (!d) return null;
-    const {required,available,balance}=d;
-    const pct=available>0?Math.round((required/available)*100):0;
-    const actions=[];
-    if (balance<0){
-      actions.push({sev:'critical',text:`Deficit of ${Math.abs(balance).toLocaleString()} hrs in ${MONTHS[capMonth]}. Subcontracting recommended.`});
-      actions.push({sev:'warning', text:'Authorize overtime — 2 hrs/day recovers ~10% of deficit.'});
-      actions.push({sev:'info',    text:'Outsource detailing for non-critical sequences to free shop floor.'});
-    } else if (balance<available*0.15){
-      actions.push({sev:'warning',text:`Thin surplus of ${balance.toLocaleString()} hrs in ${MONTHS[capMonth]}. Monitor load closely.`});
-      actions.push({sev:'info',   text:'Spread sequence scheduling to reduce peak demand this month.'});
+    const d = capChart[capMonth]; if (!d) return null;
+    const { required, available, balance } = d;
+    const pct = available > 0 ? Math.round((required / available) * 100) : 0;
+    const actions = [];
+    if (balance < 0) {
+      actions.push({ sev: 'critical', text: `Deficit of ${Math.abs(balance).toLocaleString()} hrs in ${MONTHS[capMonth]}. Subcontracting recommended.` });
+      actions.push({ sev: 'warning', text: 'Authorize overtime — 2 hrs/day recovers ~10% of deficit.' });
+      actions.push({ sev: 'info', text: 'Outsource detailing for non-critical sequences to free shop floor.' });
+    } else if (balance < available * 0.15) {
+      actions.push({ sev: 'warning', text: `Thin surplus of ${balance.toLocaleString()} hrs in ${MONTHS[capMonth]}. Monitor load closely.` });
+      actions.push({ sev: 'info', text: 'Spread sequence scheduling to reduce peak demand this month.' });
     } else {
-      actions.push({sev:'success',text:`Surplus of ${balance.toLocaleString()} hrs in ${MONTHS[capMonth]}. Capacity available for new bids.`});
-      actions.push({sev:'info',   text:'Accelerate delayed sequences using spare capacity.'});
-      actions.push({sev:'info',   text:'Allocate surplus to preventive maintenance or skills training.'});
+      actions.push({ sev: 'success', text: `Surplus of ${balance.toLocaleString()} hrs in ${MONTHS[capMonth]}. Capacity available for new bids.` });
+      actions.push({ sev: 'info', text: 'Accelerate delayed sequences using spare capacity.' });
+      actions.push({ sev: 'info', text: 'Allocate surplus to preventive maintenance or skills training.' });
     }
-    return {required,available,balance,pct,actions};
-  }, [capChart,capMonth]);
+    return { required, available, balance, pct, actions };
+  }, [capChart, capMonth]);
 
   /* Calendar events */
-  const calEvents = useMemo(()=>{
-    const ev={};
-    const add=(dt,e)=>{
-      if(!dt) return; const d=new Date(dt); if(isNaN(d)) return;
-      const k=`${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
-      ev[k]=(ev[k]||[]); ev[k].push(e);
+  const calEvents = useMemo(() => {
+    const ev = {};
+    const add = (dt, e) => {
+      if (!dt) return; const d = new Date(dt); if (isNaN(d)) return;
+      const k = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      ev[k] = (ev[k] || []); ev[k].push(e);
     };
-    bids.forEach(b=>{
-      add(b.bid_due_date,{
-        type:'bid_due',
-        label:`Bid Due: ${b.project_name||b.quote_no}`,
+    bids.forEach(b => {
+      add(b.bid_due_date, {
+        type: 'bid_due',
+        label: `Bid Due: ${b.project_name || b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
         details: `Bid Amount: ${fmtMoney(b.bid_amount)} · Status: ${b.won_lost}`,
         extra: `Expected Start: ${b.struct_fab_start_month || 'N/A'}`
       });
-      add(b.quote_date,{
-        type:'quote_date',
-        label:`Quote Submitted: ${b.project_name||b.quote_no}`,
+      add(b.quote_date, {
+        type: 'quote_date',
+        label: `Quote Submitted: ${b.project_name || b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
         details: `Bid Amount: ${fmtMoney(b.bid_amount)} · Primary Estimator: ${b.primary_estimator_initials || 'N/A'}`,
         extra: `Status: ${b.won_lost}`
       });
-      add(b.awarded_job_date,{
-        type:'awarded_date',
-        label:`Bid Awarded: ${b.project_name||b.quote_no}`,
+      add(b.awarded_job_date, {
+        type: 'awarded_date',
+        label: `Bid Awarded: ${b.project_name || b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
         details: `Awarded Amount: ${fmtMoney(b.awarded_amount)} · SFE Job No: ${b.sfe_job_no || 'N/A'}`,
         extra: `Awarded`
       });
-      add(b.fab_start_date || b.fabrication_start_date,{
-        type:'fab_start',
-        label:`Fabrication Start: ${b.project_name||b.quote_no}`,
+      add(b.fab_start_date || b.fabrication_start_date, {
+        type: 'fab_start',
+        label: `Fabrication Start: ${b.project_name || b.quote_no}`,
         projectCode: b.quote_no || 'N/A',
         details: `SFE Job No: ${b.sfe_job_no || 'N/A'}`,
         extra: `Fab Start`
       });
     });
     return ev;
-  },[bids]);
+  }, [bids]);
 
   // Selected date based on feedFilter
   const activeDate = useMemo(() => {
     const d = new Date(TODAY);
     if (feedFilter === 'yesterday') d.setDate(TODAY.getDate() - 1);
-    if (feedFilter === 'tomorrow')  d.setDate(TODAY.getDate() + 1);
+    if (feedFilter === 'tomorrow') d.setDate(TODAY.getDate() + 1);
     return d;
   }, [feedFilter]);
 
@@ -388,23 +420,23 @@ export default function VPDashboard() {
   const dayEvents = useMemo(() => calEvents[activeDateKey] || [], [calEvents, activeDateKey]);
 
   // Overall monthly stats (for the current month)
-  const monthEventCounts = useMemo(()=>{
-    const c={bid_due:0,quote_date:0,awarded_date:0,fab_start:0};
+  const monthEventCounts = useMemo(() => {
+    const c = { bid_due: 0, quote_date: 0, awarded_date: 0, fab_start: 0 };
     const curYear = TODAY.getFullYear();
     const curMonth = TODAY.getMonth();
-    Object.entries(calEvents).forEach(([k,arr])=>{
-      const [y,m]=k.split('-').map(Number);
-      if(y===curYear&&m===curMonth) arr.forEach(e=>c[e.type]=(c[e.type]||0)+1);
+    Object.entries(calEvents).forEach(([k, arr]) => {
+      const [y, m] = k.split('-').map(Number);
+      if (y === curYear && m === curMonth) arr.forEach(e => c[e.type] = (c[e.type] || 0) + 1);
     });
     return c;
-  },[calEvents]);
+  }, [calEvents]);
 
   /* ── Event type style ── */
   const EVT = {
-    bid_due:       {label:'Bid Due Date',         dot:'bg-red-500',     badge:'bg-red-50 text-red-700 border border-red-100'},
-    quote_date:    {label:'Quote Submitted Date', dot:'bg-rose-500',     badge:'bg-rose-50 text-rose-700 border border-rose-100'},
-    awarded_date:  {label:'Awarded Date',         dot:'bg-yellow-600',  badge:'bg-yellow-50 text-yellow-750 border border-yellow-200'},
-    fab_start:     {label:'Fab Start Date',       dot:'bg-fuchsia-500', badge:'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100'},
+    bid_due: { label: 'Bid Due Date', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border border-red-100' },
+    quote_date: { label: 'Quote Submitted Date', dot: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700 border border-rose-100' },
+    awarded_date: { label: 'Awarded Date', dot: 'bg-yellow-600', badge: 'bg-yellow-50 text-yellow-750 border border-yellow-200' },
+    fab_start: { label: 'Fab Start Date', dot: 'bg-fuchsia-500', badge: 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100' },
   };
 
   /* ── Loading ── */
@@ -412,7 +444,7 @@ export default function VPDashboard() {
 
   if (isInitialLoad) return (
     <div className="flex items-center justify-center h-64">
-      <Loader2 className="w-7 h-7 text-amber-500 animate-spin"/>
+      <Loader2 className="w-7 h-7 text-amber-500 animate-spin" />
     </div>
   );
 
@@ -431,16 +463,16 @@ export default function VPDashboard() {
       {latestWins.length > 0 && (
         <div className="flex items-center border border-slate-300 bg-white overflow-hidden">
           <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-amber-500">
-            <Trophy className="w-3.5 h-3.5 text-white"/>
+            <Trophy className="w-3.5 h-3.5 text-white" />
             <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Latest Wins</span>
           </div>
           <div className="overflow-hidden flex-1 border-l border-slate-300">
             <div className="animate-marquee whitespace-nowrap">
-              {[...latestWins,...latestWins].map((b,i)=>(
+              {[...latestWins, ...latestWins].map((b, i) => (
                 <span key={i} className="inline-flex items-center gap-2 mx-8">
-                  <Star className="w-3 h-3 text-amber-500 shrink-0"/>
-                  <span className="text-[11px] font-bold text-slate-800">{b.project_name||b.quote_no}</span>
-                  {b.awarded_amount>0 && <span className="text-[10px] font-black text-amber-600">· {fmtMoney(b.awarded_amount)}</span>}
+                  <Star className="w-3 h-3 text-amber-500 shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
+                  {b.awarded_amount > 0 && <span className="text-[10px] font-black text-amber-600">· {fmtMoney(b.awarded_amount)}</span>}
                   {b.awarded_job_no_date && <span className="text-[9px] text-slate-400">Awarded {fmt(b.awarded_job_no_date)}</span>}
                   <span className="text-slate-300 mx-2">|</span>
                 </span>
@@ -463,10 +495,10 @@ export default function VPDashboard() {
               /* Per-status inactive tint so every tab has a distinct colour */
               const inactiveCls = {
                 yet_to_start: 'bg-slate-50  border-slate-200  text-slate-500  hover:bg-slate-100',
-                on_track:     'bg-blue-50   border-blue-100   text-blue-500   hover:bg-blue-100',
-                completed:    'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100',
-                delayed:      'bg-red-50    border-red-100    text-red-500    hover:bg-red-100',
-                light_delay:  'bg-amber-50  border-amber-100  text-amber-600  hover:bg-amber-100',
+                on_track: 'bg-blue-50   border-blue-100   text-blue-500   hover:bg-blue-100',
+                completed: 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100',
+                delayed: 'bg-red-50    border-red-100    text-red-500    hover:bg-red-100',
+                light_delay: 'bg-amber-50  border-amber-100  text-amber-600  hover:bg-amber-100',
               }[sk] ?? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50';
 
               return (
@@ -495,7 +527,7 @@ export default function VPDashboard() {
             const sk = activeHierarchyTab;
             const cfg = S[sk];
             const projs = grouped[sk] || [];
-            
+
             if (projs.length === 0) {
               return (
                 <p className="px-8 py-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
@@ -503,7 +535,7 @@ export default function VPDashboard() {
                 </p>
               );
             }
-            
+
             return (
               <div className="divide-y divide-slate-100">
                 {projs.map(proj => {
@@ -579,10 +611,10 @@ export default function VPDashboard() {
       {/* ══ SECTION 2 — BID PERFORMANCE ══════════════════════ */}
       <Panel>
         <PanelHeader title="Bid Performance Analytics" sub="Total Quoted vs Won">
-          <ToggleGroup options={[['yoy','Year-on-Year'],['mom','Month-on-Month']]} value={bidView} onChange={setBidView}/>
-          <ToggleGroup options={[['value','Revenue $'],['count','Count']]} value={bidMetric} onChange={setBidMetric}/>
-          {bidView==='mom' && (
-            <select value={bidYear} onChange={e=>setBidYear(parseInt(e.target.value))}
+          <ToggleGroup options={[['yoy', 'Year-on-Year'], ['mom', 'Month-on-Month']]} value={bidView} onChange={setBidView} />
+          <ToggleGroup options={[['value', 'Revenue $'], ['count', 'Count']]} value={bidMetric} onChange={setBidMetric} />
+          {bidView === 'mom' && (
+            <select value={bidYear} onChange={e => setBidYear(parseInt(e.target.value))}
               className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
               {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
                 const y = 2012 + i;
@@ -596,13 +628,13 @@ export default function VPDashboard() {
           {/* Summary pills */}
           <div className="flex flex-wrap gap-2 mb-6">
             {[
-              {label:'Total',value:bids.length,      cls:'bg-slate-100 text-slate-700'},
-              {label:'Won',  value:wonBids.length,   cls:'bg-emerald-50 text-emerald-700 border border-emerald-100'},
-              {label:`Won (${TODAY.getFullYear()})`, value:`${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls:'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold'},
-              {label:'Lost', value:bids.filter(b=>b.won_lost==='Lost').length, cls:'bg-red-50 text-red-700 border border-red-100'},
-              {label:'Pending',value:bids.filter(b=>b.won_lost==='Pending').length, cls:'bg-amber-50 text-amber-700 border border-amber-100'},
-              {label:'Win Rate',value:kpi.winRate+'%', cls:'bg-slate-100 text-slate-700'},
-            ].map((p,i)=>(
+              { label: 'Total', value: bids.length, cls: 'bg-slate-100 text-slate-700' },
+              { label: 'Won', value: wonBids.length, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100' },
+              { label: `Won (${TODAY.getFullYear()})`, value: `${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold' },
+              { label: 'Lost', value: bids.filter(b => b.won_lost === 'Lost').length, cls: 'bg-red-50 text-red-700 border border-red-100' },
+              { label: 'Pending', value: bids.filter(b => b.won_lost === 'Pending').length, cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
+              { label: 'Win Rate', value: kpi.winRate + '%', cls: 'bg-slate-100 text-slate-700' },
+            ].map((p, i) => (
               <span key={i} className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide rounded ${p.cls}`}>
                 {p.label}: <span className="text-sm font-black">{p.value}</span>
               </span>
@@ -611,16 +643,16 @@ export default function VPDashboard() {
 
           <ResponsiveContainer width="100%" height={260}>
             <ComposedChart data={bidChart} barGap={4}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
-              <XAxis dataKey={bidView==='yoy'?'year':'month'} tick={{fontSize:9,fontWeight:800,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fontSize:9,fontWeight:800,fill:'#94a3b8'}} axisLine={false} tickLine={false}
-                tickFormatter={v=>bidMetric==='value'?fmtMoney(v):v}/>
-              <Tooltip content={<ChartTooltip/>}/>
-              <Legend verticalAlign="top" height={32} wrapperStyle={{fontSize:'9px',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.1em'}}/>
-              <Bar dataKey={bidMetric==='value'?'quoted':'quotedCount'} name="Total Quoted" fill="#e2e8f0" radius={[2,2,0,0]} maxBarSize={36}/>
-              <Bar dataKey={bidMetric==='value'?'won':'wonCount'}       name="Won / Awarded" fill="#f59e0b" radius={[2,2,0,0]} maxBarSize={36}/>
-              <Line type="monotone" dataKey={bidMetric==='value'?'won':'wonCount'} name="Win Trend"
-                stroke="#1e293b" strokeWidth={2} dot={{r:3,fill:'#1e293b',strokeWidth:2,stroke:'#fff'}}/>
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                tickFormatter={v => bidMetric === 'value' ? fmtMoney(v) : v}
+                ticks={bidTicks}
+                domain={bidDomain} />
+              <Tooltip content={<ChartTooltip />} />
+              <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+              <Bar dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'} name="Total Quoted" fill="#000000ff" radius={[2, 2, 0, 0]} maxBarSize={36} />
+              <Bar dataKey={bidMetric === 'value' ? 'won' : 'wonCount'} name="Won / Awarded" fill="#f59e0b" radius={[2, 2, 0, 0]} maxBarSize={36} />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
@@ -633,11 +665,11 @@ export default function VPDashboard() {
         <div className="xl:col-span-3">
           <Panel>
             <PanelHeader title="Capacity vs Bid Load" sub="Available workforce hours vs required load from won bids">
-              <select value={capMonth} onChange={e=>setCapMonth(parseInt(e.target.value))}
+              <select value={capMonth} onChange={e => setCapMonth(parseInt(e.target.value))}
                 className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-                {MONTHS.map((m,i)=><option key={i} value={i}>{m}</option>)}
+                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
               </select>
-              <select value={capYear} onChange={e=>setCapYear(parseInt(e.target.value))}
+              <select value={capYear} onChange={e => setCapYear(parseInt(e.target.value))}
                 className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
                 {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
                   const y = 2012 + i;
@@ -648,17 +680,17 @@ export default function VPDashboard() {
             <div className="p-6">
               <ResponsiveContainer width="100%" height={260}>
                 <ComposedChart data={capChart}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false}/>
-                  <XAxis dataKey="month" tick={{fontSize:9,fontWeight:800,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                  <YAxis yAxisId="l" tick={{fontSize:9,fontWeight:800,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                  <YAxis yAxisId="r" orientation="right" tick={{fontSize:9,fontWeight:800,fill:'#94a3b8'}} axisLine={false} tickLine={false}/>
-                  <Tooltip content={<ChartTooltip/>}/>
-                  <Legend verticalAlign="top" height={32} wrapperStyle={{fontSize:'9px',fontWeight:800,textTransform:'uppercase',letterSpacing:'0.1em'}}/>
-                  <ReferenceLine yAxisId="l" y={0} stroke="#e2e8f0"/>
-                  <Bar yAxisId="l" dataKey="available" name="Available (hrs)" fill="#e2e8f0" radius={[2,2,0,0]} maxBarSize={28}/>
-                  <Bar yAxisId="l" dataKey="required"  name="Required (hrs)"  fill="#f59e0b" radius={[2,2,0,0]} maxBarSize={28}/>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                  <XAxis dataKey="month" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="l" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                  <Tooltip content={<ChartTooltip />} />
+                  <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+                  <ReferenceLine yAxisId="l" y={0} stroke="#e2e8f0" />
+                  <Bar yAxisId="l" dataKey="available" name="Available (hrs)" fill="#e2e8f0" radius={[2, 2, 0, 0]} maxBarSize={28} />
+                  <Bar yAxisId="l" dataKey="required" name="Required (hrs)" fill="#f59e0b" radius={[2, 2, 0, 0]} maxBarSize={28} />
                   <Line yAxisId="r" type="monotone" dataKey="balance" name="Surplus/Deficit"
-                    stroke="#1e293b" strokeWidth={2} dot={{r:3,fill:'#1e293b',strokeWidth:2,stroke:'#fff'}}/>
+                    stroke="#1e293b" strokeWidth={2} dot={{ r: 3, fill: '#1e293b', strokeWidth: 2, stroke: '#fff' }} />
                 </ComposedChart>
               </ResponsiveContainer>
             </div>
@@ -669,7 +701,7 @@ export default function VPDashboard() {
         <div className="xl:col-span-2">
           <Panel className="h-full">
             <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
-              <Lightbulb className="w-4 h-4 text-amber-500"/>
+              <Lightbulb className="w-4 h-4 text-amber-500" />
             </PanelHeader>
             <div className="p-6 space-y-5">
               {aiInsight ? (
@@ -677,10 +709,10 @@ export default function VPDashboard() {
                   {/* Metric row */}
                   <div className="grid grid-cols-3 gap-3">
                     {[
-                      {label:'Available',value:aiInsight.available.toLocaleString(),unit:'hrs',color:'text-emerald-600'},
-                      {label:'Required', value:aiInsight.required.toLocaleString(), unit:'hrs',color:'text-amber-600'},
-                      {label:aiInsight.balance>=0?'Surplus':'Deficit',value:Math.abs(aiInsight.balance).toLocaleString(),unit:'hrs',color:aiInsight.balance>=0?'text-blue-600':'text-red-600'},
-                    ].map((m,i)=>(
+                      { label: 'Available', value: aiInsight.available.toLocaleString(), unit: 'hrs', color: 'text-emerald-600' },
+                      { label: 'Required', value: aiInsight.required.toLocaleString(), unit: 'hrs', color: 'text-amber-600' },
+                      { label: aiInsight.balance >= 0 ? 'Surplus' : 'Deficit', value: Math.abs(aiInsight.balance).toLocaleString(), unit: 'hrs', color: aiInsight.balance >= 0 ? 'text-blue-600' : 'text-red-600' },
+                    ].map((m, i) => (
                       <div key={i} className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
                         <p className={`text-base font-black leading-none ${m.color}`}>{m.value}</p>
                         <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{m.unit}</p>
@@ -693,29 +725,29 @@ export default function VPDashboard() {
                   <div>
                     <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-slate-500">
                       <span>Load Utilisation</span>
-                      <span className={aiInsight.pct>100?'text-red-600':aiInsight.pct>85?'text-amber-600':'text-emerald-600'}>
+                      <span className={aiInsight.pct > 100 ? 'text-red-600' : aiInsight.pct > 85 ? 'text-amber-600' : 'text-emerald-600'}>
                         {aiInsight.pct}%
                       </span>
                     </div>
                     <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
                       <div className={`h-full rounded-full transition-all duration-500
-                        ${aiInsight.pct>100?'bg-red-500':aiInsight.pct>85?'bg-amber-500':'bg-emerald-500'}`}
-                        style={{width:`${Math.min(100,aiInsight.pct)}%`}}/>
+                        ${aiInsight.pct > 100 ? 'bg-red-500' : aiInsight.pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, aiInsight.pct)}%` }} />
                     </div>
                   </div>
 
                   {/* Swift Actions */}
                   <div>
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
-                      <Zap className="w-3 h-3"/> Swift Actions
+                      <Zap className="w-3 h-3" /> Swift Actions
                     </p>
                     <div className="space-y-2">
-                      {aiInsight.actions.map((a,i)=>{
-                        const cls={
-                          critical:'bg-red-50 border-red-100 text-red-700',
+                      {aiInsight.actions.map((a, i) => {
+                        const cls = {
+                          critical: 'bg-red-50 border-red-100 text-red-700',
                           warning: 'bg-amber-50 border-amber-100 text-amber-700',
                           success: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-                          info:    'bg-slate-50 border-slate-200 text-slate-600',
+                          info: 'bg-slate-50 border-slate-200 text-slate-600',
                         }[a.sev];
                         return (
                           <div key={i} className={`border rounded px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${cls}`}>
@@ -728,9 +760,9 @@ export default function VPDashboard() {
                 </>
               ) : (
                 <div className="flex flex-col items-center justify-center h-40 gap-2">
-                  <Info className="w-7 h-7 text-slate-300"/>
+                  <Info className="w-7 h-7 text-slate-300" />
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                    No capacity data.<br/>Add Workforce Master records.
+                    No capacity data.<br />Add Workforce Master records.
                   </p>
                 </div>
               )}
@@ -759,7 +791,7 @@ export default function VPDashboard() {
           {/* Day events list */}
           {dayEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-slate-200 bg-slate-50/50 rounded-xl">
-              <Calendar className="w-8 h-8 text-slate-300"/>
+              <Calendar className="w-8 h-8 text-slate-300" />
               <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">No activities scheduled for this day</p>
               <p className="text-[10px] text-slate-400 font-bold">Everything is clear for this selected timeline.</p>
             </div>
@@ -767,7 +799,7 @@ export default function VPDashboard() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {dayEvents.map((ev, i) => {
                 const tc = EVT[ev.type] || EVT.rts;
-                
+
                 // Select custom Lucide icon based on type
                 let IconComponent = Clock;
                 if (ev.type === 'bid_due' || ev.type === 'quote_date' || ev.type === 'ofa_sched' || ev.type === 'bfa_sched' || ev.type === 'field_measure') {
@@ -781,16 +813,15 @@ export default function VPDashboard() {
                 }
 
                 return (
-                  <div key={i} className={`flex items-start gap-4 p-4 border rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-md transition-shadow duration-200 bg-white border-l-4 ${
-                    ev.type === 'bid_due' ? 'border-l-red-500' :
-                    ev.type === 'quote_date' ? 'border-l-rose-500' :
-                    ev.type === 'awarded_date' ? 'border-l-yellow-500' :
-                    ev.type === 'fab_start' ? 'border-l-fuchsia-500' :
-                    'border-l-amber-500'
-                  }`}>
+                  <div key={i} className={`flex items-start gap-4 p-4 border rounded-xl shadow-[0_2px_10px_rgba(0,0,0,0.01)] hover:shadow-md transition-shadow duration-200 bg-white border-l-4 ${ev.type === 'bid_due' ? 'border-l-red-500' :
+                      ev.type === 'quote_date' ? 'border-l-rose-500' :
+                        ev.type === 'awarded_date' ? 'border-l-yellow-500' :
+                          ev.type === 'fab_start' ? 'border-l-fuchsia-500' :
+                            'border-l-amber-500'
+                    }`}>
                     {/* Left Icon */}
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border ${tc.badge}`}>
-                      <IconComponent className="w-4 h-4"/>
+                      <IconComponent className="w-4 h-4" />
                     </div>
 
                     {/* Content */}
@@ -830,7 +861,7 @@ export default function VPDashboard() {
               <div className="flex flex-wrap gap-4">
                 {Object.entries(EVT).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-2">
-                    <span className={`w-2.5 h-2.5 rounded-full ${v.dot}`}/>
+                    <span className={`w-2.5 h-2.5 rounded-full ${v.dot}`} />
                     <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{v.label}</span>
                   </div>
                 ))}
@@ -849,7 +880,7 @@ export default function VPDashboard() {
                     { label: "Fab Starts", k: 'fab_start', dot: 'bg-fuchsia-500' },
                   ].map((s, i) => (
                     <span key={i} className="inline-flex items-center gap-1 text-[9px] font-black text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
-                      <span className={`w-1 h-1 rounded-full ${s.dot}`}/>
+                      <span className={`w-1 h-1 rounded-full ${s.dot}`} />
                       {s.label}: {monthEventCounts[s.k] || 0}
                     </span>
                   ))}
