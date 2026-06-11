@@ -107,7 +107,6 @@ export default function ProjectMaster() {
 
   const createDefaultRow = (projectData) => {
     const initialErectionDate = projectData.erection_date || '';
-    const calculated = initialErectionDate ? calculateDates(initialErectionDate, projectData.schedule_field_measure_required) : {};
     return {
       id: Date.now(),
       is_new: true,
@@ -117,7 +116,10 @@ export default function ProjectMaster() {
       item_description: '',
       category: '',
       scheduled_erection_date: initialErectionDate,
-      ...calculated,
+      rts_date: '',
+      scheduled_field_measure_date: '',
+      scheduled_bfa_date: '',
+      scheduled_ofa_date: '',
       plant_lead_time_weeks: '0',
       budget_plant_hours: '0',
       budget_field_hours: '0',
@@ -130,72 +132,7 @@ export default function ProjectMaster() {
     };
   };
 
-  const calculateDates = (erectionDate, isRequired) => {
-    if (!erectionDate) return {};
-    const base = new Date(erectionDate);
 
-    // RTS Date: 2 months prior
-    const rts = new Date(base);
-    rts.setMonth(rts.getMonth() - 2);
-
-    const isFMRequired = (isRequired !== undefined ? isRequired : (form.schedule_field_measure_required || 'Yes')).trim().toLowerCase() !== 'no';
-
-    const formatDate = (d) => {
-      const year = d.getFullYear();
-      const month = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return `${year}-${month}-${day}`;
-    };
-
-    if (isFMRequired) {
-      // Field Measure: 2 weeks prior to RTS
-      const fm = new Date(rts);
-      fm.setDate(fm.getDate() - 14);
-
-      // BFA: 2 weeks prior to Field Measure
-      const bfa = new Date(fm);
-      bfa.setDate(bfa.getDate() - 14);
-
-      // OFA: 2 weeks prior to BFA
-      const ofa = new Date(bfa);
-      ofa.setDate(ofa.getDate() - 14);
-
-      return {
-        rts_date: formatDate(rts),
-        scheduled_field_measure_date: formatDate(fm),
-        scheduled_bfa_date: formatDate(bfa),
-        scheduled_ofa_date: formatDate(ofa)
-      };
-    } else {
-      // Skip Field Measure, apply Field Measure constraints to BFA (rts - 14 days), and BFA constraints to OFA (bfa - 14 days)
-      const bfa = new Date(rts);
-      bfa.setDate(bfa.getDate() - 14);
-
-      const ofa = new Date(bfa);
-      ofa.setDate(ofa.getDate() - 14);
-
-      return {
-        rts_date: formatDate(rts),
-        scheduled_field_measure_date: null,
-        scheduled_bfa_date: formatDate(bfa),
-        scheduled_ofa_date: formatDate(ofa)
-      };
-    }
-  };
-
-  // Recalculate scheduled dates when schedule_field_measure_required changes
-  useEffect(() => {
-    if (schedules.length > 0) {
-      setSchedules(prev => prev.map(row => {
-        if (!row.scheduled_erection_date) return row;
-        const newDates = calculateDates(row.scheduled_erection_date, form.schedule_field_measure_required);
-        return {
-          ...row,
-          ...newDates
-        };
-      }));
-    }
-  }, [form.schedule_field_measure_required]);
 
   const handleScheduleChange = (id, field, value) => {
     setSchedules(prev => prev.map(row => {
@@ -209,10 +146,7 @@ export default function ProjectMaster() {
         updated.budget_plant_hours = (mhTon * rowTons).toFixed(2);
       }
 
-      if (field === 'scheduled_erection_date' && value) {
-        const calculated = calculateDates(value, form.schedule_field_measure_required);
-        updated = { ...updated, ...calculated };
-      }
+
       if (field === 'plant_lead_time_weeks') {
         const weeks = parseFloat(value) || 0;
         updated.num_days = Math.round(weeks * 7);
@@ -228,7 +162,6 @@ export default function ProjectMaster() {
     }, 0);
 
     const initialErectionDate = form.erection_date || '';
-    const calculated = initialErectionDate ? calculateDates(initialErectionDate, form.schedule_field_measure_required) : {};
 
     const newRow = {
       id: Date.now(),
@@ -239,7 +172,10 @@ export default function ProjectMaster() {
       item_description: '',
       category: '',
       scheduled_erection_date: initialErectionDate,
-      ...calculated,
+      rts_date: '',
+      scheduled_field_measure_date: '',
+      scheduled_bfa_date: '',
+      scheduled_ofa_date: '',
       plant_lead_time_weeks: '0',
       budget_plant_hours: '0',
       budget_field_hours: '0',
@@ -370,7 +306,7 @@ export default function ProjectMaster() {
 
     const showFieldMeasure = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
     const headersList = [
-      'Seq #', 'Tons', 'Item Description', 'Category',
+      'Seq #', 'Tons', 'Item Description',
       'Scheduled\nOFA', 'Actual\nOFA', 'Scheduled\nBFA', 'Actual\nBFA'
     ];
     if (showFieldMeasure) {
@@ -393,7 +329,6 @@ export default function ProjectMaster() {
         s.seq_no,
         s.tons,
         s.item_description,
-        s.category || '',
         s.scheduled_ofa_date,
         s.actual_ofa_date || '-',
         s.scheduled_bfa_date,
@@ -421,7 +356,6 @@ export default function ProjectMaster() {
       { cellWidth: 10 }, // SEQ #
       { cellWidth: 12 }, // Tons
       { cellWidth: 'auto' }, // Item Description
-      { cellWidth: 16 }, // Category
       { cellWidth: 12, halign: 'center' }, // schedule OFA
       { cellWidth: 12, halign: 'center' }, // actual OFA
       { cellWidth: 12, halign: 'center' }, // schedule BFA
@@ -800,7 +734,7 @@ export default function ProjectMaster() {
         doc.setFontSize(6.5);
         doc.setFont(undefined, 'normal');
         doc.setTextColor(100, 116, 139); // Slate 500
-        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons | ${s.category || 'N/A'}`, 14, yRow + 8.5);
+        doc.text(`${parseFloat(s.tons || 0).toFixed(2)} Tons`, 14, yRow + 8.5);
 
         // Draw Gantt Bar
         const { start, end } = getSequenceRange(s);

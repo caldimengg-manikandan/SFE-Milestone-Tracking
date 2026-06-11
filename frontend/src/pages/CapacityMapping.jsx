@@ -245,27 +245,72 @@ function CapacityView({ data, machines, refresh }) {
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: ''
+    shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '',
+    capacity_per_day: '', capacity_per_month: '', capacity_per_year: ''
   });
 
   // Derived data for dynamic dropdowns
   const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
   const filteredMachines = machines.filter(m => m.shop === form.shop);
 
+  // Auto-calculation helpers
+// Auto-calculation helpers – only fill empty fields
+  const handleCapacityDayChange = (val) => {
+    const day = val === '' ? '' : parseFloat(val);
+    setForm(prev => ({
+      ...prev,
+      capacity_per_day: val,
+      // Only auto-calc month/year if they are empty
+      capacity_per_month: prev.capacity_per_month ? prev.capacity_per_month : (day === '' ? '' : (day * 30).toFixed(2)),
+      capacity_per_year: prev.capacity_per_year ? prev.capacity_per_year : (day === '' ? '' : (day * 360).toFixed(2)),
+      rate_per_day: val,
+    }));
+  };
+
+  const handleCapacityMonthChange = (val) => {
+    const month = val === '' ? '' : parseFloat(val);
+    setForm(prev => ({
+      ...prev,
+      capacity_per_month: val,
+      // Only auto-calc day/year if they are empty
+      capacity_per_day: prev.capacity_per_day ? prev.capacity_per_day : (month === '' ? '' : (month / 30).toFixed(2)),
+      capacity_per_year: prev.capacity_per_year ? prev.capacity_per_year : (month === '' ? '' : (month * 12).toFixed(2)),
+      rate_per_day: prev.capacity_per_day ? prev.capacity_per_day : (month === '' ? '' : (month / 30).toFixed(2)),
+    }));
+  };
+
+  const handleCapacityYearChange = (val) => {
+    const year = val === '' ? '' : parseFloat(val);
+    setForm(prev => ({
+      ...prev,
+      capacity_per_year: val,
+      // Only auto-calc month/day if they are empty
+      capacity_per_month: prev.capacity_per_month ? prev.capacity_per_month : (year === '' ? '' : (year / 12).toFixed(2)),
+      capacity_per_day: prev.capacity_per_day ? prev.capacity_per_day : (year === '' ? '' : (year / 360).toFixed(2)),
+      rate_per_day: prev.capacity_per_day ? prev.capacity_per_day : (year === '' ? '' : (year / 360).toFixed(2)),
+    }));
+  };
+
   const handleOpen = (item = null) => {
     if (item) {
       setEditItem(item);
+      const dayVal = item.capacity_per_day || item.rate_per_day || '';
+      const monthVal = item.capacity_per_month || (dayVal ? (parseFloat(dayVal) * 30).toFixed(2) : '');
+      const yearVal = item.capacity_per_year || (dayVal ? (parseFloat(dayVal) * 360).toFixed(2) : '');
       setForm({
         shop: item.shop || '',
         location: item.location || '',
         category: item.category || 'Machine',
         machine: item.machine || '',
         process: item.process || '',
-        rate_per_day: item.rate_per_day || ''
+        rate_per_day: item.rate_per_day || '',
+        capacity_per_day: dayVal,
+        capacity_per_month: monthVal,
+        capacity_per_year: yearVal
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '', capacity_per_day: '', capacity_per_month: '', capacity_per_year: '' });
     }
     setShowModal(true);
   };
@@ -274,8 +319,15 @@ function CapacityView({ data, machines, refresh }) {
     e.preventDefault();
     setLoading(true);
     try {
-      if (editItem) await capacityAPI.update(editItem.id, form);
-      else await capacityAPI.create(form);
+      const payload = {
+        ...form,
+        rate_per_day: form.capacity_per_day || form.rate_per_day || 0,
+        capacity_per_day: form.capacity_per_day || 0,
+        capacity_per_month: form.capacity_per_month || 0,
+        capacity_per_year: form.capacity_per_year || 0
+      };
+      if (editItem) await capacityAPI.update(editItem.id, payload);
+      else await capacityAPI.create(payload);
       setShowModal(false);
       refresh();
     } catch (err) {
@@ -313,14 +365,24 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Category</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Daily Rate</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Month</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate/Year</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Day</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Month</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Year</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map(item => (
+            {data.map(item => {
+              const displayDay = item.capacity_per_day && parseFloat(item.capacity_per_day) > 0
+                ? parseFloat(item.capacity_per_day).toFixed(2)
+                : parseFloat(item.rate_per_day || 0).toFixed(2);
+              const displayMonth = item.capacity_per_month && parseFloat(item.capacity_per_month) > 0
+                ? parseFloat(item.capacity_per_month).toFixed(1)
+                : item.rate_per_month?.toFixed(1);
+              const displayYear = item.capacity_per_year && parseFloat(item.capacity_per_year) > 0
+                ? parseFloat(item.capacity_per_year).toFixed(1)
+                : item.rate_per_year?.toFixed(1);
+              return (
               <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
                 <td className="px-6 py-4 font-bold text-slate-900">{item.shop}</td>
                 <td className="px-6 py-4 text-xs text-slate-500 font-medium">{item.location || '-'}</td>
@@ -331,9 +393,9 @@ function CapacityView({ data, machines, refresh }) {
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
                 <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
-                <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{item.rate_per_day} T</td>
-                <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_month?.toFixed(1)} T</td>
-                <td className="px-6 py-4 text-right font-bold text-slate-900 whitespace-nowrap">{item.rate_per_year?.toFixed(1)} T</td>
+                <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{displayDay} T</td>
+                <td className="px-6 py-4 text-right font-bold text-blue-600 whitespace-nowrap">{displayMonth} T</td>
+                <td className="px-6 py-4 text-right font-bold text-purple-600 whitespace-nowrap">{displayYear} T</td>
                 <td className="px-6 py-4 text-right">
                   <div className="flex justify-end gap-1">
                     <button onClick={() => handleOpen(item)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
@@ -341,15 +403,16 @@ function CapacityView({ data, machines, refresh }) {
                   </div>
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
       </div>
 
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-fade-in">
-          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200">
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between">
+          <div className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-lg overflow-hidden border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h3 className="text-xl font-bold text-slate-900">{editItem ? 'Edit Capacity' : 'New Capacity Entry'}</h3>
               <button onClick={() => setShowModal(false)} className="p-2 rounded-xl text-slate-400 hover:text-slate-600"><X className="w-6 h-6" /></button>
             </div>
@@ -364,7 +427,7 @@ function CapacityView({ data, machines, refresh }) {
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Location</label>
-                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="Country" />
+                  <input className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.location} onChange={e => setForm({ ...form, location: e.target.value })} placeholder="e.g. USA, India" />
                 </div>
               </div>
               <div className="space-y-1.5">
@@ -385,12 +448,61 @@ function CapacityView({ data, machines, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({ ...form, process: e.target.value })} placeholder="e.g. Drilling" />
               </div>
-              <div className="grid grid-cols-1 gap-4">
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Daily Rate (Tonnes)</label>
-                  <input type="number" step="0.01" required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.rate_per_day} onChange={e => setForm({ ...form, rate_per_day: e.target.value })} placeholder="0.00" />
+
+              {/* Capacity Per Day / Month / Year — Interlinked Editable Fields */}
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 mb-1">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />
+                  </div>
+                  <label className="text-[10px] font-black text-slate-600 uppercase tracking-widest">Capacity Configuration</label>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium -mt-1 ml-8">
+                  Enter any field — the others auto-calculate. All fields are editable for manual adjustments.
+                </p>
+                <div className="grid grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Per Day
+                    </label>
+                    <input
+                      type="number" step="0.01" required
+                      className="w-full px-4 py-3 rounded-xl border border-emerald-200 text-sm font-bold text-slate-700 outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 transition-all bg-emerald-50/30"
+                      value={form.capacity_per_day}
+                      onChange={e => handleCapacityDayChange(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Day</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-blue-600 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Per Month
+                    </label>
+                    <input
+                      type="number" step="0.01"
+                      className="w-full px-4 py-3 rounded-xl border border-blue-200 text-sm font-bold text-slate-700 outline-none focus:border-blue-400 focus:ring-4 focus:ring-blue-500/10 transition-all bg-blue-50/30"
+                      value={form.capacity_per_month}
+                      onChange={e => handleCapacityMonthChange(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Month (×30 days)</p>
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-purple-600 uppercase tracking-widest ml-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3" /> Per Year
+                    </label>
+                    <input
+                      type="number" step="0.01"
+                      className="w-full px-4 py-3 rounded-xl border border-purple-200 text-sm font-bold text-slate-700 outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10 transition-all bg-purple-50/30"
+                      value={form.capacity_per_year}
+                      onChange={e => handleCapacityYearChange(e.target.value)}
+                      placeholder="0.00"
+                    />
+                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Year (×12 months)</p>
+                  </div>
                 </div>
               </div>
+
               <button type="submit" disabled={loading} className="w-full py-4 rounded-2xl bg-slate-900 text-white font-bold text-sm shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                 {editItem ? 'Update Capacity' : 'Save Capacity'}

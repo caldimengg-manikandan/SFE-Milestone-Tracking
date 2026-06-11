@@ -88,52 +88,6 @@ export default function PlanCreation() {
     } catch (err) { console.error(err); }
   };
 
-  const calculateDates = (erectionDate, isRequired) => {
-    if (!erectionDate) return {};
-    const base = new Date(erectionDate);
-    const formatDate = (d) => d.toISOString().split('T')[0];
-
-    const isFMRequired = (isRequired !== undefined ? isRequired : (form.schedule_field_measure_required || 'Yes')).trim().toLowerCase() !== 'no';
-
-    const rts = new Date(base); rts.setMonth(rts.getMonth() - 2);
-
-    if (isFMRequired) {
-      const fm = new Date(rts); fm.setDate(fm.getDate() - 14);
-      const bfa = new Date(fm); bfa.setDate(bfa.getDate() - 14);
-      const ofa = new Date(bfa); ofa.setDate(ofa.getDate() - 14);
-
-      return {
-        rts_date: formatDate(rts),
-        scheduled_field_measure_date: formatDate(fm),
-        scheduled_bfa_date: formatDate(bfa),
-        scheduled_ofa_date: formatDate(ofa)
-      };
-    } else {
-      const bfa = new Date(rts); bfa.setDate(bfa.getDate() - 14);
-      const ofa = new Date(bfa); ofa.setDate(ofa.getDate() - 14);
-
-      return {
-        rts_date: formatDate(rts),
-        scheduled_field_measure_date: null,
-        scheduled_bfa_date: formatDate(bfa),
-        scheduled_ofa_date: formatDate(ofa)
-      };
-    }
-  };
-
-  // Recalculate scheduled dates when schedule_field_measure_required changes
-  useEffect(() => {
-    if (schedules.length > 0) {
-      setSchedules(prev => prev.map(row => {
-        if (!row.scheduled_erection_date) return row;
-        const newDates = calculateDates(row.scheduled_erection_date, form.schedule_field_measure_required);
-        return {
-          ...row,
-          ...newDates
-        };
-      }));
-    }
-  }, [form.schedule_field_measure_required]);
 
   const createDefaultRow = (projectData) => ({
     id: Date.now(),
@@ -144,7 +98,10 @@ export default function PlanCreation() {
     item_description: '',
     category: '',
     scheduled_erection_date: projectData.erection_date || '',
-    ...calculateDates(projectData.erection_date, projectData.schedule_field_measure_required),
+    rts_date: '',
+    scheduled_field_measure_date: '',
+    scheduled_bfa_date: '',
+    scheduled_ofa_date: '',
 
     plant_lead_time_weeks: '0',
     budget_plant_hours: '0',
@@ -394,7 +351,7 @@ export default function PlanCreation() {
     // Schedule table
       const isFMRequired = (project?.schedule_field_measure_required || 'Yes').trim().toLowerCase() !== 'no';
       const tableHeaders = [
-        'Seq #', 'Tons', 'Item Description', 'Category',
+        'Seq #', 'Tons', 'Item Description',
         'Scheduled\nOFA', 'Actual\nOFA', 'Scheduled\nBFA', 'Actual\nBFA',
         ...(isFMRequired ? ['Field\nMeasure'] : []),
         'RTS', 'plant Lead\nTime\n(WEEKS)',
@@ -407,7 +364,6 @@ export default function PlanCreation() {
       s.seq_no || '',
       s.tons ? parseFloat(s.tons).toFixed(2) : '',
       s.item_description || '',
-      s.category || '',
       fmtDate(s.scheduled_ofa_date),
       fmtDate(s.actual_ofa_date),
       fmtDate(s.scheduled_bfa_date),
@@ -590,7 +546,7 @@ export default function PlanCreation() {
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(5);
       doc.setTextColor(...medGray);
-      doc.text(`${s.tons ? parseFloat(s.tons).toFixed(2) : '0.00'} Tons | ${s.category || 'N/A'}`, labelColX + 2, gy + 10);
+      doc.text(`${s.tons ? parseFloat(s.tons).toFixed(2) : '0.00'} Tons`, labelColX + 2, gy + 10);
 
       // Timeline grid
       months.forEach(m => { doc.setDrawColor(226, 232, 240); doc.rect(m.x, gy, m.width, rowH, 'S'); });
@@ -870,9 +826,7 @@ export default function PlanCreation() {
                 updated.budget_plant_hours = (mhTon * rowTons).toFixed(2);
               }
 
-              if (f === 'scheduled_erection_date' && v) {
-                updated = { ...updated, ...calculateDates(v, form.schedule_field_measure_required) };
-              }
+
               return updated;
             }));
           }}

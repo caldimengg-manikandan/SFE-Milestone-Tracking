@@ -118,46 +118,45 @@ export default function StructuralScheduleForm({
       {/* Table Area */}
       <div className="flex-1 flex flex-col overflow-hidden bg-slate-50/30 p-4">
         <div className="bg-white rounded-lg border border-slate-300 shadow-sm overflow-auto h-max max-h-full relative [&::-webkit-scrollbar]:h-3 [&::-webkit-scrollbar]:w-3 [&::-webkit-scrollbar-track]:bg-slate-100/50 [&::-webkit-scrollbar-thumb]:bg-slate-800 [&::-webkit-scrollbar-thumb]:border-2 [&::-webkit-scrollbar-thumb]:border-white [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-slate-900">
-          <table className="w-full text-left min-w-[2450px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+          <table className="w-full text-left min-w-[1800px]" style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
             <thead>
               <tr className="text-white text-[9px] font-bold uppercase tracking-wider bg-slate-800">
                 <th
                   className="px-1 py-1 border-r border-b border-white/10 text-center bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]"
-                  style={{ width: '48px', minWidth: '48px', maxWidth: '48px', left: '0px', top: '0px', position: 'sticky', zIndex: 50 }}
+                  style={{ width: '36px', minWidth: '36px', maxWidth: '36px', left: '0px', top: '0px', position: 'sticky', zIndex: 50 }}
                 >
                   SEQ #
                 </th>
                 <th
                   className="px-1 py-1 border-r border-b border-white/10 text-center bg-slate-800 shadow-[1px_0_0_rgba(0,0,0,0.1)]"
-                  style={{ width: '96px', minWidth: '96px', maxWidth: '96px', left: '48px', top: '0px', position: 'sticky', zIndex: 50 }}
+                  style={{ width: '60px', minWidth: '60px', maxWidth: '60px', left: '36px', top: '0px', position: 'sticky', zIndex: 50 }}
                 >
                   Tons
                 </th>
                 <th
                   className="px-1 py-1 border-r border-b border-white/10 bg-slate-800 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)]"
-                  style={{ width: '240px', minWidth: '240px', maxWidth: '240px', left: '144px', top: '0px', position: 'sticky', zIndex: 50 }}
+                  style={{ width: '180px', minWidth: '180px', maxWidth: '180px', left: '96px', top: '0px', position: 'sticky', zIndex: 50 }}
                 >
                   Item Description
                 </th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Category</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Scheduled OFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Scheduled OFA Date</th>
 
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">Scheduled BFA Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Scheduled BFA Date</th>
 
                 {project?.schedule_field_measure_required?.trim() !== 'No' && (
-                  <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
+                  <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Scheduled Field Measure Date</th>
                 )}
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-28 bg-slate-800 sticky top-0 z-20">RTS Date</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">plant Lead Time in WEEKS</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget plant Hours</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Budget Field Hours</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">plant Hours actual</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-700 sticky top-0 z-20">Field Hours Actual</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Detailer / Vendor</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-12 bg-slate-800 sticky top-0 z-20">Dwg Status</th>
-                <th className="px-1 py-1 border-r border-b border-white/10 w-48 bg-slate-800 sticky top-0 z-20">Notes</th>
-                <th className="px-1 py-1 border-b text-center w-12 bg-slate-800 sticky top-0 z-20">Action</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">RTS Date</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-10 bg-slate-800 sticky top-0 z-20">plant Lead Time in WEEKS</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-24 bg-slate-800 sticky top-0 z-20">Scheduled Start of Erection</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-800 sticky top-0 z-20">Budget plant Hours</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-800 sticky top-0 z-20">Budget Field Hours</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-700 sticky top-0 z-20">plant Hours actual</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-700 sticky top-0 z-20">Field Hours Actual</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-800 sticky top-0 z-20">Detailer / Vendor</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 text-center w-16 bg-slate-800 sticky top-0 z-20">Dwg Status</th>
+                <th className="px-1 py-1 border-r border-b border-white/10 w-32 bg-slate-800 sticky top-0 z-20">Notes</th>
+                <th className="px-1 py-1 border-b text-center w-8 bg-slate-800 sticky top-0 z-20">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -170,7 +169,7 @@ export default function StructuralScheduleForm({
                 <tr key={row.id} className="hover:bg-slate-50/50 transition-colors group">
                   <td
                     className="px-1 py-1 border-r border-b border-slate-200 sticky left-0 z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50"
-                    style={{ width: '48px', minWidth: '48px', maxWidth: '48px', left: '0px' }}
+                    style={{ width: '36px', minWidth: '36px', maxWidth: '36px', left: '0px' }}
                   >
                     <input
                       readOnly={isViewOnly}
@@ -180,8 +179,8 @@ export default function StructuralScheduleForm({
                     />
                   </td>
                   <td
-                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[48px] z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50"
-                    style={{ width: '96px', minWidth: '96px', maxWidth: '96px', left: '48px' }}
+                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[36px] z-30 bg-white outline outline-1 outline-slate-200 group-hover:bg-slate-50"
+                    style={{ width: '60px', minWidth: '60px', maxWidth: '60px', left: '36px' }}
                   >
                     <input
                       type="number"
@@ -192,8 +191,8 @@ export default function StructuralScheduleForm({
                     />
                   </td>
                   <td
-                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[144px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50"
-                    style={{ width: '240px', minWidth: '240px', maxWidth: '240px', left: '144px' }}
+                    className="px-1 py-1 border-r border-b border-slate-200 sticky left-[96px] z-30 bg-white outline outline-1 outline-slate-200 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] group-hover:bg-slate-50"
+                    style={{ width: '180px', minWidth: '180px', maxWidth: '180px', left: '96px' }}
                   >
                     <div className="flex flex-col gap-1.5 p-1">
                       <input
@@ -224,14 +223,6 @@ export default function StructuralScheduleForm({
                         </div>
                       )}
                     </div>
-                  </td>
-                  <td className="px-1 py-1 border-r border-b border-slate-200">
-                    <input
-                      readOnly={isViewOnly}
-                      className="w-full px-1.5 py-1 rounded border border-slate-200 outline-none text-[10px] font-medium focus:border-amber-400 bg-transparent transition-all"
-                      value={row.category || ''}
-                      onChange={e => handleRowChange(row.id, 'category', e.target.value)}
-                    />
                   </td>
                   <td className="px-1 py-1 border-r border-b border-slate-200">
                     <FormattedDateInput
