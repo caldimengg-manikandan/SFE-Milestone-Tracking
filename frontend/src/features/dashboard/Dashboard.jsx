@@ -6,7 +6,8 @@ import {
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  BarChart, Bar, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line
+  BarChart, Bar, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line,
+  LabelList
 } from 'recharts';
 import { dashboardAPI, projectAPI, scheduleAPI } from '../../services/api';
 import VPDashboard from './VPDashboard';
@@ -16,6 +17,7 @@ import VPDashboard from './VPDashboard';
 export default function Dashboard() {
   const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+  const [tonnageYear, setTonnageYear] = useState(new Date().getFullYear().toString());
   const [fromMonth, setFromMonth] = useState(0);
   const [toMonth, setToMonth] = useState(11);
   const [loading, setLoading] = useState(true);
@@ -123,7 +125,8 @@ export default function Dashboard() {
           dashboardAPI.getStats({
             year: selectedYear,
             capacity_month: capacityMonth,
-            capacity_year: capacityYear
+            capacity_year: capacityYear,
+            tonnage_year: tonnageYear
           }),
           projectAPI.getAll(),
           scheduleAPI.getAll({ page_size: 1000 })
@@ -143,7 +146,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, [selectedYear, capacityMonth, capacityYear]);
+  }, [selectedYear, capacityMonth, capacityYear, tonnageYear]);
 
   // Helper to check if a value is present (not null, undefined, or empty string)
   const isPresent = (val) => val !== null && val !== undefined && String(val).trim() !== '';
@@ -285,7 +288,14 @@ export default function Dashboard() {
     );
   });
 
-  if (loading) {
+  const totalAllocated = data.barData ? data.barData.reduce((acc, d) => acc + (d.total_ton || 0), 0) : 0;
+  const totalWon = data.total_won_tonnage || 0;
+  const tonnageDiff = totalAllocated - totalWon;
+  const absTonnageDiff = Math.abs(tonnageDiff);
+
+  const isInitialLoad = loading && projects.length === 0;
+
+  if (isInitialLoad) {
     return (
       <div className="flex items-center justify-center h-96">
         <Loader2 className="w-8 h-8 text-amber-500 animate-spin" />
@@ -294,7 +304,12 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 page-enter relative ${loading ? 'opacity-75 pointer-events-none' : ''} transition-opacity duration-300`}>
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-amber-500 overflow-hidden z-[9999]">
+          <div className="h-full bg-amber-600 animate-pulse w-full" />
+        </div>
+      )}
 
       {/* ─── Premium Mode Switcher ──────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
@@ -330,10 +345,12 @@ export default function Dashboard() {
       </div>
 
       {/* ─── VP Dashboard Mount ─────────────────────────────── */}
-      {dashboardMode === 'executive' && <VPDashboard />}
+      <div className={dashboardMode === 'executive' ? 'block page-enter' : 'hidden'}>
+        <VPDashboard />
+      </div>
 
       {/* ─── Operations Dashboard ───────────────────────────── */}
-      {dashboardMode === 'operations' && (
+      <div className={dashboardMode === 'operations' ? 'block page-enter' : 'hidden'}>
         <>
           {/* Header Row */}
           {error && (
@@ -558,8 +575,8 @@ export default function Dashboard() {
                     onChange={(e) => setSelectedYear(e.target.value)}
                     className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1 outline-none bg-white cursor-pointer"
                   >
-                    {[...Array(5)].map((_, i) => {
-                      const year = new Date().getFullYear() - 2 + i;
+                    {Array.from({ length: new Date().getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                      const year = 2012 + i;
                       return <option key={year} value={year}>{year}</option>;
                     })}
                   </select>
@@ -793,8 +810,8 @@ export default function Dashboard() {
                     onChange={(e) => setCapacityYear(e.target.value)}
                     className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
                   >
-                    {[...Array(5)].map((_, i) => {
-                      const year = new Date().getFullYear() - 2 + i;
+                    {Array.from({ length: new Date().getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                      const year = 2012 + i;
                       return <option key={year} value={year}>{year}</option>;
                     })}
                   </select>
@@ -1009,8 +1026,20 @@ export default function Dashboard() {
             <div className="bg-white border border-slate-300 p-8 flex flex-col gap-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Tonnage Loading Summary</h3>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Tonnage Loading</p>
+                  <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Tonnage Loading Summary ({tonnageYear})</h3>
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Tonnage Loading for {tonnageYear}</p>
+                </div>
+                <div className="flex items-center gap-4">
+                  <select
+                    value={tonnageYear}
+                    onChange={(e) => setTonnageYear(e.target.value)}
+                    className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+                  >
+                    {Array.from({ length: new Date().getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                      const year = 2012 + i;
+                      return <option key={year} value={year}>{year}</option>;
+                    })}
+                  </select>
                 </div>
               </div>
 
@@ -1026,7 +1055,7 @@ export default function Dashboard() {
                     <h4 className="text-lg font-black text-slate-800 mt-0.5">
                       {data.total_won_structural_tonnage ? data.total_won_structural_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
                     </h4>
-                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Won Projects ({tonnageYear})</p>
                   </div>
                 </div>
 
@@ -1040,7 +1069,7 @@ export default function Dashboard() {
                     <h4 className="text-lg font-black text-slate-800 mt-0.5">
                       {data.total_won_joist_tonnage ? data.total_won_joist_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
                     </h4>
-                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Won Projects ({tonnageYear})</p>
                   </div>
                 </div>
 
@@ -1054,12 +1083,34 @@ export default function Dashboard() {
                     <h4 className="text-lg font-black text-slate-800 mt-0.5">
                       {data.total_won_tonnage ? data.total_won_tonnage.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 }) : '0'} Tons
                     </h4>
-                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">All Won Projects</p>
+                    <p className="text-[9px] text-slate-400 font-medium leading-none mt-0.5">Won Projects ({tonnageYear})</p>
                   </div>
                 </div>
               </div>
 
               <div className="flex-1 min-h-[380px] w-full relative">
+                {/* Floating Tonnage Variance (Surplus / Deficit) Indicator */}
+                {data.barData && data.barData.length > 0 && (
+                  <div className="absolute top-1 right-2 z-10">
+                    <div className={`px-3 py-2 border text-[10px] font-black uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-2 transition-all ${
+                      tonnageDiff >= 0 
+                        ? 'bg-violet-50 text-violet-700 border-violet-200 shadow-violet-100/40' 
+                        : 'bg-rose-50 text-rose-700 border-rose-200 shadow-rose-100/40'
+                    }`}>
+                      <div className={`w-2 h-2 rounded-full ${tonnageDiff >= 0 ? 'bg-violet-500' : 'bg-rose-500'} animate-pulse`} />
+                      <div className="flex flex-col leading-none">
+                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Annual Variance</span>
+                        <span className="font-extrabold text-[10px]">
+                          {tonnageDiff >= 0 ? 'Surplus Tonnage: ' : 'Deficient Tonnage: '}
+                          <span className="font-mono text-xs font-black ml-0.5">
+                            {tonnageDiff >= 0 ? '+' : '-'}
+                            {absTonnageDiff.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tons
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <ResponsiveContainer width="100%" height="100%">
                   <ComposedChart data={data.barData} barGap={6} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
@@ -1069,9 +1120,12 @@ export default function Dashboard() {
                     <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
                     <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
                     
-                    {/* Stacked Bars for monthly Structural Tons and Joist Tons */}
-                    <Bar dataKey="struct_ton" stackId="tonnage" name="Structural Tons" fill="#6366f1" radius={0} />
-                    <Bar dataKey="joist_ton" stackId="tonnage" name="Joist Tons" fill="#fbbf24" radius={0} />
+                    {/* Total Tonnage Bar */}
+                    <Bar dataKey="total_ton" name="Total Tonnage" fill="#6366f1" radius={0}>
+                      <LabelList dataKey="total_ton" position="top" formatter={(val) => val > 0 ? val.toLocaleString(undefined, { maximumFractionDigits: 1 }) : ''} style={{ fontSize: 9, fontWeight: 800, fill: '#6366f1' }} />
+                    </Bar>
+                    {/* Capacity Line (Black Dot Thread) */}
+                    <Line type="monotone" dataKey="tonnage_capacity" name="Tonnage Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
                   </ComposedChart>
                 </ResponsiveContainer>
               </div>
@@ -1166,7 +1220,7 @@ export default function Dashboard() {
             </div>
           )}
         </>
-      )}
+      </div>
     </div>
   );
 }

@@ -201,9 +201,27 @@ class DashboardStatsView(APIView):
         months_short = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
         
         won_rfqs = RFQMaster.objects.filter(won_lost='Won', deleted_at__isnull=True)
-        total_won_tonnage = sum(float(r.total_tonnage or 0) for r in won_rfqs)
-        total_won_structural_tonnage = sum(float(r.ton_steel or 0) for r in won_rfqs)
-        total_won_joist_tonnage = sum(float(r.ton_joist or 0) for r in won_rfqs)
+        tonnage_year = request.query_params.get('tonnage_year') or year
+        try:
+            t_year = int(tonnage_year)
+        except Exception:
+            t_year = 2026
+
+        import datetime
+        year_start = datetime.date(t_year, 1, 1)
+        year_end = datetime.date(t_year, 12, 31)
+
+        schedules_for_tonnage = ProductionSchedule.objects.filter(
+            start_date__isnull=False,
+            end_date__isnull=False,
+            start_date__lte=year_end,
+            end_date__gte=year_start
+        )
+        # Calculate dynamic tonnage capacity from the Capacity configuration module
+        total_monthly_capacity = sum(float(c.rate_per_month or 0) for c in Capacity.objects.all())
+        if total_monthly_capacity <= 0:
+            total_monthly_capacity = 33500.0  # Fallback default
+            
         manpower_entries = Manpower.objects.all()
 
         def is_schedule_active_in_month(start_month_date, duration_months, target_month_idx):
@@ -254,16 +272,37 @@ class DashboardStatsView(APIView):
             required_hours = struct_fab + misc_fab + struct_erect + misc_erect
             remaining = available_hours - required_hours
             
-            # Tonnage distribution by month
+            # Tonnage distribution by month based on ProductionSchedule
             struct_ton = 0.0
             joist_ton = 0.0
-            for r in won_rfqs:
-                if is_schedule_active_in_month(r.struct_fab_start_month, r.struct_fab_duration_months, idx):
-                    r_ton_steel = float(r.ton_steel or 0)
-                    r_ton_joist = float(r.ton_joist or 0)
-                    dur = float(r.struct_fab_duration_months or 1)
-                    struct_ton += r_ton_steel / dur if dur > 0 else r_ton_steel
-                    joist_ton += r_ton_joist / dur if dur > 0 else r_ton_joist
+            for schedule in schedules_for_tonnage:
+                try:
+                    month_start = datetime.date(t_year, idx + 1, 1)
+                    if idx == 11:
+                        month_end = datetime.date(t_year + 1, 1, 1) - timedelta(days=1)
+                    else:
+                        month_end = datetime.date(t_year, idx + 2, 1) - timedelta(days=1)
+                except Exception:
+                    continue
+                
+                if schedule.start_date <= month_end and schedule.end_date >= month_start:
+                    dur = (schedule.end_date.year - schedule.start_date.year) * 12 + schedule.end_date.month - schedule.start_date.month + 1
+                    dur = max(1, dur)
+                    
+                    for item in schedule.items.all():
+                        is_joist = False
+                        struct_item = StructuralScheduleItem.objects.filter(
+                            project__code=item.job_number,
+                            seq_no=item.sequence_number
+                        ).first()
+                        if struct_item and struct_item.category and 'joist' in struct_item.category.lower():
+                            is_joist = True
+                        
+                        item_w = float(item.weight or 0)
+                        if is_joist:
+                            joist_ton += item_w / dur
+                        else:
+                            struct_ton += item_w / dur
             
             bar_data.append({
                 'name': m_short,
@@ -276,8 +315,21 @@ class DashboardStatsView(APIView):
                 'misc_erect': round(misc_erect, 2),
                 'struct_ton': round(struct_ton, 2),
                 'joist_ton': round(joist_ton, 2),
-                'total_ton': round(struct_ton + joist_ton, 2)
+                'total_ton': round(struct_ton + joist_ton, 2),
+                'tonnage_capacity': round(total_monthly_capacity, 2)
             })
+
+        # Calculate totals for Tonnage Loading Summary from RFQ Master for the selected year
+        year_prefix = str(t_year)[-2:]
+        rfqs_for_year = RFQMaster.objects.filter(
+            won_lost='Won',
+            deleted_at__isnull=True,
+            quote_no__startswith=year_prefix
+        )
+        total_won_structural_tonnage = sum(float(r.ton_steel or 0) for r in rfqs_for_year)
+        total_won_joist_tonnage = sum(float(r.ton_joist or 0) for r in rfqs_for_year)
+        total_won_tonnage = total_won_structural_tonnage + total_won_joist_tonnage
+
 
         # 5. Recent Activities (Recent Projects)
         recent_activities = []

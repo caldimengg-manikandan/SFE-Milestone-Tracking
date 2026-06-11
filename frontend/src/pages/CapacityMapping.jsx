@@ -110,7 +110,12 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
   const filteredCapacities = filterShop === 'All' ? capacities : capacities.filter(c => c.shop === filterShop);
   const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => m.shop === filterShop);
   
-  const totalCapacity = filteredCapacities.reduce((sum, c) => sum + parseFloat(c.rate_per_day || 0), 0);
+  const totalCapacity = filteredCapacities.reduce((sum, c) => {
+    const monthVal = c.capacity_per_month && parseFloat(c.capacity_per_month) > 0
+      ? parseFloat(c.capacity_per_month)
+      : parseFloat(c.rate_per_day || 0) * 30;
+    return sum + monthVal;
+  }, 0);
   const machineCount = filteredMachines.length;
 
   const filteredManpower = filterMonth === 'All' 
@@ -184,7 +189,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
   const varianceBg = manhoursVariance >= 0 ? 'bg-emerald-50' : 'bg-rose-50';
 
   const stats = [
-    { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: filterShop === 'All' ? 'Per Day (Global)' : `Per Day (${filterShop})`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: filterShop === 'All' ? 'Per Month (Global)' : `Per Month (${filterShop})`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { label: 'Manhours Available', value: `${totalMonthlyManhours} Hours`, sub: filterMonth === 'All' ? 'Per Month (Workforce Master)' : `Per Month (${filterMonth} - Workforce Master)`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
     { label: 'Manhours Required', value: `${totalRequiredHours} Hours`, sub: filterMonth === 'All' ? 'All Won Bids Total' : `Won Bids active in ${filterMonth}`, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: varianceLabel, value: `${varianceValue} Hours`, sub: varianceSub, icon: AlertCircle, color: varianceColor, bg: varianceBg },

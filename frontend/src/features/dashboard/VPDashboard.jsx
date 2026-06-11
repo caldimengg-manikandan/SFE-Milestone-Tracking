@@ -408,7 +408,9 @@ export default function VPDashboard() {
   };
 
   /* ── Loading ── */
-  if (loading) return (
+  const isInitialLoad = loading && projects.length === 0;
+
+  if (isInitialLoad) return (
     <div className="flex items-center justify-center h-64">
       <Loader2 className="w-7 h-7 text-amber-500 animate-spin"/>
     </div>
@@ -418,7 +420,12 @@ export default function VPDashboard() {
      RENDER
   ──────────────────────────────────────────────────────── */
   return (
-    <div className="space-y-6">
+    <div className={`space-y-6 page-enter relative ${loading ? 'opacity-75 pointer-events-none' : ''} transition-opacity duration-300`}>
+      {loading && (
+        <div className="fixed top-0 left-0 right-0 h-1 bg-amber-500 overflow-hidden z-[9999]">
+          <div className="h-full bg-amber-600 animate-pulse w-full" />
+        </div>
+      )}
 
       {/* ══ ANNOUNCEMENT BAR — Latest Wins ══════════════════ */}
       {latestWins.length > 0 && (
@@ -577,7 +584,10 @@ export default function VPDashboard() {
           {bidView==='mom' && (
             <select value={bidYear} onChange={e=>setBidYear(parseInt(e.target.value))}
               className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-              {[...Array(6)].map((_,i)=>{const y=TODAY.getFullYear()-3+i;return<option key={y} value={y}>{y}</option>;})}
+              {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                const y = 2012 + i;
+                return <option key={y} value={y}>{y}</option>;
+              })}
             </select>
           )}
         </PanelHeader>
@@ -629,7 +639,10 @@ export default function VPDashboard() {
               </select>
               <select value={capYear} onChange={e=>setCapYear(parseInt(e.target.value))}
                 className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-                {[...Array(5)].map((_,i)=>{const y=TODAY.getFullYear()-2+i;return<option key={y} value={y}>{y}</option>;})}
+                {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                  const y = 2012 + i;
+                  return <option key={y} value={y}>{y}</option>;
+                })}
               </select>
             </PanelHeader>
             <div className="p-6">

@@ -234,6 +234,16 @@ export default function InternalBidSchedule() {
   const wonBids = filteredBids.filter(b => getBidStatus(b) === 'won').length;
   const pendingBids = filteredBids.filter(b => ['upcoming', 'due-today'].includes(getBidStatus(b))).length;
 
+  // Monthly Stats (for the visible calendar month)
+  const visibleMonthBids = filteredBids.filter(bid => {
+    if (!bid.bid_due_date) return false;
+    const bidDate = new Date(bid.bid_due_date + 'T00:00:00');
+    return bidDate.getFullYear() === visibleMonth.year && bidDate.getMonth() === visibleMonth.month;
+  });
+  const monthlyWon = visibleMonthBids.filter(b => getBidStatus(b) === 'won').length;
+  const monthlyLost = visibleMonthBids.filter(b => getBidStatus(b) === 'lost').length;
+  const monthlyOverdue = visibleMonthBids.filter(b => getBidStatus(b) === 'overdue').length;
+
   const exportToCSV = () => {
     if (filteredBids.length === 0) return;
     const headers = ['Quote No', 'Project Name', 'Customer', 'Estimator', 'Bid Due Date', 'Bid Due Time', 'Bid Amount', 'Decision to Bid', 'Won/Lost', 'Location'];
@@ -440,8 +450,8 @@ export default function InternalBidSchedule() {
                 </div>
               </div>
             </div>            {/* Calendar Table Container */}
-            <div className="flex-1 overflow-hidden bg-white min-h-0 flex flex-col">
-              <table className="w-full h-full border-collapse border border-slate-300 table-fixed">
+            <div className="flex-1 overflow-y-auto bg-white min-h-0 flex flex-col">
+              <table className="w-full border-collapse border border-slate-300 table-fixed">
                 <thead className="bg-slate-50 border-b border-slate-300 select-none h-10">
                   <tr>
                     {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
@@ -456,7 +466,7 @@ export default function InternalBidSchedule() {
                 </thead>
                 <tbody>
                   {weeks.map((week, wIndex) => (
-                    <tr key={wIndex}>
+                    <tr key={wIndex} className="h-28">
                       {week.map((day) => {
                         const dateStr = day.formattedDate;
                         const dayBids = getDayBids(dateStr);
@@ -507,11 +517,26 @@ export default function InternalBidSchedule() {
                                   const cat = getBidCategory(bid);
                                   const cfg = CATEGORY_CONFIG[cat];
                                   const status = getBidStatus(bid);
+
+                                  let bgClass = cfg.bg;
+                                  let borderClass = cfg.border;
+                                  let textClass = cfg.text;
+
+                                  if (status === 'overdue') {
+                                    bgClass = 'bg-red-50';
+                                    borderClass = 'border-red-200';
+                                    textClass = 'text-red-700';
+                                  } else if (status === 'won') {
+                                    bgClass = 'bg-emerald-50';
+                                    borderClass = 'border-emerald-200';
+                                    textClass = 'text-emerald-700';
+                                  }
+
                                   return (
                                     <div
                                       key={bid.id}
                                       onClick={() => setSelectedBid(bid)}
-                                      className={`rounded border ${cfg.border} ${cfg.bg} ${cfg.text} text-[11px] font-bold px-1.5 py-1 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight flex items-center gap-1.5`}
+                                      className={`rounded border ${borderClass} ${bgClass} ${textClass} text-[11px] font-bold px-1.5 py-1 cursor-pointer transition-all hover:brightness-95 hover:shadow-sm leading-tight flex items-center gap-1.5`}
                                       title={`${bid.quote_no} — ${bid.project_name}`}
                                     >
                                       {status === 'overdue' && <span className="w-1.5 h-1.5 shrink-0 rounded-full bg-rose-500 inline-block" title="Overdue" />}
@@ -532,6 +557,27 @@ export default function InternalBidSchedule() {
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* Calendar Footer stats for the particular month */}
+            <div className="flex-none bg-slate-50 border-t border-slate-200 px-6 py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 select-none">
+              <div className="text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                Monthly Performance Summary ({MONTH_NAMES[visibleMonth.month]} {visibleMonth.year})
+              </div>
+              <div className="flex flex-wrap items-center gap-6 text-[11px] font-black uppercase tracking-wider">
+                <div className="flex items-center gap-2 text-emerald-600 bg-emerald-50 border border-emerald-200/50 px-3 py-1 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                  <span>Won: <span className="font-mono text-xs ml-0.5">{monthlyWon}</span></span>
+                </div>
+                <div className="flex items-center gap-2 text-slate-600 bg-slate-50 border border-slate-200 px-3 py-1 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-slate-400" />
+                  <span>Lost: <span className="font-mono text-xs ml-0.5">{monthlyLost}</span></span>
+                </div>
+                <div className="flex items-center gap-2 text-rose-600 bg-rose-50 border border-rose-200/50 px-3 py-1 rounded-lg">
+                  <span className="w-2 h-2 rounded-full bg-rose-500" />
+                  <span>Overdue: <span className="font-mono text-xs ml-0.5">{monthlyOverdue}</span></span>
+                </div>
+              </div>
             </div>
           </div>
         )}

@@ -103,9 +103,9 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
               return {
                 job: item.job_number,
                 seq: item.sequence_number || (idx + 1).toString(),
-                weight: matchingItem.tons || item.weight,
+                weight: item.weight ? item.weight : (matchingItem.tons || ''),
                 quantity: item.quantity,
-                rtsDate: matchingItem.actual_rts_date || matchingItem.rts_date || '',
+                rtsDate: item.rts_date || matchingItem.actual_rts_date || matchingItem.rts_date || '',
                 shipDate: item.ship_date || '',
                 notes: item.notes || '',
                 isValidSeq: true
