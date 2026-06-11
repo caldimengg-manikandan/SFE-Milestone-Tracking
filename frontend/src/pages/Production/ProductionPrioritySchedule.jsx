@@ -16,6 +16,7 @@ export default function ProductionPrioritySchedule() {
   const [expandedId, setExpandedId] = useState(null);
   const [expandedViewMode, setExpandedViewMode] = useState('table'); // 'table' or 'gantt'
   const [currentPage, setCurrentPage] = useState(1);
+  const [ganttFilter, setGanttFilter] = useState('all'); // 'all', '1month', '3month', '6month'
   const itemsPerPage = 10;
 
   const fetchSchedules = async () => {
@@ -51,10 +52,47 @@ export default function ProductionPrioritySchedule() {
   const getPlanCreationDates = (item) => {
     const proj = projects.find(p => p.code === item.job_number);
     const seq = proj?.structural_schedules?.find(s => String(s.seq_no) === String(item.sequence_number));
+    if (seq) {
+      return {
+        rts_date: seq.actual_rts_date || seq.rts_date || null,
+        scheduled_erection_date: seq.scheduled_erection_date || item.ship_date
+      };
+    }
     return {
-      rts_date: seq?.rts_date || item.rts_date,
-      scheduled_erection_date: seq?.scheduled_erection_date || item.ship_date
+      rts_date: item.rts_date,
+      scheduled_erection_date: item.ship_date
     };
+  };
+
+  const getGanttBarColorClasses = (item) => {
+    const shipDate = item.ship_date ? new Date(item.ship_date) : null;
+    if (shipDate) {
+      return 'bg-emerald-500/10 border-emerald-500 text-emerald-800'; // COMPLETED
+    }
+
+    const planDates = getPlanCreationDates(item);
+    const rtsDateStr = planDates.rts_date;
+    if (!rtsDateStr) {
+      return 'bg-slate-500/10 border-slate-500 text-slate-800'; // TBD
+    }
+
+    const [year, month, day] = rtsDateStr.split('-').map(Number);
+    const rtsDate = new Date(year, month - 1, day);
+    const today = new Date();
+    const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    
+    const diffTime = todayMidnight - rtsDate;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    if (diffDays === 0) {
+      return 'bg-blue-500/10 border-blue-500 text-blue-800'; // IN PROGRESS
+    } else if (diffDays > 0 && diffDays <= 7) {
+      return 'bg-yellow-500/10 border-yellow-500 text-yellow-800'; // LIKELY DELAY
+    } else if (diffDays > 7) {
+      return 'bg-red-500/10 border-red-500 text-red-800'; // DELAYED
+    } else {
+      return 'bg-slate-400/10 border-slate-400 text-slate-700'; // YET TO START
+    }
   };
 
   const handleDelete = async (id) => {
@@ -92,11 +130,17 @@ export default function ProductionPrioritySchedule() {
     }
   };
 
-  const getScheduleTimelineRange = (schedule) => {
+  const getScheduleTimelineRange = (schedule, filter = 'all') => {
     let minDate = schedule.start_date ? new Date(schedule.start_date) : null;
     let maxDate = schedule.end_date ? new Date(schedule.end_date) : null;
 
-    (schedule.items || []).forEach(item => {
+    const validItems = (schedule.items || []).filter(item => {
+      const proj = projects.find(p => p.code === item.job_number);
+      if (!proj) return true;
+      return proj.structural_schedules?.some(s => String(s.seq_no) === String(item.sequence_number));
+    });
+
+    validItems.forEach(item => {
       const planDates = getPlanCreationDates(item);
       if (planDates.rts_date) {
         const d = new Date(planDates.rts_date);
@@ -115,7 +159,19 @@ export default function ProductionPrioritySchedule() {
     });
 
     if (!minDate) minDate = new Date();
-    if (!maxDate) maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+    
+    if (filter === '1month') {
+      maxDate = new Date(minDate);
+      maxDate.setMonth(maxDate.getMonth() + 1);
+    } else if (filter === '3month') {
+      maxDate = new Date(minDate);
+      maxDate.setMonth(maxDate.getMonth() + 3);
+    } else if (filter === '6month') {
+      maxDate = new Date(minDate);
+      maxDate.setMonth(maxDate.getMonth() + 6);
+    } else {
+      if (!maxDate) maxDate = new Date(minDate.getTime() + 90 * 24 * 60 * 60 * 1000);
+    }
 
     const startMonth = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
     const endMonth = new Date(maxDate.getFullYear(), maxDate.getMonth() + 1, 0);
@@ -272,25 +328,55 @@ export default function ProductionPrioritySchedule() {
                     {expandedId === schedule.id && (
                       <tr>
                         <td colSpan="4" className="px-0 py-4 bg-slate-50/50">
-                          <div className="border-y border-slate-200 overflow-hidden shadow-inner bg-white animate-in slide-in-from-top-4 duration-300">
-                            {expandedViewMode === 'gantt' ? (
-                              <div className="overflow-x-auto">
-                                {(() => {
-                                  const { startMonth, endMonth, months } = getScheduleTimelineRange(schedule);
-                                  
-                                  const sortedItems = [...(schedule.items || [])].sort((a, b) => {
-                                    const datesA = getPlanCreationDates(a);
-                                    const datesB = getPlanCreationDates(b);
-                                    const dateA = new Date(datesA.rts_date || '9999-12-31');
-                                    const dateB = new Date(datesB.rts_date || '9999-12-31');
-                                    if (dateA - dateB !== 0) return dateA - dateB;
-                                    const seqA = parseFloat(a.sequence_number) || 999;
-                                    const seqB = parseFloat(b.sequence_number) || 999;
-                                    return seqA - seqB;
-                                  });
+                          {(() => {
+                            const validItems = (schedule.items || []).filter(item => {
+                              const proj = projects.find(p => p.code === item.job_number);
+                              if (!proj) return true;
+                              return proj.structural_schedules?.some(s => String(s.seq_no) === String(item.sequence_number));
+                            });
 
-                                  return (
-                                    <div className="min-w-[800px] p-4 bg-white">
+                            return (
+                              <div className="border-y border-slate-200 overflow-hidden shadow-inner bg-white animate-in slide-in-from-top-4 duration-300">
+                                {expandedViewMode === 'gantt' ? (
+                                  <div className="overflow-x-auto">
+                                    {(() => {
+                                      const { startMonth, endMonth, months } = getScheduleTimelineRange(schedule, ganttFilter);
+                                      const sortedItems = [...validItems].sort((a, b) => {
+                                        const datesA = getPlanCreationDates(a);
+                                        const datesB = getPlanCreationDates(b);
+                                        const dateA = new Date(datesA.rts_date || '9999-12-31');
+                                        const dateB = new Date(datesB.rts_date || '9999-12-31');
+                                        if (dateA - dateB !== 0) return dateA - dateB;
+                                        const seqA = parseFloat(a.sequence_number) || 999;
+                                        const seqB = parseFloat(b.sequence_number) || 999;
+                                        return seqA - seqB;
+                                      });
+
+                                      return (
+                                        <div className="min-w-[800px] p-4 bg-white">
+                                          {/* View Filter buttons */}
+                                          <div className="flex justify-end items-center gap-2 mb-4">
+                                            <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">Timeline View Range:</span>
+                                            {[
+                                              { value: 'all', label: 'All' },
+                                              { value: '1month', label: '1 Month' },
+                                              { value: '3month', label: '3 Months' },
+                                              { value: '6month', label: '6 Months' }
+                                            ].map(opt => (
+                                              <button
+                                                key={opt.value}
+                                                onClick={() => setGanttFilter(opt.value)}
+                                                className={`px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border ${
+                                                  ganttFilter === opt.value
+                                                    ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white border-transparent shadow-md shadow-amber-500/10'
+                                                    : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                                                }`}
+                                              >
+                                                {opt.label}
+                                              </button>
+                                            ))}
+                                          </div>
+
                                       <table className="w-full text-left border-collapse border border-slate-200 rounded-lg overflow-hidden">
                                         <thead>
                                           <tr className="bg-slate-50 border-b border-slate-200">
@@ -311,6 +397,7 @@ export default function ProductionPrioritySchedule() {
                                             const erection = planDates.scheduled_erection_date ? new Date(planDates.scheduled_erection_date) : null;
                                             const hasValidDates = rts && !isNaN(rts.getTime()) && erection && !isNaN(erection.getTime());
                                             
+                                            let isBarVisible = false;
                                             let leftPct = 0;
                                             let widthPct = 0;
                                             
@@ -319,11 +406,17 @@ export default function ProductionPrioritySchedule() {
                                               let dEnd = rts < erection ? erection : rts;
                                               
                                               const totalMs = endMonth - startMonth;
-                                              const startMs = dStart - startMonth;
-                                              const durationMs = dEnd - dStart;
+                                              const visibleStart = dStart < startMonth ? startMonth : dStart;
+                                              const visibleEnd = dEnd > endMonth ? endMonth : dEnd;
                                               
-                                              leftPct = Math.max(0, Math.min(100, (startMs / totalMs) * 100));
-                                              widthPct = Math.max(0.5, Math.min(100 - leftPct, (durationMs / totalMs) * 100));
+                                              if (visibleEnd > visibleStart) {
+                                                isBarVisible = true;
+                                                const startMs = visibleStart - startMonth;
+                                                const durationMs = visibleEnd - visibleStart;
+                                                
+                                                leftPct = Math.max(0, Math.min(100, (startMs / totalMs) * 100));
+                                                widthPct = Math.max(0.5, Math.min(100 - leftPct, (durationMs / totalMs) * 100));
+                                              }
                                             }
 
                                             return (
@@ -344,9 +437,9 @@ export default function ProductionPrioritySchedule() {
                                                     ))}
                                                   </div>
                                                   {/* Gantt Bar */}
-                                                  {hasValidDates ? (
+                                                  {isBarVisible ? (
                                                     <div 
-                                                      className="absolute top-1/2 -translate-y-1/2 h-8 bg-amber-500/10 border border-amber-500 border-l-4 text-amber-800 rounded-lg shadow-sm flex items-center px-3 justify-between transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group"
+                                                      className={`absolute top-1/2 -translate-y-1/2 h-8 ${getGanttBarColorClasses(item)} border border-l-4 rounded-lg shadow-sm flex items-center px-3 justify-between transition-all hover:scale-[1.01] hover:shadow-md cursor-pointer group`}
                                                       style={{
                                                         left: `${leftPct}%`,
                                                         width: `${widthPct}%`,
@@ -363,13 +456,13 @@ export default function ProductionPrioritySchedule() {
                                                       <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1.5 bg-slate-900 text-white text-[9px] font-bold rounded-lg shadow-xl opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50">
                                                         <div className="font-extrabold text-[10px] text-amber-400 mb-0.5">{item.job_number}</div>
                                                         <div>RTS Date: {formatDate(planDates.rts_date)}</div>
-                                                        <div>Scheduled Start of Erection: {formatDate(planDates.scheduled_erection_date)}</div>
+                                                        <div>Erection Start: {formatDate(planDates.scheduled_erection_date)}</div>
                                                         <div>Weight: {item.weight} Tons</div>
                                                       </div>
                                                     </div>
                                                   ) : (
                                                     <div className="absolute inset-0 flex items-center pl-4 text-[10px] text-slate-400 italic">
-                                                      Timeline TBD (Dates missing)
+                                                      {hasValidDates ? 'Outside visible range' : 'Timeline TBD (Dates missing)'}
                                                     </div>
                                                   )}
                                                 </td>
@@ -384,15 +477,26 @@ export default function ProductionPrioritySchedule() {
                                           )}
                                         </tbody>
                                       </table>
-                                      
                                       {/* Legend */}
-                                      <div className="bg-slate-50 px-6 py-3 border border-t-0 border-slate-200 flex items-center justify-between text-[10px] font-semibold text-slate-500 rounded-b-lg">
-                                        <div className="flex items-center gap-6">
-                                          <div className="flex items-center gap-2">
-                                          </div>
+                                      <div className="bg-slate-50 px-6 py-3.5 border border-t-0 border-slate-200 flex flex-wrap items-center justify-between gap-4 text-[10px] font-semibold text-slate-500 rounded-b-lg">
+                                        <div className="flex flex-wrap items-center gap-4">
+                                          <span className="font-bold text-slate-700 uppercase tracking-wider text-[9px]">Status Legend:</span>
+                                          {[
+                                            { label: 'Completed', colorBg: 'bg-emerald-500' },
+                                            { label: 'In Progress', colorBg: 'bg-blue-500' },
+                                            { label: 'Likely Delay', colorBg: 'bg-yellow-500' },
+                                            { label: 'Delayed', colorBg: 'bg-red-500' },
+                                            { label: 'Yet to Start', colorBg: 'bg-slate-400' },
+                                            { label: 'TBD', colorBg: 'bg-slate-500' }
+                                          ].map(leg => (
+                                            <div key={leg.label} className="flex items-center gap-1.5 bg-white px-2 py-1 rounded-md border border-slate-100 shadow-sm">
+                                              <span className={`w-2 h-2 rounded-full ${leg.colorBg}`} />
+                                              <span className="text-slate-600 font-bold">{leg.label}</span>
+                                            </div>
+                                          ))}
                                         </div>
                                         <div className="uppercase tracking-widest text-[9px] font-bold text-slate-400">
-                                          {schedule.items?.length || 0} Project Timelines Rendered
+                                          {validItems.length} Project Timelines Rendered
                                         </div>
                                       </div>
                                     </div>
@@ -416,10 +520,18 @@ export default function ProductionPrioritySchedule() {
                               </thead>
                               <tbody className="divide-y divide-slate-100">
                                 {(() => {
-                                  const sortedItems = [...(schedule.items || [])].sort((a, b) => {
+                                  const validItems = (schedule.items || []).filter(item => {
+                                    const proj = projects.find(p => p.code === item.job_number);
+                                    if (!proj) return true;
+                                    return proj.structural_schedules?.some(s => String(s.seq_no) === String(item.sequence_number));
+                                  });
+
+                                  const sortedItems = [...validItems].sort((a, b) => {
+                                    const planDatesA = getPlanCreationDates(a);
+                                    const planDatesB = getPlanCreationDates(b);
                                     // 1. RTS Date (Soonest first)
-                                    const dateA = new Date(a.rts_date || '9999-12-31');
-                                    const dateB = new Date(b.rts_date || '9999-12-31');
+                                    const dateA = new Date(planDatesA.rts_date || '9999-12-31');
+                                    const dateB = new Date(planDatesB.rts_date || '9999-12-31');
                                     if (dateA - dateB !== 0) return dateA - dateB;
 
                                     // 2. Sequence (Lowest first)
@@ -428,8 +540,8 @@ export default function ProductionPrioritySchedule() {
                                     if (seqA !== seqB) return seqA - seqB;
 
                                     // 3. Schedule Erection Date (Soonest first)
-                                    const erecA = new Date(a.scheduled_erection_date || '9999-12-31');
-                                    const erecB = new Date(b.scheduled_erection_date || '9999-12-31');
+                                    const erecA = new Date(planDatesA.scheduled_erection_date || '9999-12-31');
+                                    const erecB = new Date(planDatesB.scheduled_erection_date || '9999-12-31');
                                     if (erecA - erecB !== 0) return erecA - erecB;
 
                                     // 4. Project Priority (High > Medium > Low)
@@ -440,6 +552,7 @@ export default function ProductionPrioritySchedule() {
                                   });
 
                                   return sortedItems.length > 0 ? sortedItems.map((item, idx) => {
+                                    const planDates = getPlanCreationDates(item);
                                     const calculateStatus = () => {
                                       const shipDate = item.ship_date ? new Date(item.ship_date) : null;
 
@@ -447,18 +560,26 @@ export default function ProductionPrioritySchedule() {
                                         return { label: 'COMPLETED', color: 'text-emerald-600', bg: 'bg-emerald-50', dot: 'bg-emerald-500' };
                                       }
 
-                                      if (!item.rts_date) {
+                                      if (!planDates.rts_date) {
                                         return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
                                       }
 
-                                      const rtsDate = new Date(item.rts_date);
-                                      const twoDaysFromNow = new Date();
-                                      twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+                                      const [year, month, day] = planDates.rts_date.split('-').map(Number);
+                                      const rtsDate = new Date(year, month - 1, day);
+                                      const today = new Date();
+                                      const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                                      
+                                      const diffTime = todayMidnight - rtsDate;
+                                      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                                      if (rtsDate > twoDaysFromNow) {
-                                        return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                                      if (diffDays === 0) {
+                                        return { label: 'IN PROGRESS', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                                      } else if (diffDays > 0 && diffDays <= 7) {
+                                        return { label: 'LIKELY DELAY', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500' };
+                                      } else if (diffDays > 7) {
+                                        return { label: 'DELAYED', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' };
                                       } else {
-                                        return { label: 'IN PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                                        return { label: 'YET TO START', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' };
                                       }
                                     };
 
@@ -475,7 +596,7 @@ export default function ProductionPrioritySchedule() {
                                         <td className="px-4 py-3 text-center text-slate-600 font-bold">{item.sequence_number}</td>
                                         <td className="px-4 py-3 text-center text-orange-600 font-black">{item.weight}</td>
                                         <td className="px-4 py-3 text-center text-slate-500 font-bold">{item.quantity}</td>
-                                        <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(item.rts_date)}</td>
+                                        <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(planDates.rts_date)}</td>
                                         <td className="px-4 py-3">
                                           <div className={`flex items-center justify-center gap-1.5 px-2 py-0.5 rounded-full text-[8px] font-black tracking-tight ${status.bg} ${status.color} border border-current/10 whitespace-nowrap w-fit`}>
                                             <div className={`w-1 h-1 rounded-full ${status.dot}`} />
@@ -511,12 +632,14 @@ export default function ProductionPrioritySchedule() {
                             </table>
                           )}
                           <div className="bg-slate-50 px-6 py-2 border-t border-slate-100 flex items-center">
-                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{schedule.items?.length || 0} Production Items Tracked</span>
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{validItems.length} Production Items Tracked</span>
                           </div>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                      </tr>
+                    )}
                   </Fragment>
                 ))}
               </tbody>
