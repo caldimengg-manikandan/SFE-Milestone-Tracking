@@ -272,37 +272,31 @@ class DashboardStatsView(APIView):
             required_hours = struct_fab + misc_fab + struct_erect + misc_erect
             remaining = available_hours - required_hours
             
-            # Tonnage distribution by month based on ProductionSchedule
+            # Tonnage by month based on ProductionSchedule items' RTS dates
             struct_ton = 0.0
             joist_ton = 0.0
             for schedule in schedules_for_tonnage:
-                try:
-                    month_start = datetime.date(t_year, idx + 1, 1)
-                    if idx == 11:
-                        month_end = datetime.date(t_year + 1, 1, 1) - timedelta(days=1)
-                    else:
-                        month_end = datetime.date(t_year, idx + 2, 1) - timedelta(days=1)
-                except Exception:
-                    continue
-                
-                if schedule.start_date <= month_end and schedule.end_date >= month_start:
-                    dur = (schedule.end_date.year - schedule.start_date.year) * 12 + schedule.end_date.month - schedule.start_date.month + 1
-                    dur = max(1, dur)
+                for item in schedule.items.all():
+                    # Resolve RTS date and category from ProductionItem and StructuralScheduleItem
+                    struct_item = StructuralScheduleItem.objects.filter(
+                        project__code=item.job_number,
+                        seq_no=item.sequence_number
+                    ).first()
                     
-                    for item in schedule.items.all():
+                    item_rts = item.rts_date
+                    if not item_rts and struct_item:
+                        item_rts = struct_item.actual_rts_date or struct_item.rts_date
+                    
+                    if item_rts and item_rts.year == t_year and item_rts.month == (idx + 1):
                         is_joist = False
-                        struct_item = StructuralScheduleItem.objects.filter(
-                            project__code=item.job_number,
-                            seq_no=item.sequence_number
-                        ).first()
                         if struct_item and struct_item.category and 'joist' in struct_item.category.lower():
                             is_joist = True
                         
                         item_w = float(item.weight or 0)
                         if is_joist:
-                            joist_ton += item_w / dur
+                            joist_ton += item_w
                         else:
-                            struct_ton += item_w / dur
+                            struct_ton += item_w
             
             bar_data.append({
                 'name': m_short,
