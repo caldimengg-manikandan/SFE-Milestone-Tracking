@@ -5,8 +5,17 @@ import FormattedDateInput from './FormattedDateInput';
 
 const parseLocalDate = (dateStr) => {
   if (!dateStr) return null;
-  const [year, month, day] = dateStr.split('-').map(Number);
-  return new Date(year, month - 1, day);
+  const cleanDateStr = dateStr.includes('T') ? dateStr.split('T')[0] : dateStr;
+  const parts = cleanDateStr.trim().split('-').map(Number);
+  if (parts.length === 3) {
+    if (parts[0] > 1000) {
+      return new Date(parts[0], parts[1] - 1, parts[2]);
+    } else {
+      // MM-DD-YYYY
+      return new Date(parts[2], parts[0] - 1, parts[1]);
+    }
+  }
+  return null;
 };
 
 const formatDateString = (d) => {
@@ -23,6 +32,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
   const [userChangedProjects, setUserChangedProjects] = useState(false);
+  const [planOption, setPlanOption] = useState('auto'); // 'auto', '1month', '3month'
   const [header, setHeader] = useState({
     scheduleNumber: `SCH-${String(nextNumber || 1).padStart(2, '0')}`,
     startDate: '',
@@ -30,7 +40,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   });
 
   const [rows, setRows] = useState([
-    { job: '', seq: '1', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }
+    { job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }
   ]);
 
   // Fetch projects from Project Master
@@ -40,7 +50,18 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       .catch(err => console.error('Error fetching projects:', err));
   }, []);
 
-  // Load existing data if editing
+  // Close project dropdown when clicked outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!event.target.closest('.project-dropdown-container')) {
+        setShowProjectDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Load existing data if editing, and sync with live project master data
   useEffect(() => {
     if (editSchedule) {
       setHeader({
@@ -50,23 +71,70 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       });
       setSelectedProjectIds(editSchedule.projects || []);
 
+      if (editSchedule.start_date && editSchedule.end_date) {
+        const start = parseLocalDate(editSchedule.start_date);
+        const end = parseLocalDate(editSchedule.end_date);
+        if (start && end) {
+          const diff1M = new Date(start);
+          diff1M.setMonth(diff1M.getMonth() + 1);
+          const diff3M = new Date(start);
+          diff3M.setMonth(diff3M.getMonth() + 3);
+          const diff6M = new Date(start);
+          diff6M.setMonth(diff6M.getMonth() + 6);
+
+          if (formatDateString(diff1M) === editSchedule.end_date) {
+            setPlanOption('1month');
+          } else if (formatDateString(diff3M) === editSchedule.end_date) {
+            setPlanOption('3month');
+          } else if (formatDateString(diff6M) === editSchedule.end_date) {
+            setPlanOption('6month');
+          } else {
+            setPlanOption('auto');
+          }
+        }
+      }
+
       if (editSchedule.items && editSchedule.items.length > 0) {
-        setRows(editSchedule.items.map((item, idx) => ({
-          job: item.job_number,
-          seq: item.sequence_number || (idx + 1).toString(),
-          weight: item.weight,
-          quantity: item.quantity,
-          rtsDate: item.rts_date || '',
-          shipDate: item.ship_date || '',
-          notes: item.notes || ''
-        })));
+        const mappedRows = editSchedule.items.map((item, idx) => {
+          const matchingProj = projects.find(p => String(p.code).trim() === String(item.job_number).trim());
+          if (matchingProj && matchingProj.structural_schedules) {
+            const matchingItem = matchingProj.structural_schedules.find(s => String(s.seq_no).trim() === String(item.sequence_number).trim());
+            if (matchingItem) {
+              return {
+                job: item.job_number,
+                seq: item.sequence_number || (idx + 1).toString(),
+                weight: matchingItem.tons || item.weight,
+                quantity: item.quantity,
+                rtsDate: matchingItem.actual_rts_date || matchingItem.rts_date || '',
+                shipDate: item.ship_date || '',
+                notes: item.notes || '',
+                isValidSeq: true
+              };
+            } else {
+              return { isValidSeq: false };
+            }
+          }
+          return {
+            job: item.job_number,
+            seq: item.sequence_number || (idx + 1).toString(),
+            weight: item.weight,
+            quantity: item.quantity,
+            rtsDate: item.rts_date || '',
+            shipDate: item.ship_date || '',
+            notes: item.notes || '',
+            isValidSeq: true
+          };
+        });
+
+        const filtered = mappedRows.filter(r => r.isValidSeq !== false);
+        setRows(filtered.length > 0 ? filtered : [{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
       }
     }
-  }, [editSchedule]);
+  }, [editSchedule, projects]);
 
-  // Auto-calculate schedule Start/End dates when selected projects change
+  // Auto-calculate schedule Start/End dates when selected projects change or planOption changes
   useEffect(() => {
-    if (selectedProjectIds.length > 0 && (!editSchedule || userChangedProjects) && projects.length > 0) {
+    if (selectedProjectIds.length > 0 && (!editSchedule || userChangedProjects || planOption === 'auto') && projects.length > 0) {
       const selectedProjects = projects.filter(p => selectedProjectIds.includes(p.id));
       let minRTSObj = null;
       let maxRTSObj = null;
@@ -76,8 +144,9 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         if (proj.structural_schedules) {
           proj.structural_schedules.forEach(item => {
             if (item.notes && item.notes.toLowerCase() === 'not in scope') return;
-            if (item.rts_date) {
-              const rtsDateObj = parseLocalDate(item.rts_date);
+            const rtsDateToUse = item.actual_rts_date || item.rts_date;
+            if (rtsDateToUse) {
+              const rtsDateObj = parseLocalDate(rtsDateToUse);
               if (!rtsDateObj) return;
 
               // 2. Early RTS date -> production start date
@@ -103,19 +172,72 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
       const calculatedStart = minRTSObj ? formatDateString(minRTSObj) : '';
       let calculatedEnd = '';
-      if (maxRTSObj) {
-        // Add leadWeeksForMaxRTS in WEEKS to the late RTS date
-        const calculatedEndDateObj = new Date(maxRTSObj.getTime() + leadWeeksForMaxRTS * 7 * 24 * 60 * 60 * 1000);
-        calculatedEnd = formatDateString(calculatedEndDateObj);
+      if (planOption === 'auto') {
+        if (maxRTSObj) {
+          // Add leadWeeksForMaxRTS in WEEKS to the late RTS date
+          const calculatedEndDateObj = new Date(maxRTSObj.getTime() + leadWeeksForMaxRTS * 7 * 24 * 60 * 60 * 1000);
+          calculatedEnd = formatDateString(calculatedEndDateObj);
+        }
+        setHeader(prev => ({
+          ...prev,
+          startDate: calculatedStart,
+          endDate: calculatedEnd
+        }));
+      } else {
+        const baseStart = header.startDate || calculatedStart;
+        let calculatedEndFixed = '';
+        if (baseStart) {
+          const startDateObj = parseLocalDate(baseStart);
+          if (startDateObj) {
+            const endDateObj = new Date(startDateObj);
+            if (planOption === '1month') {
+              endDateObj.setMonth(endDateObj.getMonth() + 1);
+            } else if (planOption === '3month') {
+              endDateObj.setMonth(endDateObj.getMonth() + 3);
+            } else if (planOption === '6month') {
+              endDateObj.setMonth(endDateObj.getMonth() + 6);
+            }
+            calculatedEndFixed = formatDateString(endDateObj);
+          }
+        }
+        setHeader(prev => ({
+          ...prev,
+          startDate: baseStart,
+          endDate: calculatedEndFixed
+        }));
       }
-
+    } else if (selectedProjectIds.length === 0 && (!editSchedule || userChangedProjects)) {
       setHeader(prev => ({
         ...prev,
-        startDate: calculatedStart,
-        endDate: calculatedEnd
+        startDate: '',
+        endDate: ''
       }));
     }
-  }, [selectedProjectIds, projects, editSchedule, userChangedProjects]);
+  }, [selectedProjectIds, projects, editSchedule, userChangedProjects, planOption]);
+
+  // Auto-calculate end date when start date or plan option changes for fixed duration plans (1m/3m/6m)
+  useEffect(() => {
+    if (planOption !== 'auto' && header.startDate) {
+      const startDateObj = parseLocalDate(header.startDate);
+      if (startDateObj) {
+        const endDateObj = new Date(startDateObj);
+        if (planOption === '1month') {
+          endDateObj.setMonth(endDateObj.getMonth() + 1);
+        } else if (planOption === '3month') {
+          endDateObj.setMonth(endDateObj.getMonth() + 3);
+        } else if (planOption === '6month') {
+          endDateObj.setMonth(endDateObj.getMonth() + 6);
+        }
+        const calculatedEnd = formatDateString(endDateObj);
+        setHeader(prev => {
+          if (prev.endDate !== calculatedEnd) {
+            return { ...prev, endDate: calculatedEnd };
+          }
+          return prev;
+        });
+      }
+    }
+  }, [header.startDate, planOption]);
 
   // Auto-populate logic when projects or dates change
   useEffect(() => {
@@ -129,8 +251,9 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             if (item.notes && item.notes.toLowerCase() === 'not in scope') return;
             
             let inRange = true;
-            if (header.startDate && header.endDate && item.rts_date) {
-              const rts = parseLocalDate(item.rts_date);
+            const rtsDateToUse = item.actual_rts_date || item.rts_date;
+            if (header.startDate && header.endDate && rtsDateToUse) {
+              const rts = parseLocalDate(rtsDateToUse);
               const start = parseLocalDate(header.startDate);
               const end = parseLocalDate(header.endDate);
               inRange = rts && start && end && rts >= start && rts <= end;
@@ -142,7 +265,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                 seq: item.seq_no,
                 weight: item.tons,
                 quantity: 1,
-                rtsDate: item.rts_date || '',
+                rtsDate: item.actual_rts_date || item.rts_date || '',
                 shipDate: item.ship_date || '',
                 notes: item.notes || '',
                 // For sorting
@@ -175,9 +298,26 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
           return priA - priB;
         });
         setRows(allItems);
+      } else {
+        setRows([{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
       }
     }
   }, [selectedProjectIds, header.startDate, header.endDate, projects, editSchedule, userChangedProjects]);
+
+  const handlePlanOptionChange = (option) => {
+    setUserChangedProjects(true);
+    setPlanOption(option);
+  };
+
+  const handleStartDateChange = (e) => {
+    setUserChangedProjects(true);
+    setHeader(prev => ({ ...prev, startDate: e.target.value }));
+  };
+
+  const handleEndDateChange = (e) => {
+    setUserChangedProjects(true);
+    setHeader(prev => ({ ...prev, endDate: e.target.value }));
+  };
 
   const toggleProjectSelection = (projectId) => {
     setUserChangedProjects(true);
@@ -215,7 +355,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
           const matchingItem = matchingProj.structural_schedules.find(item => item.seq_no === seqVal);
           if (matchingItem) {
             newRows[index].weight = matchingItem.tons || '';
-            newRows[index].rtsDate = matchingItem.rts_date || '';
+            newRows[index].rtsDate = matchingItem.actual_rts_date || matchingItem.rts_date || '';
             newRows[index].shipDate = matchingItem.ship_date || '';
           }
         }
@@ -226,10 +366,24 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   };
 
   const handleSave = async () => {
+    // Frontend validation
+    if (!header.scheduleNumber || !header.scheduleNumber.trim()) {
+      alert('Save Failed: Schedule Number is required.');
+      return;
+    }
+    if (!header.startDate) {
+      alert('Save Failed: Start Date is required.');
+      return;
+    }
+    if (!header.endDate) {
+      alert('Save Failed: End Date is required.');
+      return;
+    }
+
     try {
       setLoading(true);
       const payload = {
-        schedule_number: header.scheduleNumber,
+        schedule_number: header.scheduleNumber.trim(),
         start_date: header.startDate,
         end_date: header.endDate,
         projects: selectedProjectIds,
@@ -245,7 +399,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       };
 
       if (payload.items_input.length === 0) {
-        alert('Please add at least one production item with a Job #');
+        alert('Save Failed: Please add at least one production item with a Job #');
         setLoading(false);
         return;
       }
@@ -260,7 +414,24 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
       onClose();
     } catch (error) {
       console.error('Error saving schedule:', error);
-      alert(error.response?.data?.detail || 'Failed to save schedule.');
+      let errorMsg = 'Failed to save schedule.';
+      if (error.response?.data) {
+        const data = error.response.data;
+        if (typeof data === 'string') {
+          errorMsg = data;
+        } else if (data.detail) {
+          errorMsg = data.detail;
+        } else if (typeof data === 'object') {
+          errorMsg = Object.entries(data)
+            .map(([field, errors]) => {
+              const fieldName = field.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+              const fieldErrors = Array.isArray(errors) ? errors.join(', ') : String(errors);
+              return `${fieldName}: ${fieldErrors}`;
+            })
+            .join('\n');
+        }
+      }
+      alert(errorMsg);
     } finally {
       setLoading(false);
     }
@@ -285,7 +456,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
         {/* Modal Body */}
         <div className="flex-1 overflow-y-auto p-8 space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-2xl bg-slate-50 border border-slate-300">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6 p-6 rounded-2xl bg-slate-50 border border-slate-300">
             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Schedule Number</label>
               <input
@@ -295,10 +466,35 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
               />
             </div>
             <div>
+              <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Plan Option</label>
+              <div className="flex bg-white rounded-xl border border-slate-300 p-1 min-h-[46px] items-center">
+                {[
+                  { value: 'auto', label: 'Auto' },
+                  { value: '1month', label: '1 Month' },
+                  { value: '3month', label: '3 Months' },
+                  { value: '6month', label: '6 Months' }
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => handlePlanOptionChange(opt.value)}
+                    className={`flex-1 py-1.5 px-1 rounded-lg text-[10px] font-bold transition-all ${
+                      planOption === opt.value
+                        ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-md'
+                        : 'text-slate-600 hover:bg-slate-50'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+             <div>
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Start Date</label>
               <FormattedDateInput
                 value={header.startDate}
-                onChange={(e) => setHeader({ ...header, startDate: e.target.value })}
+                onChange={handleStartDateChange}
+                disabled={planOption === 'auto'}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
               />
             </div>
@@ -306,11 +502,12 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">End Date</label>
               <FormattedDateInput
                 value={header.endDate}
-                onChange={(e) => setHeader({ ...header, endDate: e.target.value })}
+                onChange={handleEndDateChange}
+                disabled={true}
                 className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-white text-sm outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
               />
             </div>
-            <div className="relative">
+            <div className="relative project-dropdown-container">
               <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 ml-1">Select Projects</label>
               <div 
                 onClick={(e) => { e.stopPropagation(); setShowProjectDropdown(!showProjectDropdown); }}
@@ -410,14 +607,22 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
                         if (!row.rtsDate) return { label: 'TBD', color: 'text-slate-400', bg: 'bg-slate-100', dot: 'bg-slate-400' };
                         
-                        const rtsDate = new Date(row.rtsDate);
-                        const twoDaysFromNow = new Date();
-                        twoDaysFromNow.setDate(twoDaysFromNow.getDate() + 2);
+                        const [year, month, day] = row.rtsDate.split('-').map(Number);
+                        const rtsDate = new Date(year, month - 1, day);
+                        const today = new Date();
+                        const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+                        
+                        const diffTime = todayMidnight - rtsDate;
+                        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                        if (rtsDate > twoDaysFromNow) {
-                          return { label: 'YET TO START', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                        if (diffDays === 0) {
+                          return { label: 'IN PROGRESS', color: 'text-blue-600', bg: 'bg-blue-50', dot: 'bg-blue-500' };
+                        } else if (diffDays > 0 && diffDays <= 7) {
+                          return { label: 'LIKELY DELAY', color: 'text-yellow-600', bg: 'bg-yellow-50', dot: 'bg-yellow-500' };
+                        } else if (diffDays > 7) {
+                          return { label: 'DELAYED', color: 'text-red-600', bg: 'bg-red-50', dot: 'bg-red-500' };
                         } else {
-                          return { label: 'IN PROGRESS', color: 'text-amber-600', bg: 'bg-amber-50', dot: 'bg-amber-500' };
+                          return { label: 'YET TO START', color: 'text-slate-500', bg: 'bg-slate-50', dot: 'bg-slate-400' };
                         }
                       };
 
