@@ -633,7 +633,6 @@ export default function VPDashboard() {
               { label: `Won (${TODAY.getFullYear()})`, value: `${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold' },
               { label: 'Lost', value: bids.filter(b => b.won_lost === 'Lost').length, cls: 'bg-red-50 text-red-700 border border-red-100' },
               { label: 'Pending', value: bids.filter(b => b.won_lost === 'Pending').length, cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
-              { label: 'Win Rate', value: kpi.winRate + '%', cls: 'bg-slate-100 text-slate-700' },
             ].map((p, i) => (
               <span key={i} className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide rounded ${p.cls}`}>
                 {p.label}: <span className="text-sm font-black">{p.value}</span>
@@ -664,7 +663,7 @@ export default function VPDashboard() {
         {/* Chart — 3 cols */}
         <div className="xl:col-span-3">
           <Panel>
-            <PanelHeader title="Capacity vs Bid Load" sub="Available workforce hours vs required load from won bids">
+            <PanelHeader title="Capacity Utilization Summary" sub="Manhours loading">
               <select value={capMonth} onChange={e => setCapMonth(parseInt(e.target.value))}
                 className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
                 {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
