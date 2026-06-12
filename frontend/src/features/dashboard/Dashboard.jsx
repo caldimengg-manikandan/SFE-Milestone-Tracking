@@ -1038,8 +1038,70 @@ export default function Dashboard() {
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Tonnage Loading Summary ({tonnageYear})</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Tonnage Loading for {tonnageYear}</p>
                 </div>
-                <div className="flex items-center gap-3 flex-nowrap whitespace-nowrap overflow-x-auto scrollbar-none">
-                  {/* View Toggle Tabs */}
+                <div className="flex flex-col items-end gap-2 shrink-0">
+                  {/* Row 1: Checkboxes and Year Select */}
+                  <div className="flex items-center gap-3 whitespace-nowrap">
+                    <select
+                      value={tonnageYear}
+                      onChange={(e) => setTonnageYear(e.target.value)}
+                      className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
+                    >
+                      {Array.from({ length: new Date().getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                        const year = 2012 + i;
+                        return <option key={year} value={year}>{year}</option>;
+                      })}
+                    </select>
+
+                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={includeSaturdays}
+                        onChange={(e) => setIncludeSaturdays(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
+                      />
+                      Saturdays
+                    </label>
+
+                    {includeSaturdays && (
+                      <select
+                        value={saturdaysMonth}
+                        onChange={(e) => setSaturdaysMonth(e.target.value)}
+                        className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
+                      >
+                        <option value="All">All</option>
+                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
+                          const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
+                          return <option key={fullMonth} value={fullMonth}>{m}</option>;
+                        })}
+                      </select>
+                    )}
+
+                    <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={includeSundays}
+                        onChange={(e) => setIncludeSundays(e.target.checked)}
+                        className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
+                      />
+                      Sundays
+                    </label>
+
+                    {includeSundays && (
+                      <select
+                        value={sundaysMonth}
+                        onChange={(e) => setSundaysMonth(e.target.value)}
+                        className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
+                      >
+                        <option value="All">All</option>
+                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
+                          const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
+                          return <option key={fullMonth} value={fullMonth}>{m}</option>;
+                        })}
+                      </select>
+                    )}
+                  </div>
+
+                  {/* Row 2: View Toggle Tabs */}
                   <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
                     <button
                       onClick={() => setTonnageView('planning')}
@@ -1062,65 +1124,6 @@ export default function Dashboard() {
                       Yearly Forecast
                     </button>
                   </div>
-
-                  <select
-                    value={tonnageYear}
-                    onChange={(e) => setTonnageYear(e.target.value)}
-                    className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2.5 py-1.5 outline-none bg-white cursor-pointer rounded"
-                  >
-                    {Array.from({ length: new Date().getFullYear() + 4 - 2012 + 1 }, (_, i) => {
-                      const year = 2012 + i;
-                      return <option key={year} value={year}>{year}</option>;
-                    })}
-                  </select>
-
-                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={includeSaturdays}
-                      onChange={(e) => setIncludeSaturdays(e.target.checked)}
-                      className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
-                    />
-                    Saturdays
-                  </label>
-
-                  {includeSaturdays && (
-                    <select
-                      value={saturdaysMonth}
-                      onChange={(e) => setSaturdaysMonth(e.target.value)}
-                      className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
-                    >
-                      <option value="All">All</option>
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
-                        const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
-                        return <option key={fullMonth} value={fullMonth}>{m}</option>;
-                      })}
-                    </select>
-                  )}
-
-                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
-                    <input
-                      type="checkbox"
-                      checked={includeSundays}
-                      onChange={(e) => setIncludeSundays(e.target.checked)}
-                      className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
-                    />
-                    Sundays
-                  </label>
-
-                  {includeSundays && (
-                    <select
-                      value={sundaysMonth}
-                      onChange={(e) => setSundaysMonth(e.target.value)}
-                      className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
-                    >
-                      <option value="All">All</option>
-                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
-                        const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
-                        return <option key={fullMonth} value={fullMonth}>{m}</option>;
-                      })}
-                    </select>
-                  )}
                 </div>
               </div>
 
