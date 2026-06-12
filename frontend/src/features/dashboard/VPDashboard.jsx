@@ -119,7 +119,7 @@ const STATUS_ORDER = ['yet_to_start', 'on_track', 'completed', 'delayed', 'light
 /* ─────────────────────────────────────────────────────────
    TOOLTIP
 ───────────────────────────────────────────────────────── */
-const ChartTooltip = ({ active, payload, label }) => {
+const ChartTooltip = ({ active, payload, label, isValue }) => {
   if (!active || !payload?.length) return null;
   return (
     <div className="bg-white border border-slate-200 rounded px-3 py-2 shadow-lg text-[10px]">
@@ -129,7 +129,10 @@ const ChartTooltip = ({ active, payload, label }) => {
           <span className="w-2 h-2 rounded-full shrink-0" style={{ background: p.color }} />
           <span className="font-bold text-slate-600">{p.name}:</span>
           <span className="font-black text-slate-900">
-            {typeof p.value === 'number' && p.value > 999 ? fmtMoney(p.value) : p.value}
+            {isValue
+              ? (typeof p.value === 'number' && p.value > 999 ? fmtMoney(p.value) : p.value)
+              : (typeof p.value === 'number' ? p.value.toLocaleString() : p.value)
+            }
           </span>
         </div>
       ))}
@@ -594,7 +597,7 @@ export default function VPDashboard() {
                 tickFormatter={v => bidMetric === 'value' ? fmtMoney(v) : v}
                 ticks={bidTicks}
                 domain={bidDomain} />
-              <Tooltip content={<ChartTooltip />} />
+              <Tooltip content={<ChartTooltip isValue={bidMetric === 'value'} />} />
               <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
               <Bar
                 dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
