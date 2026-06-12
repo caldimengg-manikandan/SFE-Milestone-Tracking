@@ -13,6 +13,7 @@ import {
   Loader2,
   Check,
   ChevronRight,
+  ChevronDown,
   TrendingUp,
   Box,
   MapPin,
@@ -103,18 +104,60 @@ export default function CapacityMapping() {
   );
 }
 
+const MONTH_DAYS = {
+  'January': 22, 'February': 20, 'March': 22, 'April': 22, 'May': 21, 'June': 22,
+  'July': 23, 'August': 21, 'September': 22, 'October': 22, 'November': 21, 'December': 23
+};
+
+const getDaysFactor = (monthsStr) => {
+  const selected = monthsStr ? monthsStr.split(',').map(m => m.trim()).filter(Boolean) : [];
+  if (selected.length === 0) {
+    return 261 / 12; // 21.75
+  }
+  let totalDays = 0;
+  selected.forEach(m => {
+    totalDays += MONTH_DAYS[m] || 22;
+  });
+  return totalDays / selected.length;
+};
+
+const getYearDays = (monthsStr) => {
+  const selected = monthsStr ? monthsStr.split(',').map(m => m.trim()).filter(Boolean) : [];
+  if (selected.length === 0) {
+    return 261;
+  }
+  let totalDays = 0;
+  selected.forEach(m => {
+    totalDays += MONTH_DAYS[m] || 22;
+  });
+  return totalDays;
+};
+
 /* ── Summary Cards Component (Header) ── */
 function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [], filterShop, setFilterShop, filterMonth, setFilterMonth }) {
   const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
 
-  const filteredCapacities = filterShop === 'All' ? capacities : capacities.filter(c => c.shop === filterShop);
+  const filteredCapacities = capacities.filter(c => {
+    if (filterShop !== 'All' && c.shop !== filterShop) return false;
+    if (filterMonth !== 'All') {
+      const cMonths = c.months ? c.months.split(',').map(m => m.trim().toLowerCase()) : [];
+      if (cMonths.length > 0 && !cMonths.includes(filterMonth.toLowerCase())) return false;
+    }
+    return true;
+  });
   const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => m.shop === filterShop);
   
   const totalCapacity = filteredCapacities.reduce((sum, c) => {
-    const monthVal = c.capacity_per_month && parseFloat(c.capacity_per_month) > 0
-      ? parseFloat(c.capacity_per_month)
-      : parseFloat(c.rate_per_day || 0) * 30;
-    return sum + monthVal;
+    let monthDays = 22;
+    if (filterMonth !== 'All') {
+      monthDays = MONTH_DAYS[filterMonth] || 22;
+    } else {
+      return sum + (c.capacity_per_month && parseFloat(c.capacity_per_month) > 0
+        ? parseFloat(c.capacity_per_month)
+        : parseFloat(c.capacity_per_day || c.rate_per_day || 0) * (261 / 12));
+    }
+    const dayVal = parseFloat(c.capacity_per_day || c.rate_per_day || 0);
+    return sum + (dayVal * monthDays);
   }, 0);
   const machineCount = filteredMachines.length;
 
@@ -249,9 +292,17 @@ function CapacityView({ data, machines, refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [expandedRecords, setExpandedRecords] = useState({});
+
+  const toggleExpandRecord = (id) => {
+    setExpandedRecords(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
   const [form, setForm] = useState({
     shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '',
-    capacity_per_day: '', capacity_per_month: '', capacity_per_year: ''
+    capacity_per_day: '', capacity_per_month: '', capacity_per_year: '', months: ''
   });
 
   // Derived data for dynamic dropdowns
@@ -259,49 +310,59 @@ function CapacityView({ data, machines, refresh }) {
   const filteredMachines = machines.filter(m => m.shop === form.shop);
 
   // Auto-calculation helpers
-// Auto-calculation helpers – only fill empty fields
   const handleCapacityDayChange = (val) => {
     const day = val === '' ? '' : parseFloat(val);
+    const factor = getDaysFactor(form.months);
+    const yearDays = getYearDays(form.months);
     setForm(prev => ({
       ...prev,
       capacity_per_day: val,
-      // Only auto-calc month/year if they are empty
-      capacity_per_month: prev.capacity_per_month ? prev.capacity_per_month : (day === '' ? '' : (day * 30).toFixed(2)),
-      capacity_per_year: prev.capacity_per_year ? prev.capacity_per_year : (day === '' ? '' : (day * 360).toFixed(2)),
+      capacity_per_month: (day === '' ? '' : (day * factor).toFixed(2)),
+      capacity_per_year: (day === '' ? '' : (day * yearDays).toFixed(2)),
       rate_per_day: val,
     }));
   };
 
   const handleCapacityMonthChange = (val) => {
     const month = val === '' ? '' : parseFloat(val);
-    setForm(prev => ({
-      ...prev,
-      capacity_per_month: val,
-      // Only auto-calc day/year if they are empty
-      capacity_per_day: prev.capacity_per_day ? prev.capacity_per_day : (month === '' ? '' : (month / 30).toFixed(2)),
-      capacity_per_year: prev.capacity_per_year ? prev.capacity_per_year : (month === '' ? '' : (month * 12).toFixed(2)),
-      rate_per_day: prev.capacity_per_day ? prev.capacity_per_day : (month === '' ? '' : (month / 30).toFixed(2)),
-    }));
+    const factor = getDaysFactor(form.months);
+    const yearDays = getYearDays(form.months);
+    setForm(prev => {
+      const day = month === '' ? '' : month / factor;
+      return {
+        ...prev,
+        capacity_per_month: val,
+        capacity_per_day: (day === '' ? '' : day.toFixed(2)),
+        capacity_per_year: (day === '' ? '' : (day * yearDays).toFixed(2)),
+        rate_per_day: (day === '' ? '' : day.toFixed(2)),
+      };
+    });
   };
 
   const handleCapacityYearChange = (val) => {
     const year = val === '' ? '' : parseFloat(val);
-    setForm(prev => ({
-      ...prev,
-      capacity_per_year: val,
-      // Only auto-calc month/day if they are empty
-      capacity_per_month: prev.capacity_per_month ? prev.capacity_per_month : (year === '' ? '' : (year / 12).toFixed(2)),
-      capacity_per_day: prev.capacity_per_day ? prev.capacity_per_day : (year === '' ? '' : (year / 360).toFixed(2)),
-      rate_per_day: prev.capacity_per_day ? prev.capacity_per_day : (year === '' ? '' : (year / 360).toFixed(2)),
-    }));
+    const factor = getDaysFactor(form.months);
+    const yearDays = getYearDays(form.months);
+    setForm(prev => {
+      const day = year === '' ? '' : year / yearDays;
+      return {
+        ...prev,
+        capacity_per_year: val,
+        capacity_per_day: (day === '' ? '' : day.toFixed(2)),
+        capacity_per_month: (day === '' ? '' : (day * factor).toFixed(2)),
+        rate_per_day: (day === '' ? '' : day.toFixed(2)),
+      };
+    });
   };
 
   const handleOpen = (item = null) => {
     if (item) {
       setEditItem(item);
       const dayVal = item.capacity_per_day || item.rate_per_day || '';
-      const monthVal = item.capacity_per_month || (dayVal ? (parseFloat(dayVal) * 30).toFixed(2) : '');
-      const yearVal = item.capacity_per_year || (dayVal ? (parseFloat(dayVal) * 360).toFixed(2) : '');
+      const factor = getDaysFactor(item.months || '');
+      const yearDays = getYearDays(item.months || '');
+      const monthVal = item.capacity_per_month || (dayVal ? (parseFloat(dayVal) * factor).toFixed(2) : '');
+      const yearVal = item.capacity_per_year || (dayVal ? (parseFloat(dayVal) * yearDays).toFixed(2) : '');
       setForm({
         shop: item.shop || '',
         location: item.location || '',
@@ -311,11 +372,12 @@ function CapacityView({ data, machines, refresh }) {
         rate_per_day: item.rate_per_day || '',
         capacity_per_day: dayVal,
         capacity_per_month: monthVal,
-        capacity_per_year: yearVal
+        capacity_per_year: yearVal,
+        months: item.months || ''
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '', capacity_per_day: '', capacity_per_month: '', capacity_per_year: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '', capacity_per_day: '', capacity_per_month: '', capacity_per_year: '', months: '' });
     }
     setShowModal(true);
   };
@@ -329,7 +391,8 @@ function CapacityView({ data, machines, refresh }) {
         rate_per_day: form.capacity_per_day || form.rate_per_day || 0,
         capacity_per_day: form.capacity_per_day || 0,
         capacity_per_month: form.capacity_per_month || 0,
-        capacity_per_year: form.capacity_per_year || 0
+        capacity_per_year: form.capacity_per_year || 0,
+        months: form.months || ''
       };
       if (editItem) await capacityAPI.update(editItem.id, payload);
       else await capacityAPI.create(payload);
@@ -368,6 +431,7 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Shop</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Location</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Category</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Months</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Process</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Day</th>
@@ -377,39 +441,127 @@ function CapacityView({ data, machines, refresh }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {data.map(item => {
-              const displayDay = item.capacity_per_day && parseFloat(item.capacity_per_day) > 0
-                ? parseFloat(item.capacity_per_day).toFixed(2)
-                : parseFloat(item.rate_per_day || 0).toFixed(2);
-              const displayMonth = item.capacity_per_month && parseFloat(item.capacity_per_month) > 0
-                ? parseFloat(item.capacity_per_month).toFixed(1)
-                : item.rate_per_month?.toFixed(1);
-              const displayYear = item.capacity_per_year && parseFloat(item.capacity_per_year) > 0
-                ? parseFloat(item.capacity_per_year).toFixed(1)
-                : item.rate_per_year?.toFixed(1);
-              return (
-              <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-6 py-4 font-bold text-slate-900">{item.shop}</td>
-                <td className="px-6 py-4 text-xs text-slate-500 font-medium">{item.location || '-'}</td>
-                <td className="px-6 py-4">
-                  <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter ${item.category === 'Machine' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
-                    {item.category}
-                  </span>
-                </td>
-                <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
-                <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
-                <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{displayDay} T</td>
-                <td className="px-6 py-4 text-right font-bold text-blue-600 whitespace-nowrap">{displayMonth} T</td>
-                <td className="px-6 py-4 text-right font-bold text-purple-600 whitespace-nowrap">{displayYear} T</td>
-                <td className="px-6 py-4 text-right">
-                  <div className="flex justify-end gap-1">
-                    <button onClick={() => handleOpen(item)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
-                    <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 className="w-4 h-4" /></button>
-                  </div>
-                </td>
-              </tr>
-              );
-            })}
+            {(() => {
+              const flatData = [];
+              data.forEach(item => {
+                const selected = item.months ? item.months.split(',').map(m => m.trim()).filter(Boolean) : [];
+                if (selected.length <= 1) {
+                  flatData.push({
+                    ...item,
+                    uniqueRowKey: `${item.id}-all`,
+                    displayMonthName: selected[0] || null,
+                    isExpandable: false,
+                    isExpanded: false,
+                    isFirstOfGroup: true,
+                    selectedMonthsCount: selected.length,
+                  });
+                } else {
+                  const isExpanded = !!expandedRecords[item.id];
+                  if (!isExpanded) {
+                    flatData.push({
+                      ...item,
+                      uniqueRowKey: `${item.id}-${selected[0]}`,
+                      displayMonthName: selected[0],
+                      isExpandable: true,
+                      isExpanded: false,
+                      isFirstOfGroup: true,
+                      selectedMonthsCount: selected.length,
+                    });
+                  } else {
+                    selected.forEach((m, idx) => {
+                      flatData.push({
+                        ...item,
+                        uniqueRowKey: `${item.id}-${m}`,
+                        displayMonthName: m,
+                        isExpandable: true,
+                        isExpanded: true,
+                        isFirstOfGroup: idx === 0,
+                        selectedMonthsCount: selected.length,
+                      });
+                    });
+                  }
+                }
+              });
+
+              return flatData.map(item => {
+                const displayDay = item.capacity_per_day && parseFloat(item.capacity_per_day) > 0
+                  ? parseFloat(item.capacity_per_day).toFixed(2)
+                  : parseFloat(item.rate_per_day || 0).toFixed(2);
+                
+                let displayMonth;
+                if (item.displayMonthName) {
+                  const days = MONTH_DAYS[item.displayMonthName] || 22;
+                  displayMonth = (parseFloat(displayDay) * days).toFixed(1);
+                } else {
+                  displayMonth = item.capacity_per_month && parseFloat(item.capacity_per_month) > 0
+                    ? parseFloat(item.capacity_per_month).toFixed(1)
+                    : item.rate_per_month?.toFixed(1);
+                }
+
+                const displayYear = item.capacity_per_year && parseFloat(item.capacity_per_year) > 0
+                  ? parseFloat(item.capacity_per_year).toFixed(1)
+                  : item.rate_per_year?.toFixed(1);
+
+                return (
+                  <tr key={item.uniqueRowKey} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4">
+                      {item.isExpandable ? (
+                        item.isFirstOfGroup ? (
+                          <div 
+                            onClick={() => toggleExpandRecord(item.id)}
+                            className="flex items-center gap-1.5 cursor-pointer hover:text-amber-600 transition-colors select-none"
+                          >
+                            {item.isExpanded ? (
+                              <ChevronDown className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                            ) : (
+                              <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                            )}
+                            <span className="font-bold text-slate-900">{item.shop}</span>
+                            {!item.isExpanded && (
+                              <span className="text-[8px] font-black uppercase bg-amber-50 text-amber-600 px-1.5 py-0.5 rounded border border-amber-100 ml-1">
+                                +{item.selectedMonthsCount - 1} more
+                              </span>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-1.5 pl-5 select-none text-slate-400">
+                            <span className="font-semibold text-xs">{item.shop}</span>
+                          </div>
+                        )
+                      ) : (
+                        <span className="font-bold text-slate-900">{item.shop}</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-500 font-medium">{item.location || '-'}</td>
+                    <td className="px-6 py-4">
+                      <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-tighter ${item.category === 'Machine' ? 'bg-amber-50 text-amber-600' : 'bg-blue-50 text-blue-600'}`}>
+                        {item.category}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      {item.displayMonthName ? (
+                        <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[9px] font-extrabold uppercase">
+                          {item.displayMonthName.substring(0, 3)}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] text-slate-400 font-semibold italic">All Months</span>
+                      )}
+                    </td>
+                    <td className="px-6 py-4 font-bold text-slate-700">{item.process || '-'}</td>
+                    <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
+                    <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{displayDay} T</td>
+                    <td className="px-6 py-4 text-right font-bold text-blue-600 whitespace-nowrap">{displayMonth} T</td>
+                    <td className="px-6 py-4 text-right font-bold text-purple-600 whitespace-nowrap">{displayYear} T</td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex justify-end gap-1">
+                        <button onClick={() => handleOpen(item)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
+                        <button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-all"><Trash2 className="w-4 h-4" /></button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              });
+            })()}
           </tbody>
         </table>
       </div>
@@ -453,6 +605,52 @@ function CapacityView({ data, machines, refresh }) {
                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Process Name</label>
                 <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.process} onChange={e => setForm({ ...form, process: e.target.value })} placeholder="e.g. Drilling" />
               </div>
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Applicable Months (Multiple Selection)</label>
+                <div className="grid grid-cols-4 gap-2">
+                  {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => {
+                    const selectedList = form.months ? form.months.split(',').map(x => x.trim()) : [];
+                    const isSelected = selectedList.includes(m);
+                    return (
+                      <button
+                        key={m}
+                        type="button"
+                        onClick={() => {
+                          let newMonths;
+                          if (selectedList.includes(m)) {
+                            newMonths = selectedList.filter(x => x !== m);
+                          } else {
+                            newMonths = [...selectedList, m];
+                          }
+                          const monthsVal = newMonths.join(',');
+                          setForm(prev => {
+                            const dayVal = prev.capacity_per_day || prev.rate_per_day || '';
+                            const day = dayVal === '' ? '' : parseFloat(dayVal);
+                            const factor = getDaysFactor(monthsVal);
+                            const yearDays = getYearDays(monthsVal);
+                            return {
+                              ...prev,
+                              months: monthsVal,
+                              capacity_per_month: day === '' ? prev.capacity_per_month : (day * factor).toFixed(2),
+                              capacity_per_year: day === '' ? prev.capacity_per_year : (day * yearDays).toFixed(2),
+                            };
+                          });
+                        }}
+                        className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all border ${
+                          isSelected
+                            ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/10'
+                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                        }`}
+                      >
+                        {m.substring(0, 3)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium ml-1">
+                  Select specific months, or leave empty if it applies to all months.
+                </p>
+              </div>
 
               {/* Capacity Per Day / Month / Year — Interlinked Editable Fields */}
               <div className="space-y-3">
@@ -490,7 +688,7 @@ function CapacityView({ data, machines, refresh }) {
                       onChange={e => handleCapacityMonthChange(e.target.value)}
                       placeholder="0.00"
                     />
-                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Month (×30 days)</p>
+                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Month (cal. days)</p>
                   </div>
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-purple-600 uppercase tracking-widest ml-1 flex items-center gap-1">
@@ -503,7 +701,7 @@ function CapacityView({ data, machines, refresh }) {
                       onChange={e => handleCapacityYearChange(e.target.value)}
                       placeholder="0.00"
                     />
-                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Year (×12 months)</p>
+                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Year (cal. days)</p>
                   </div>
                 </div>
               </div>

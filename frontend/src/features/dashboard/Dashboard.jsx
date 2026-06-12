@@ -18,12 +18,17 @@ export default function Dashboard() {
   const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [tonnageYear, setTonnageYear] = useState(new Date().getFullYear().toString());
+  const [includeSaturdays, setIncludeSaturdays] = useState(false);
+  const [saturdaysMonth, setSaturdaysMonth] = useState('All');
+  const [includeSundays, setIncludeSundays] = useState(false);
+  const [sundaysMonth, setSundaysMonth] = useState('All');
   const [fromMonth, setFromMonth] = useState(0);
   const [toMonth, setToMonth] = useState(11);
   const [loading, setLoading] = useState(true);
   const [capacityMonth, setCapacityMonth] = useState(new Date().getMonth() + 1);
   const [capacityYear, setCapacityYear] = useState(new Date().getFullYear().toString());
   const [capacityView, setCapacityView] = useState('planning'); // 'planning' | 'forecast'
+  const [tonnageView, setTonnageView] = useState('planning'); // 'planning' | 'forecast'
   const [data, setData] = useState({
     stats: [],
     areaData: [],
@@ -126,7 +131,11 @@ export default function Dashboard() {
             year: selectedYear,
             capacity_month: capacityMonth,
             capacity_year: capacityYear,
-            tonnage_year: tonnageYear
+            tonnage_year: tonnageYear,
+            include_saturdays: includeSaturdays,
+            saturdays_month: saturdaysMonth,
+            include_sundays: includeSundays,
+            sundays_month: sundaysMonth
           }),
           projectAPI.getAll(),
           scheduleAPI.getAll({ page_size: 1000 })
@@ -146,7 +155,7 @@ export default function Dashboard() {
     };
 
     fetchDashboardData();
-  }, [selectedYear, capacityMonth, capacityYear, tonnageYear]);
+  }, [selectedYear, capacityMonth, capacityYear, tonnageYear, includeSaturdays, saturdaysMonth, includeSundays, sundaysMonth]);
 
   // Helper to check if a value is present (not null, undefined, or empty string)
   const isPresent = (val) => val !== null && val !== undefined && String(val).trim() !== '';
@@ -1029,7 +1038,31 @@ export default function Dashboard() {
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">Tonnage Loading Summary ({tonnageYear})</h3>
                   <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Monthly Tonnage Loading for {tonnageYear}</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 flex-nowrap whitespace-nowrap overflow-x-auto scrollbar-none">
+                  {/* View Toggle Tabs */}
+                  <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                    <button
+                      onClick={() => setTonnageView('planning')}
+                      className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                        tonnageView === 'planning'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      Monthly Planning
+                    </button>
+                    <button
+                      onClick={() => setTonnageView('forecast')}
+                      className={`px-3 py-1.5 rounded-md text-[9px] font-black uppercase tracking-wider transition-all duration-200 ${
+                        tonnageView === 'forecast'
+                          ? 'bg-white text-slate-900 shadow-sm'
+                          : 'text-slate-400 hover:text-slate-600'
+                      }`}
+                    >
+                      Yearly Forecast
+                    </button>
+                  </div>
+
                   <select
                     value={tonnageYear}
                     onChange={(e) => setTonnageYear(e.target.value)}
@@ -1040,6 +1073,54 @@ export default function Dashboard() {
                       return <option key={year} value={year}>{year}</option>;
                     })}
                   </select>
+
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={includeSaturdays}
+                      onChange={(e) => setIncludeSaturdays(e.target.checked)}
+                      className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
+                    />
+                    Saturdays
+                  </label>
+
+                  {includeSaturdays && (
+                    <select
+                      value={saturdaysMonth}
+                      onChange={(e) => setSaturdaysMonth(e.target.value)}
+                      className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
+                    >
+                      <option value="All">All</option>
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
+                        const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
+                        return <option key={fullMonth} value={fullMonth}>{m}</option>;
+                      })}
+                    </select>
+                  )}
+
+                  <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={includeSundays}
+                      onChange={(e) => setIncludeSundays(e.target.checked)}
+                      className="rounded border-slate-300 text-amber-500 focus:ring-amber-500 cursor-pointer w-3.5 h-3.5"
+                    />
+                    Sundays
+                  </label>
+
+                  {includeSundays && (
+                    <select
+                      value={sundaysMonth}
+                      onChange={(e) => setSundaysMonth(e.target.value)}
+                      className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
+                    >
+                      <option value="All">All</option>
+                      {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
+                        const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
+                        return <option key={fullMonth} value={fullMonth}>{m}</option>;
+                      })}
+                    </select>
+                  )}
                 </div>
               </div>
 
@@ -1088,47 +1169,127 @@ export default function Dashboard() {
                 </div>
               </div>
 
-              <div className="flex-1 min-h-[380px] w-full relative">
-                {/* Floating Tonnage Variance (Surplus / Deficit) Indicator */}
-                {data.barData && data.barData.length > 0 && (
-                  <div className="absolute top-1 right-2 z-10">
-                    <div className={`px-3 py-2 border text-[10px] font-black uppercase tracking-wider rounded-xl shadow-lg flex items-center gap-2 transition-all ${
-                      tonnageDiff >= 0 
-                        ? 'bg-violet-50 text-violet-700 border-violet-200 shadow-violet-100/40' 
-                        : 'bg-rose-50 text-rose-700 border-rose-200 shadow-rose-100/40'
-                    }`}>
-                      <div className={`w-2 h-2 rounded-full ${tonnageDiff >= 0 ? 'bg-violet-500' : 'bg-rose-500'} animate-pulse`} />
-                      <div className="flex flex-col leading-none">
-                        <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider mb-0.5">Annual Variance</span>
-                        <span className="font-extrabold text-[10px]">
-                          {tonnageDiff >= 0 ? 'Surplus Tonnage: ' : 'Deficient Tonnage: '}
-                          <span className="font-mono text-xs font-black ml-0.5">
-                            {tonnageDiff >= 0 ? '+' : '-'}
-                            {absTonnageDiff.toLocaleString(undefined, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} Tons
-                          </span>
-                        </span>
-                      </div>
+              {tonnageView === 'planning' ? (
+                <div className="flex-1 min-h-[380px] w-full relative">
+                  {/* Floating Tonnage Variance (Surplus / Deficit) Indicator */}
+                  {data.barData && data.barData.length > 0 && (
+                    <div className="absolute top-1 right-2 z-10">
+
                     </div>
-                  </div>
-                )}
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={data.barData} barGap={6} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                    <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                    <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1.5} />
-                    <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
-                    <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+                  )}
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={data.barData} barGap={6} margin={{ top: 20, right: 10, left: 10, bottom: 20 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+                      <XAxis dataKey="name" tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 10, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+                      <ReferenceLine y={0} stroke="#cbd5e1" strokeWidth={1.5} />
+                      <Tooltip contentStyle={{ borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: 10, fontWeight: 900 }} />
+                      <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
+                      
+                      {/* Total Tonnage Bar */}
+                      <Bar dataKey="total_ton" name="Total Tonnage" fill="#6366f1" radius={0}>
+                        <LabelList dataKey="total_ton" position="top" formatter={(val) => val > 0 ? val.toLocaleString(undefined, { maximumFractionDigits: 1 }) : ''} style={{ fontSize: 9, fontWeight: 800, fill: '#6366f1' }} />
+                      </Bar>
+                      {/* Capacity Line (Black Dot Thread) */}
+                      <Line type="monotone" dataKey="tonnage_capacity" name="Tonnage Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : (
+                /* Heat Map Calendar for Yearly Tonnage Loading Planning */
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 pt-2">
+                  {data.barData && data.barData.map((m, idx) => {
+                    const mUtil = m.tonnage_capacity > 0 ? Math.round((m.total_ton / m.tonnage_capacity) * 100) : (m.total_ton > 0 ? 101 : 0);
                     
-                    {/* Total Tonnage Bar */}
-                    <Bar dataKey="total_ton" name="Total Tonnage" fill="#6366f1" radius={0}>
-                      <LabelList dataKey="total_ton" position="top" formatter={(val) => val > 0 ? val.toLocaleString(undefined, { maximumFractionDigits: 1 }) : ''} style={{ fontSize: 9, fontWeight: 800, fill: '#6366f1' }} />
-                    </Bar>
-                    {/* Capacity Line (Black Dot Thread) */}
-                    <Line type="monotone" dataKey="tonnage_capacity" name="Tonnage Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </div>
+                    let themeColor = 'slate';
+                    let statusLabel = 'No Load';
+                    let badgeClass = 'bg-slate-50 text-slate-500 border border-slate-200';
+                    let barColor = 'bg-slate-300';
+                    let glowBorder = 'border-slate-200';
+
+                    if (mUtil > 0) {
+                      if (mUtil <= 75) {
+                        themeColor = 'emerald';
+                        statusLabel = 'Underloaded';
+                        badgeClass = 'bg-emerald-50 text-emerald-600 border border-emerald-100';
+                        barColor = 'bg-emerald-500';
+                        glowBorder = 'border-emerald-200 shadow-[0_2px_10px_rgba(16,185,129,0.05)] hover:border-emerald-400';
+                      } else if (mUtil <= 90) {
+                        themeColor = 'indigo';
+                        statusLabel = 'Optimal';
+                        badgeClass = 'bg-indigo-50 text-indigo-600 border border-indigo-100';
+                        barColor = 'bg-indigo-500';
+                        glowBorder = 'border-indigo-200 shadow-[0_2px_10px_rgba(99,102,241,0.05)] hover:border-indigo-400';
+                      } else if (mUtil <= 100) {
+                        themeColor = 'amber';
+                        statusLabel = 'High Load';
+                        badgeClass = 'bg-amber-50 text-amber-600 border border-amber-100';
+                        barColor = 'bg-amber-500';
+                        glowBorder = 'border-amber-200 shadow-[0_2px_10px_rgba(245,158,11,0.05)] hover:border-amber-400';
+                      } else {
+                        themeColor = 'rose';
+                        statusLabel = 'Overloaded';
+                        badgeClass = 'bg-rose-50 text-rose-600 border border-rose-100';
+                        barColor = 'bg-rose-500';
+                        glowBorder = 'border-rose-200 shadow-[0_2px_10px_rgba(239,68,68,0.05)] hover:border-rose-400';
+                      }
+                    }
+
+                    const remaining = m.tonnage_capacity - m.total_ton;
+                    const absRemaining = Math.abs(remaining).toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 1 });
+
+                    return (
+                      <div
+                        key={idx}
+                        onClick={() => {
+                          setSaturdaysMonth(monthsNames[idx]);
+                          setIncludeSaturdays(true);
+                          setTonnageView('planning');
+                        }}
+                        className={`bg-white border rounded-xl p-4 transition-all duration-300 hover:-translate-y-1 hover:shadow-md cursor-pointer ${glowBorder}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-xs font-black text-slate-800 uppercase">{monthsNames[idx]}</span>
+                          <span className={`text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full ${badgeClass}`}>
+                            {statusLabel}
+                          </span>
+                        </div>
+
+                        <div className="mt-3">
+                          <div className="flex items-baseline justify-between text-[10px] font-black">
+                            <span className="text-slate-800">{mUtil}% Loaded</span>
+                            <span className="text-slate-400 font-medium">
+                              {m.total_ton.toLocaleString(undefined, { maximumFractionDigits: 1 })}t / {m.tonnage_capacity.toLocaleString(undefined, { maximumFractionDigits: 1 })}t
+                            </span>
+                          </div>
+                          {/* Mini Progress Bar */}
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                              style={{ width: `${Math.min(mUtil, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        <div className="mt-3 pt-2.5 border-t border-slate-100 grid grid-cols-2 gap-1 text-[9px] font-bold text-slate-400">
+                          <div className="flex flex-col">
+                            <span>AVAILABLE</span>
+                            <span className="text-slate-700 font-mono mt-0.5">
+                              {m.tonnage_capacity.toLocaleString(undefined, { maximumFractionDigits: 1 })} Tons
+                            </span>
+                          </div>
+                          <div className="flex flex-col text-right">
+                            <span>{remaining >= 0 ? 'SURPLUS' : 'SHORTAGE'}</span>
+                            <span className={`font-mono mt-0.5 ${remaining >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
+                              {remaining >= 0 ? `+${absRemaining}t` : `-${absRemaining}t`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 

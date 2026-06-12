@@ -207,6 +207,11 @@ class DashboardStatsView(APIView):
         except Exception:
             t_year = 2026
 
+        include_saturdays = request.query_params.get('include_saturdays') == 'true'
+        saturdays_month = request.query_params.get('saturdays_month', 'All')
+        include_sundays = request.query_params.get('include_sundays') == 'true'
+        sundays_month = request.query_params.get('sundays_month', 'All')
+
         import datetime
         year_start = datetime.date(t_year, 1, 1)
         year_end = datetime.date(t_year, 12, 31)
@@ -298,6 +303,43 @@ class DashboardStatsView(APIView):
                         else:
                             struct_ton += item_w
             
+            # Calculate dynamic tonnage capacity for this specific month from Capacity configuration module
+            import calendar
+            import datetime
+            days_in_month = calendar.monthrange(t_year, idx + 1)[1]
+            
+            # Check if Saturdays/Sundays should be included as working days for this month
+            include_sats_for_this_month = include_saturdays and (
+                saturdays_month.lower() == 'all' or 
+                saturdays_month.lower() == m_name.lower() or 
+                saturdays_month.lower() == m_short.lower()
+            )
+            include_suns_for_this_month = include_sundays and (
+                sundays_month.lower() == 'all' or 
+                sundays_month.lower() == m_name.lower() or 
+                sundays_month.lower() == m_short.lower()
+            )
+            
+            working_days_in_month = 0
+            for day in range(1, days_in_month + 1):
+                day_of_week = datetime.date(t_year, idx + 1, day).weekday()
+                if day_of_week == 5: # Saturday
+                    if include_sats_for_this_month:
+                        working_days_in_month += 1
+                elif day_of_week == 6: # Sunday
+                    if include_suns_for_this_month:
+                        working_days_in_month += 1
+                else: # Mon-Fri
+                    working_days_in_month += 1
+
+            month_capacity = 0.0
+            for c in Capacity.objects.all():
+                c_months = [m.strip().lower() for m in (getattr(c, 'months', '') or '').split(',') if m.strip()]
+                if not c_months or m_name.lower() in c_months:
+                    day_cap = float(c.capacity_per_day or c.rate_per_day or 0)
+                    month_capacity += day_cap * working_days_in_month
+
+
             bar_data.append({
                 'name': m_short,
                 'capacity': round(available_hours, 2),
@@ -310,7 +352,7 @@ class DashboardStatsView(APIView):
                 'struct_ton': round(struct_ton, 2),
                 'joist_ton': round(joist_ton, 2),
                 'total_ton': round(struct_ton + joist_ton, 2),
-                'tonnage_capacity': round(total_monthly_capacity, 2)
+                'tonnage_capacity': round(month_capacity, 2)
             })
 
         # Calculate totals for Tonnage Loading Summary from RFQ Master for the selected year

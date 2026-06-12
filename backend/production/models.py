@@ -136,6 +136,7 @@ class Capacity(models.Model):
     capacity_per_month = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     capacity_per_year = models.DecimalField(max_digits=14, decimal_places=2, default=0)
     rate_per_day = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    months = models.TextField(blank=True, default='', help_text="Comma-separated months, e.g. January,February")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -144,14 +145,37 @@ class Capacity(models.Model):
         # Use stored capacity_per_month if set, else compute from rate_per_day
         if self.capacity_per_month and float(str(self.capacity_per_month)) > 0:
             return float(str(self.capacity_per_month))
-        return float(str(self.rate_per_day)) * 30
+        
+        MONTH_WORKING_DAYS_2026 = {
+            'january': 22, 'february': 20, 'march': 22, 'april': 22, 'may': 21, 'june': 22,
+            'july': 23, 'august': 21, 'september': 22, 'october': 22, 'november': 21, 'december': 23
+        }
+        c_months = [m.strip().lower() for m in (self.months or '').split(',') if m.strip()]
+        if not c_months:
+            factor = 261.0 / 12.0
+        else:
+            total_days = sum(MONTH_WORKING_DAYS_2026.get(m, 22) for m in c_months)
+            factor = total_days / len(c_months)
+        
+        return float(str(self.capacity_per_day or self.rate_per_day or 0)) * factor
 
     @property
     def rate_per_year(self):
         # Use stored capacity_per_year if set, else compute from rate_per_day
         if self.capacity_per_year and float(str(self.capacity_per_year)) > 0:
             return float(str(self.capacity_per_year))
-        return float(str(self.rate_per_day)) * 360
+        
+        MONTH_WORKING_DAYS_2026 = {
+            'january': 22, 'february': 20, 'march': 22, 'april': 22, 'may': 21, 'june': 22,
+            'july': 23, 'august': 21, 'september': 22, 'october': 22, 'november': 21, 'december': 23
+        }
+        c_months = [m.strip().lower() for m in (self.months or '').split(',') if m.strip()]
+        if not c_months:
+            factor = 261.0
+        else:
+            factor = float(sum(MONTH_WORKING_DAYS_2026.get(m, 22) for m in c_months))
+        
+        return float(str(self.capacity_per_day or self.rate_per_day or 0)) * factor
 
     def __str__(self):
         return f"{self.shop} - {self.category} Capacity"
