@@ -21,6 +21,8 @@ class ProductionItem(models.Model):
     quantity = models.IntegerField()
     rts_date = models.DateField(null=True, blank=True)
     ship_date = models.DateField(null=True, blank=True)
+    production_start_date = models.DateField(null=True, blank=True)
+    production_end_date = models.DateField(null=True, blank=True)
     notes = models.TextField(null=True, blank=True)
 
     def __str__(self):

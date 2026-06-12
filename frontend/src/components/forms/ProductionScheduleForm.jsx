@@ -26,6 +26,13 @@ const formatDateString = (d) => {
   return `${year}-${month}-${day}`;
 };
 
+const addOneDay = (dateStr) => {
+  const d = parseLocalDate(dateStr);
+  if (!d) return '';
+  d.setDate(d.getDate() + 1);
+  return formatDateString(d);
+};
+
 export default function ProductionScheduleForm({ onClose, onSuccess, editSchedule, nextNumber }) {
   const [loading, setLoading] = useState(false);
   const [projects, setProjects] = useState([]);
@@ -40,7 +47,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   });
 
   const [rows, setRows] = useState([
-    { job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }
+    { job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', productionStartDate: '', productionEndDate: '', notes: '' }
   ]);
 
   // Fetch projects from Project Master
@@ -107,6 +114,8 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                 quantity: item.quantity,
                 rtsDate: item.rts_date || matchingItem.actual_rts_date || matchingItem.rts_date || '',
                 shipDate: item.ship_date || '',
+                productionStartDate: item.production_start_date || '',
+                productionEndDate: item.production_end_date || '',
                 notes: item.notes || '',
                 isValidSeq: true
               };
@@ -121,13 +130,15 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             quantity: item.quantity,
             rtsDate: item.rts_date || '',
             shipDate: item.ship_date || '',
+            productionStartDate: item.production_start_date || '',
+            productionEndDate: item.production_end_date || '',
             notes: item.notes || '',
             isValidSeq: true
           };
         });
 
         const filtered = mappedRows.filter(r => r.isValidSeq !== false);
-        setRows(filtered.length > 0 ? filtered : [{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
+        setRows(filtered.length > 0 ? filtered : [{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', productionStartDate: '', productionEndDate: '', notes: '' }]);
       }
     }
   }, [editSchedule, projects]);
@@ -260,13 +271,16 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
             }
             
             if (inRange) {
+              const rtsD = item.actual_rts_date || item.rts_date || '';
               allItems.push({
                 job: proj.code,
                 seq: item.seq_no,
                 weight: item.tons,
                 quantity: 1,
-                rtsDate: item.actual_rts_date || item.rts_date || '',
+                rtsDate: rtsD,
                 shipDate: item.ship_date || '',
+                productionStartDate: rtsD ? addOneDay(rtsD) : '',
+                productionEndDate: '',
                 notes: item.notes || '',
                 // For sorting
                 erectionDate: item.scheduled_erection_date || '',
@@ -299,7 +313,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
         });
         setRows(allItems);
       } else {
-        setRows([{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
+        setRows([{ job: '', seq: '', weight: '', quantity: '', rtsDate: '', shipDate: '', productionStartDate: '', productionEndDate: '', notes: '' }]);
       }
     }
   }, [selectedProjectIds, header.startDate, header.endDate, projects, editSchedule, userChangedProjects]);
@@ -331,7 +345,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   const addRow = () => {
     const lastSeq = rows.length > 0 ? (parseInt(rows[rows.length - 1].seq) || 0) : 0;
     const nextSeq = lastSeq + 1;
-    setRows([...rows, { job: '', seq: nextSeq.toString(), weight: '', quantity: '', rtsDate: '', shipDate: '', notes: '' }]);
+    setRows([...rows, { job: '', seq: nextSeq.toString(), weight: '', quantity: '', rtsDate: '', shipDate: '', productionStartDate: '', productionEndDate: '', notes: '' }]);
   };
 
   const removeRow = (index) => {
@@ -355,11 +369,17 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
           const matchingItem = matchingProj.structural_schedules.find(item => item.seq_no === seqVal);
           if (matchingItem) {
             newRows[index].weight = matchingItem.tons || '';
-            newRows[index].rtsDate = matchingItem.actual_rts_date || matchingItem.rts_date || '';
+            const rtsD = matchingItem.actual_rts_date || matchingItem.rts_date || '';
+            newRows[index].rtsDate = rtsD;
             newRows[index].shipDate = matchingItem.ship_date || '';
+            newRows[index].productionStartDate = rtsD ? addOneDay(rtsD) : '';
           }
         }
       }
+    }
+
+    if (field === 'rtsDate') {
+      newRows[index].productionStartDate = value ? addOneDay(value) : '';
     }
 
     setRows(newRows);
@@ -394,6 +414,8 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
           quantity: r.quantity || 0,
           rts_date: r.rtsDate || null,
           ship_date: r.shipDate || null,
+          production_start_date: r.productionStartDate || null,
+          production_end_date: r.productionEndDate || null,
           notes: r.notes
         })).filter(r => r.job_number)
       };
@@ -439,7 +461,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-fade-in" onClick={() => setShowProjectDropdown(false)}>
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[95vw] lg:max-w-7xl flex flex-col overflow-hidden max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-[95vw] lg:max-w-[1450px] flex flex-col overflow-hidden max-h-[95vh]" onClick={(e) => e.stopPropagation()}>
         {/* Modal Header */}
         <div className="flex items-center justify-between px-8 py-5 border-b border-slate-300 bg-white">
           <div className="flex items-center gap-3">
@@ -582,16 +604,18 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
 
             <div className="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-all">
               <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[1000px]">
+                <table className="w-full text-left border-collapse min-w-[1280px]">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-300">
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-52">Job (Project)</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36">Job (Project)</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Seq #</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Weight</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Quantity</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">RTS Date</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36 text-center">Status</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Status</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Ship Date</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Prod Start</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">Prod End</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider text-center">Notes</th>
                       <th className="px-4 py-3 w-12"></th>
                     </tr>
@@ -682,6 +706,22 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                             <FormattedDateInput
                               value={row.shipDate}
                               onChange={(e) => updateRow(index, 'shipDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <FormattedDateInput
+                              value={row.productionStartDate}
+                              onChange={(e) => updateRow(index, 'productionStartDate', e.target.value)}
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
+                              disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <FormattedDateInput
+                              value={row.productionEndDate}
+                              onChange={(e) => updateRow(index, 'productionEndDate', e.target.value)}
                               className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-slate-600"
                               disabled={loading}
                             />
