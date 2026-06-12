@@ -323,13 +323,42 @@ export default function VPDashboard() {
 
     if (maxVal === 0) {
       if (bidMetric === 'value') {
-        return { bidTicks: [0, 250_000_000], bidDomain: [0, 250_000_000] };
+        return { bidTicks: [0, 1_000_000], bidDomain: [0, 1_000_000] };
       } else {
-        return { bidTicks: [0, 250], bidDomain: [0, 250] };
+        return { bidTicks: [0, 5], bidDomain: [0, 5] };
       }
     }
 
-    const step = bidMetric === 'value' ? 250_000_000 : 250;
+    let step;
+    if (bidMetric === 'value') {
+      const targetTicks = 5;
+      const rawStep = maxVal / targetTicks;
+      const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+      const normalized = rawStep / magnitude;
+      
+      let niceStep;
+      if (normalized < 1.5) niceStep = 1;
+      else if (normalized < 2.5) niceStep = 2;
+      else if (normalized < 5) niceStep = 5;
+      else niceStep = 10;
+      
+      step = niceStep * magnitude;
+      if (step < 10_000) step = 10_000;
+    } else {
+      const targetTicks = 5;
+      const rawStep = maxVal / targetTicks;
+      const magnitude = Math.pow(10, Math.max(0, Math.floor(Math.log10(rawStep))));
+      const normalized = rawStep / magnitude;
+      
+      let niceStep;
+      if (normalized < 1.5) niceStep = 1;
+      else if (normalized < 2.5) niceStep = 2;
+      else if (normalized < 5) niceStep = 5;
+      else niceStep = 10;
+      
+      step = Math.max(1, niceStep * magnitude);
+    }
+
     const ticks = [0];
     let current = 0;
     while (current < maxVal) {
@@ -545,7 +574,20 @@ export default function VPDashboard() {
           </div>
 
           <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart data={bidChart} barGap={4}>
+            <ComposedChart
+              data={bidChart}
+              barGap={4}
+              onClick={(state) => {
+                if (bidView === 'yoy' && state && state.activeLabel) {
+                  const yr = parseInt(state.activeLabel);
+                  if (!isNaN(yr)) {
+                    setBidYear(yr);
+                    setBidView('mom');
+                  }
+                }
+              }}
+              style={{ cursor: bidView === 'yoy' ? 'pointer' : 'default' }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
               <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false}
@@ -554,8 +596,38 @@ export default function VPDashboard() {
                 domain={bidDomain} />
               <Tooltip content={<ChartTooltip />} />
               <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
-              <Bar dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'} name="Total Quoted" fill="#000000ff" radius={[2, 2, 0, 0]} maxBarSize={36} />
-              <Bar dataKey={bidMetric === 'value' ? 'won' : 'wonCount'} name="Won / Awarded" fill="#f59e0b" radius={[2, 2, 0, 0]} maxBarSize={36} />
+              <Bar
+                dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
+                name="Total Quoted"
+                fill="#000000ff"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={36}
+                onClick={(data) => {
+                  if (bidView === 'yoy' && data && data.year) {
+                    const yr = parseInt(data.year);
+                    if (!isNaN(yr)) {
+                      setBidYear(yr);
+                      setBidView('mom');
+                    }
+                  }
+                }}
+              />
+              <Bar
+                dataKey={bidMetric === 'value' ? 'won' : 'wonCount'}
+                name="Won / Awarded"
+                fill="#f59e0b"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={36}
+                onClick={(data) => {
+                  if (bidView === 'yoy' && data && data.year) {
+                    const yr = parseInt(data.year);
+                    if (!isNaN(yr)) {
+                      setBidYear(yr);
+                      setBidView('mom');
+                    }
+                  }
+                }}
+              />
             </ComposedChart>
           </ResponsiveContainer>
         </div>
