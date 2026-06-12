@@ -9,7 +9,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine
 } from 'recharts';
-import { projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../../services/api';
+import { dashboardAPI, projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../../services/api';
 
 /* ─────────────────────────────────────────────────────────
    CONSTANTS & HELPERS
@@ -233,6 +233,18 @@ export default function VPDashboard() {
     })();
   }, []);
 
+  const [dashboardStats, setDashboardStats] = useState(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await dashboardAPI.getStats({ capacity_year: capYear.toString() });
+        setDashboardStats(res.data);
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, [capYear]);
+
 
   /* ── Derived ── */
   const wonBids = useMemo(() => bids.filter(b => b.won_lost === 'Won'), [bids]);
@@ -246,7 +258,16 @@ export default function VPDashboard() {
   const wonBidsCurrentYearValue = useMemo(() => {
     return wonBidsCurrentYear.reduce((s, b) => s + parseFloat(b.awarded_amount || b.bid_amount || 0), 0);
   }, [wonBidsCurrentYear]);
-  const latestWins = useMemo(() => [...wonBids].sort((a, b) => new Date(b.awarded_job_date || b.created_at) - new Date(a.awarded_job_date || a.created_at)).slice(0, 6), [wonBids]);
+  const latestWins = useMemo(() => {
+    return wonBids.filter(b => {
+      const dt = new Date(b.awarded_job_date || b.created_at);
+      return dt.getFullYear() === bidYear;
+    }).sort((a, b) => new Date(b.awarded_job_date || b.created_at) - new Date(a.awarded_job_date || a.created_at)).slice(0, 6);
+  }, [wonBids, bidYear]);
+
+  const latestQuotes = useMemo(() => {
+    return [...bids].sort((a, b) => new Date(b.quote_date || b.created_at) - new Date(a.quote_date || a.created_at)).slice(0, 8);
+  }, [bids]);
 
   const kpi = useMemo(() => {
     const pending = bids.filter(b => b.won_lost === 'Pending');
@@ -345,8 +366,12 @@ export default function VPDashboard() {
   }, [wonBids, manpower, capData, capYear]);
 
   const aiInsight = useMemo(() => {
-    const d = capChart[capMonth]; if (!d) return null;
-    const { required, available, balance } = d;
+    if (!dashboardStats || !dashboardStats.barData || dashboardStats.barData.length <= capMonth) return null;
+    const d = dashboardStats.barData[capMonth];
+    const available = d.capacity || 0;
+    const required = d.allocated || 0;
+    const balance = d.remaining || 0;
+
     const pct = available > 0 ? Math.round((required / available) * 100) : 0;
     const actions = [];
     if (balance < 0) {
@@ -362,7 +387,7 @@ export default function VPDashboard() {
       actions.push({ sev: 'info', text: 'Allocate surplus to preventive maintenance or skills training.' });
     }
     return { required, available, balance, pct, actions };
-  }, [capChart, capMonth]);
+  }, [dashboardStats, capMonth]);
 
   /* Calendar events */
   const calEvents = useMemo(() => {
@@ -459,21 +484,23 @@ export default function VPDashboard() {
         </div>
       )}
 
-      {/* ══ ANNOUNCEMENT BAR — Latest Wins ══════════════════ */}
-      {latestWins.length > 0 && (
-        <div className="flex items-center border border-slate-300 bg-white overflow-hidden">
-          <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-amber-500">
-            <Trophy className="w-3.5 h-3.5 text-white" />
-            <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Latest Wins</span>
+
+
+      {/* ══ ANNOUNCEMENT BAR — Latest Quotes ══════════════════ */}
+      {latestQuotes.length > 0 && (
+        <div className="flex items-center border border-slate-300 bg-white overflow-hidden mt-2">
+          <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-sky-500">
+            <Target className="w-3.5 h-3.5 text-white" />
+            <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Latest Quotes</span>
           </div>
           <div className="overflow-hidden flex-1 border-l border-slate-300">
-            <div className="animate-marquee whitespace-nowrap">
-              {[...latestWins, ...latestWins].map((b, i) => (
+            <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
+              {[...latestQuotes, ...latestQuotes].map((b, i) => (
                 <span key={i} className="inline-flex items-center gap-2 mx-8">
-                  <Star className="w-3 h-3 text-amber-500 shrink-0" />
+                  <Target className="w-3 h-3 text-sky-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
-                  {b.awarded_amount > 0 && <span className="text-[10px] font-black text-amber-600">· {fmtMoney(b.awarded_amount)}</span>}
-                  {b.awarded_job_no_date && <span className="text-[9px] text-slate-400">Awarded {fmt(b.awarded_job_no_date)}</span>}
+                  {b.bid_amount > 0 && <span className="text-[10px] font-black text-sky-600">· {fmtMoney(b.bid_amount)}</span>}
+                  {b.quote_date && <span className="text-[9px] text-slate-400">Quoted {fmt(b.quote_date)}</span>}
                   <span className="text-slate-300 mx-2">|</span>
                 </span>
               ))}
@@ -483,130 +510,7 @@ export default function VPDashboard() {
       )}
 
 
-      {/* ══ SECTION 1 — PROJECT HIERARCHY ════════════════════ */}
-      <Panel>
-        <PanelHeader title="Project Health Hierarchy" sub="Status grouped by schedule adherence · Click to expand">
-          <div className="flex flex-wrap items-center gap-2">
-            {STATUS_ORDER.map(sk => {
-              const c = S[sk];
-              const isActive = activeHierarchyTab === sk;
-              const projs = grouped[sk] || [];
 
-              /* Per-status inactive tint so every tab has a distinct colour */
-              const inactiveCls = {
-                yet_to_start: 'bg-slate-50  border-slate-200  text-slate-500  hover:bg-slate-100',
-                on_track: 'bg-blue-50   border-blue-100   text-blue-500   hover:bg-blue-100',
-                completed: 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100',
-                delayed: 'bg-red-50    border-red-100    text-red-500    hover:bg-red-100',
-                light_delay: 'bg-amber-50  border-amber-100  text-amber-600  hover:bg-amber-100',
-              }[sk] ?? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50';
-
-              return (
-                <button
-                  key={sk}
-                  onClick={() => setActiveHierarchyTab(sk)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider border rounded transition-all
-                    ${isActive
-                      ? `${c.badge} ring-2 ring-slate-800/10 scale-105 shadow-sm`
-                      : inactiveCls}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.blink}`} />
-                  {c.label}
-                  <span className={`ml-1 px-1.5 py-0.5 text-[8px] rounded border font-mono
-                    ${isActive ? 'bg-white/60 border-current/30 text-current' : 'bg-white/80 border-slate-200 text-slate-600'}`}>
-                    {projs.length}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </PanelHeader>
-
-        <div className="bg-slate-50/30">
-          {(() => {
-            const sk = activeHierarchyTab;
-            const cfg = S[sk];
-            const projs = grouped[sk] || [];
-
-            if (projs.length === 0) {
-              return (
-                <p className="px-8 py-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                  No projects in this category.
-                </p>
-              );
-            }
-
-            return (
-              <div className="divide-y divide-slate-100">
-                {projs.map(proj => {
-                  const projSeqs = schedules.filter(s => String(s.project?.id || s.project) === String(proj.id));
-                  const isOpen = openProjects[proj.id];
-                  return (
-                    <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
-                      {/* Project row */}
-                      <button
-                        onClick={() => setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
-                        className="w-full flex items-center gap-3 px-8 py-3.5 hover:bg-white/60 transition-colors text-left bg-white"
-                      >
-                        <div className={`w-0.5 h-5 ${cfg.dot}`} />
-                        {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name || 'N/A'}</p>
-                        </div>
-                        {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`} />}
-                        <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
-                      </button>
-
-                      {/* Sequence table */}
-                      {isOpen && (
-                        <div className="bg-white border-t border-slate-100 overflow-x-auto">
-                          {projSeqs.length === 0 ? (
-                            <p className="px-10 py-3 text-[10px] text-slate-400 font-bold uppercase tracking-widest">No sequences.</p>
-                          ) : (
-                            <table className="w-full text-left min-w-[700px]">
-                              <thead>
-                                <tr className="bg-slate-800 text-slate-100 text-[9px] font-black uppercase tracking-wider">
-                                  <th className="px-8 py-2.5">Seq No</th>
-                                  <th className="px-4 py-2.5">Description</th>
-                                  <th className="px-4 py-2.5 text-center">RTS Date</th>
-                                  <th className="px-4 py-2.5 text-center">Act. RTS</th>
-                                  <th className="px-4 py-2.5 text-center">Status</th>
-                                  <th className="px-4 py-2.5 text-center">Tons</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100">
-                                {projSeqs.map(seq => {
-                                  const ss = classifySeq(seq); const sc = S[ss];
-                                  return (
-                                    <tr key={seq.id} className={`text-[11px] font-medium hover:bg-slate-50/40 transition-colors ${sc.row}`}>
-                                      <td className="px-8 py-2.5 font-mono font-bold text-slate-700">{seq.seq_no}</td>
-                                      <td className="px-4 py-2.5 text-slate-600 truncate max-w-[180px]" title={seq.item_description}>{seq.item_description || '—'}</td>
-                                      <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.rts_date)}</td>
-                                      <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.actual_rts_date)}</td>
-                                      <td className="px-4 py-2.5 text-center">
-                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wide ${sc.badge}`}>
-                                          <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${sc.blink}`} />
-                                          {sc.label}
-                                        </span>
-                                      </td>
-                                      <td className="px-4 py-2.5 text-center text-slate-500">{parseFloat(seq.tons || 0).toFixed(1)}t</td>
-                                    </tr>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
-          })()}
-        </div>
-      </Panel>
 
       {/* ══ SECTION 2 — BID PERFORMANCE ══════════════════════ */}
       <Panel>
@@ -657,48 +561,8 @@ export default function VPDashboard() {
         </div>
       </Panel>
 
-      {/* ══ SECTION 3 — CAPACITY vs WORKFORCE ════════════════ */}
-      <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
-
-        {/* Chart — 3 cols */}
-        <div className="xl:col-span-3">
-          <Panel>
-            <PanelHeader title="Capacity Utilization Summary" sub="Manhours loading">
-              <select value={capMonth} onChange={e => setCapMonth(parseInt(e.target.value))}
-                className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-                {MONTHS.map((m, i) => <option key={i} value={i}>{m}</option>)}
-              </select>
-              <select value={capYear} onChange={e => setCapYear(parseInt(e.target.value))}
-                className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-                {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
-                  const y = 2012 + i;
-                  return <option key={y} value={y}>{y}</option>;
-                })}
-              </select>
-            </PanelHeader>
-            <div className="p-6">
-              <ResponsiveContainer width="100%" height={260}>
-                <ComposedChart data={capChart}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-                  <XAxis dataKey="month" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="l" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-                  <Tooltip content={<ChartTooltip />} />
-                  <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
-                  <ReferenceLine yAxisId="l" y={0} stroke="#e2e8f0" />
-                  <Bar yAxisId="l" dataKey="available" name="Available (hrs)" fill="#e2e8f0" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                  <Bar yAxisId="l" dataKey="required" name="Required (hrs)" fill="#f59e0b" radius={[2, 2, 0, 0]} maxBarSize={28} />
-                  <Line yAxisId="r" type="monotone" dataKey="balance" name="Surplus/Deficit"
-                    stroke="#1e293b" strokeWidth={2} dot={{ r: 3, fill: '#1e293b', strokeWidth: 2, stroke: '#fff' }} />
-                </ComposedChart>
-              </ResponsiveContainer>
-            </div>
-          </Panel>
-        </div>
-
-        {/* AI Advisor — 2 cols */}
-        <div className="xl:col-span-2">
-          <Panel className="h-full">
+{/* ══ SECTION 3 — EXECUTIVE ADVISOR ════════════════ */}
+      <Panel>
             <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
               <Lightbulb className="w-4 h-4 text-amber-500" />
             </PanelHeader>
@@ -767,8 +631,6 @@ export default function VPDashboard() {
               )}
             </div>
           </Panel>
-        </div>
-      </div>
 
       {/* ══ SECTION 4 — DAILY ACTIVITY FEED ═══════════════ */}
       <Panel>

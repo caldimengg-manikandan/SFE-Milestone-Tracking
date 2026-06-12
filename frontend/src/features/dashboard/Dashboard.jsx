@@ -1,16 +1,101 @@
-import { useState, useEffect, Fragment } from 'react';
+import { useState, useEffect, Fragment, useMemo } from 'react';
 import {
   Users, FolderKanban, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight,
   Clock, CheckCircle2, AlertTriangle, Box, Loader2, X, Calendar, Search,
-  Crown, LayoutDashboard, Scale
+  Crown, LayoutDashboard, Scale, ChevronRight, ChevronDown
 } from 'lucide-react';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend, ReferenceLine, ComposedChart, Line,
   LabelList
 } from 'recharts';
-import { dashboardAPI, projectAPI, scheduleAPI } from '../../services/api';
+import { dashboardAPI, projectAPI, scheduleAPI, priorityAPI } from '../../services/api';
+import api from '../../services/api';
 import VPDashboard from './VPDashboard';
+
+/* ─────────────────────────────────────────────────────────
+   STATUS CONFIG — matching existing app palette
+───────────────────────────────────────────────────────── */
+const S = {
+  completed: { label: 'Completed', dot: 'bg-emerald-500', badge: 'bg-emerald-50 text-emerald-700 border-emerald-100', row: '', blink: '' },
+  completed_delayed: { label: 'Completed with Delay', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-100', row: '', blink: '' },
+  on_track: { label: 'On Track', dot: 'bg-blue-500', badge: 'bg-blue-50 text-blue-700 border-blue-100', row: '', blink: '' },
+  light_delay: { label: 'Likely Delay', dot: 'bg-amber-500', badge: 'bg-amber-50 text-amber-700 border-amber-200', row: 'bg-amber-50/30', blink: 'animate-blink-amber' },
+  delayed: { label: 'Delayed', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border-red-100', row: 'bg-red-50/20', blink: 'animate-blink-red' },
+  yet_to_start: { label: 'Yet to Start', dot: 'bg-slate-400', badge: 'bg-slate-50 text-slate-600 border-slate-200', row: '', blink: '' },
+};
+const STATUS_ORDER = ['yet_to_start', 'on_track', 'completed', 'delayed', 'light_delay'];
+
+const TODAY = new Date();
+const fmt = d => d ? new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+
+const classifyProject = (project, schedules) => {
+  if (project.status === 'Completed') return 'completed';
+  const seqs = schedules.filter(s => String(s.project?.id || s.project) === String(project.id));
+  if (seqs.length === 0) return 'yet_to_start';
+
+  const now = TODAY.getTime();
+  let delayed = false, light = false, onTrack = false;
+  for (const s of seqs) {
+    if (s.is_complete || s.actual_rts_date) continue;
+    const sd = s.rts_date ? new Date(s.rts_date) : null;
+    if (!sd) { onTrack = true; continue; }
+    const diffTime = now - sd.getTime();
+    if (diffTime > 0) {
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      if (diffDays <= 7) light = true;
+      else delayed = true;
+    } else {
+      onTrack = true;
+    }
+  }
+
+  if (delayed) return 'delayed';
+  if (light) return 'light_delay';
+
+  const allCompleted = seqs.every(s => s.is_complete || s.actual_rts_date);
+  if (allCompleted) return 'completed';
+
+  return 'on_track';
+};
+
+const classifySeq = (seq) => {
+  if (seq.is_complete) return 'completed';
+  
+  const plan = seq.rts_date ? new Date(seq.rts_date) : null;
+  const actual = seq.actual_rts_date ? new Date(seq.actual_rts_date) : null;
+
+  if (actual) {
+    if (plan && actual > plan) {
+      return 'completed_delayed';
+    }
+    return 'completed';
+  }
+
+  if (!plan) return 'on_track';
+
+  const diffTime = TODAY.getTime() - plan.getTime();
+  if (diffTime > 0) {
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    if (diffDays <= 7) return 'light_delay';
+    return 'delayed';
+  }
+  return 'on_track';
+};
+
+const Panel = ({ children, className = '' }) => (
+  <div className={`bg-white border border-slate-300 ${className}`}>{children}</div>
+);
+
+const PanelHeader = ({ title, sub, children }) => (
+  <div className="p-6 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+    <div>
+      <h3 className="text-xs font-black text-slate-900 uppercase tracking-[0.25em]">{title}</h3>
+      {sub && <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">{sub}</p>}
+    </div>
+    {children && <div className="flex flex-wrap items-center gap-2">{children}</div>}
+  </div>
+);
 
 /* ── Configs ── */
 
@@ -41,8 +126,45 @@ export default function Dashboard() {
   /* -- Real plan tracking state -- */
   const [projects, setProjects] = useState([]);
   const [schedules, setSchedules] = useState([]);
+  const [priorityItems, setPriorityItems] = useState([]);
   const [activeCardFilter, setActiveCardFilter] = useState(null);
   const [tableSearch, setTableSearch] = useState('');
+
+  const [activeHierarchyTab, setActiveHierarchyTab] = useState('completed');
+  const [openProjects, setOpenProjects] = useState({});
+
+  const grouped = useMemo(() => {
+    const g = { delayed: [], light_delay: [], on_track: [], yet_to_start: [], completed: [] };
+    
+    // Inject is_complete from production priority items OR gantt data (ship_date)
+    const enhancedSchedules = schedules.map(s => {
+      const proj = projects.find(p => String(p.id) === String(s.project?.id || s.project));
+      const pItem = priorityItems.find(pi => pi.job_number === proj?.code && pi.sequence_number === s.seq_no);
+      
+      let isGanttComplete = false;
+      if (data?.ganttData?.tasks) {
+        for (const t of data.ganttData.tasks) {
+          const gItem = t.items?.find(i => i.job_number === proj?.code && String(i.sequence_number) === String(s.seq_no));
+          if (gItem && gItem.ship_date) {
+            isGanttComplete = true;
+            break;
+          }
+        }
+      }
+      
+      return { ...s, is_complete: pItem?.is_complete || isGanttComplete || false };
+    });
+
+    enhancedSchedules.forEach(s => {
+      const status = classifySeq(s);
+      const mapStatus = status === 'completed_delayed' ? 'completed' : status;
+      if (g[mapStatus]) {
+        g[mapStatus].push(s);
+      }
+    });
+
+    return { g, enhancedSchedules };
+  }, [projects, schedules, priorityItems, data]);
 
   const toggleExpand = (id) => {
     setExpandedTaskId(expandedTaskId === id ? null : id);
@@ -121,7 +243,7 @@ export default function Dashboard() {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [statsRes, projRes, schedRes] = await Promise.all([
+        const [statsRes, projRes, schedRes, priorityItemsRes] = await Promise.all([
           dashboardAPI.getStats({
             year: selectedYear,
             capacity_month: capacityMonth,
@@ -129,14 +251,17 @@ export default function Dashboard() {
             tonnage_year: tonnageYear
           }),
           projectAPI.getAll(),
-          scheduleAPI.getAll({ page_size: 1000 })
+          scheduleAPI.getAll({ page_size: 1000 }),
+          api.get('/production/priority-items/', { params: { page_size: 1000 } })
         ]);
         setData(statsRes.data);
 
         const projData = projRes.data.results || projRes.data;
         const schedData = schedRes.data.results || schedRes.data;
+        const pItemsData = priorityItemsRes.data.results || priorityItemsRes.data;
         setProjects(Array.isArray(projData) ? projData : []);
         setSchedules(Array.isArray(schedData) ? schedData : []);
+        setPriorityItems(Array.isArray(pItemsData) ? pItemsData : []);
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
         setError(error.response?.data?.detail || 'Failed to connect to the server');
@@ -540,6 +665,137 @@ export default function Dashboard() {
               </div>
             </div>
           )}
+
+          {/* ══ SECTION 1 — PROJECT HEALTH HIERARCHY ════════════════════ */}
+          <div className="mb-6">
+            <Panel>
+              <PanelHeader title="Project Health Hierarchy" sub="Status grouped by schedule adherence · Click to expand">
+                <div className="flex flex-wrap items-center gap-2">
+                  {STATUS_ORDER.map(sk => {
+                    const c = S[sk];
+                    const isActive = activeHierarchyTab === sk;
+                    const seqs = grouped.g[sk] || [];
+
+                    const inactiveCls = {
+                      yet_to_start: 'bg-slate-50  border-slate-200  text-slate-500  hover:bg-slate-100',
+                      on_track: 'bg-blue-50   border-blue-100   text-blue-500   hover:bg-blue-100',
+                      completed: 'bg-emerald-50 border-emerald-100 text-emerald-600 hover:bg-emerald-100',
+                      delayed: 'bg-red-50    border-red-100    text-red-500    hover:bg-red-100',
+                      light_delay: 'bg-amber-50  border-amber-100  text-amber-600  hover:bg-amber-100',
+                    }[sk] ?? 'bg-white border-slate-200 text-slate-500 hover:bg-slate-50';
+
+                    return (
+                      <button
+                        key={sk}
+                        onClick={() => setActiveHierarchyTab(sk)}
+                        className={`flex items-center gap-1.5 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider border rounded transition-all
+                          ${isActive
+                            ? `${c.badge} ring-2 ring-slate-800/10 scale-105 shadow-sm`
+                            : inactiveCls}`}
+                      >
+                        <span className={`w-1.5 h-1.5 rounded-full ${c.dot} ${c.blink}`} />
+                        {c.label}
+                        <span className={`ml-1 px-1.5 py-0.5 text-[8px] rounded border font-mono
+                          ${isActive ? 'bg-white/60 border-current/30 text-current' : 'bg-white/80 border-slate-200 text-slate-600'}`}>
+                          {seqs.length}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </PanelHeader>
+
+              <div className="bg-slate-50/30">
+                {(() => {
+                  const sk = activeHierarchyTab;
+                  const cfg = S[sk];
+                  const seqs = grouped.g[sk] || [];
+
+                  if (seqs.length === 0) {
+                    return (
+                      <p className="px-8 py-8 text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                        No sequences in this category.
+                      </p>
+                    );
+                  }
+
+                  const projsWithSeqs = {};
+                  seqs.forEach(s => {
+                    const pId = String(s.project?.id || s.project);
+                    if (!projsWithSeqs[pId]) {
+                      projsWithSeqs[pId] = { proj: projects.find(p => String(p.id) === pId), seqs: [] };
+                    }
+                    projsWithSeqs[pId].seqs.push(s);
+                  });
+
+                  return (
+                    <div className="divide-y divide-slate-100">
+                      {Object.values(projsWithSeqs).map(({ proj, seqs: projSeqs }) => {
+                        if (!proj) return null;
+                        const isOpen = openProjects[proj.id];
+                        return (
+                          <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
+                            {/* Project row */}
+                            <button
+                              onClick={() => setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
+                              className="w-full flex items-center gap-3 px-8 py-3.5 hover:bg-white/60 transition-colors text-left bg-white"
+                            >
+                              <div className={`w-0.5 h-5 ${cfg.dot}`} />
+                              {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
+                                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name || 'N/A'}</p>
+                              </div>
+                              {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`} />}
+                              <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
+                            </button>
+
+                            {/* Sequence table */}
+                            {isOpen && (
+                              <div className="bg-white border-t border-slate-100 overflow-x-auto">
+                                  <table className="w-full text-left min-w-[700px]">
+                                    <thead>
+                                      <tr className="bg-slate-800 text-slate-100 text-[9px] font-black uppercase tracking-wider">
+                                        <th className="px-8 py-2.5">Seq No</th>
+                                        <th className="px-4 py-2.5">Description</th>
+                                        <th className="px-4 py-2.5 text-center">RTS Date</th>
+                                        <th className="px-4 py-2.5 text-center">Act. RTS</th>
+                                        <th className="px-4 py-2.5 text-center">Status</th>
+                                        <th className="px-4 py-2.5 text-center">Tons</th>
+                                      </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-100">
+                                      {projSeqs.map(seq => {
+                                        const ss = classifySeq(seq); const sc = S[ss];
+                                        return (
+                                          <tr key={seq.id} className={`text-[11px] font-medium hover:bg-slate-50/40 transition-colors ${sc.row}`}>
+                                            <td className="px-8 py-2.5 font-mono font-bold text-slate-700">{seq.seq_no}</td>
+                                            <td className="px-4 py-2.5 text-slate-600 truncate max-w-[180px]" title={seq.item_description}>{seq.item_description || '—'}</td>
+                                            <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.rts_date)}</td>
+                                            <td className="px-4 py-2.5 text-center text-slate-600 whitespace-nowrap">{fmt(seq.actual_rts_date)}</td>
+                                            <td className="px-4 py-2.5 text-center">
+                                              <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded border text-[8px] font-black uppercase tracking-wide ${sc.badge}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${sc.dot} ${sc.blink}`} />
+                                                {sc.label}
+                                              </span>
+                                            </td>
+                                            <td className="px-4 py-2.5 text-center text-slate-500">{parseFloat(seq.tons || 0).toFixed(1)}t</td>
+                                          </tr>
+                                        );
+                                      })}
+                                    </tbody>
+                                  </table>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+            </Panel>
+          </div>
 
           {/* Charts Row */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
