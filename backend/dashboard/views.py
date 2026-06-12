@@ -126,7 +126,7 @@ class DashboardStatsView(APIView):
                     'ofa_date': None,
                     'erection_date': None,
                     'rts_date': rts_date.isoformat() if rts_date else None,
-                    'ship_date': None,
+                    'ship_date': item.ship_date.isoformat() if item.ship_date else None,
                     'start_date': item_start,
                     'end_date': item_end,
                     'plant_lead_time_weeks': plant_lead_time_weeks,

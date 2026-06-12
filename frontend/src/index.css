@@ -631,9 +631,7 @@ tr[class*="hover:bg-"]:hover {
   animation: marquee-scroll 30s linear infinite;
 }
 
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
+
 
 /* Custom orange scrollbar styling for the table container */
 .orange-scrollbar::-webkit-scrollbar {
