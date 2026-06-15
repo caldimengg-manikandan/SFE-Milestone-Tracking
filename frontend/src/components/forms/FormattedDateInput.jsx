@@ -1,6 +1,6 @@
 import { Calendar } from 'lucide-react';
 
-export default function FormattedDateInput({ value, onChange, readOnly, disabled, className, max, min, placeholder = 'mm-dd-yyyy' }) {
+export default function FormattedDateInput({ name, value, onChange, readOnly, disabled, className, max, min, placeholder = 'mm-dd-yyyy' }) {
   const getDisplayValue = (val) => {
     if (!val) return '';
     const parts = val.split('-');
@@ -15,6 +15,7 @@ export default function FormattedDateInput({ value, onChange, readOnly, disabled
       <div className="relative w-full flex items-center">
         <input
           type="text"
+          name={name}
           readOnly
           className={`${className} pointer-events-none pr-8`}
           value={getDisplayValue(value)}
@@ -37,6 +38,7 @@ export default function FormattedDateInput({ value, onChange, readOnly, disabled
       <Calendar className="w-3.5 h-3.5 text-slate-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
       <input
         type="date"
+        name={name}
         value={value || ''}
         onChange={onChange}
         disabled={disabled}

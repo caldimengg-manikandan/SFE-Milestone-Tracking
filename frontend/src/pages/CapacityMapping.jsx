@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -725,6 +725,30 @@ function MachineView({ data, refresh }) {
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', custom_fields: [] });
 
+  const [isNewShop, setIsNewShop] = useState(false);
+  const [customShopNumber, setCustomShopNumber] = useState('');
+  const [shopName, setShopName] = useState('');
+  const [errors, setErrors] = useState({});
+
+  const shopMap = useMemo(() => {
+    const map = {};
+    data.forEach(m => {
+      if (m.shop) {
+        if (m.shop.includes(' - ')) {
+          const [num, name] = m.shop.split(' - ');
+          map[num.trim()] = name.trim();
+        } else {
+          map[m.shop.trim()] = '';
+        }
+      }
+    });
+    return map;
+  }, [data]);
+
+  const existingShopNumbers = useMemo(() => {
+    return Object.keys(shopMap);
+  }, [shopMap]);
+
   const handleOpen = (item = null) => {
     if (item) {
       setEditItem(item);
@@ -736,22 +760,73 @@ function MachineView({ data, refresh }) {
         }
       } catch (e) { }
       setForm({ ...item, custom_fields: parsed });
+
+      let shopNum = '';
+      let nameVal = '';
+      if (item.shop) {
+        if (item.shop.includes(' - ')) {
+          const parts = item.shop.split(' - ');
+          shopNum = parts[0];
+          nameVal = parts[1];
+        } else {
+          shopNum = item.shop;
+        }
+      }
+      setForm(prev => ({ ...prev, shop: shopNum }));
+      setShopName(nameVal);
+      setIsNewShop(false);
+      setCustomShopNumber('');
+      setErrors({});
     } else {
       setEditItem(null);
       setForm({ name: '', machine_id: '', make: '', model_no: '', serial_no: '', shop: '', commissioned_date: '', validity_year: '', custom_fields: [] });
+      setIsNewShop(false);
+      setCustomShopNumber('');
+      setShopName('');
+      setErrors({});
     }
     setShowModal(true);
   };
 
   const handleSave = async (e) => {
     e.preventDefault();
+    
+    const newErrors = {};
+    if (!form.name || !form.name.trim()) newErrors.name = true;
+    if (!form.make || !form.make.trim()) newErrors.make = true;
+    if (isNewShop && (!customShopNumber || !customShopNumber.trim())) newErrors.shop = true;
+    if (!isNewShop && !form.shop) newErrors.shop = true;
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      return;
+    }
+    setErrors({});
+
     setLoading(true);
     try {
       const other_fields = {};
       (form.custom_fields || []).forEach(f => {
         if (f.label) other_fields[f.label] = f.value;
       });
-      const payload = { ...form, other_fields };
+
+      let finalShop = '';
+      if (isNewShop) {
+        const num = customShopNumber.trim();
+        const name = shopName.trim();
+        finalShop = name ? `${num} - ${name}` : num;
+      } else {
+        const num = (form.shop || '').trim();
+        const name = shopName.trim();
+        finalShop = name ? `${num} - ${name}` : num;
+      }
+
+      const payload = { 
+        ...form, 
+        shop: finalShop, 
+        other_fields,
+        commissioned_date: form.commissioned_date || null 
+      };
 
       if (editItem) await machineAPI.update(editItem.id, payload);
       else await machineAPI.create(payload);
@@ -827,8 +902,9 @@ function MachineView({ data, refresh }) {
             <form onSubmit={handleSave} className="p-8 space-y-5">
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Name</label>
-                  <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} placeholder="e.g. CNC Plasma Cutter" />
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine Name <span className="text-red-500">*</span></label>
+                  <input className={`w-full px-4 py-3 rounded-xl border text-sm font-bold text-slate-700 outline-none focus:ring-4 transition-all ${errors.name ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-amber-400 focus:ring-amber-500/5'}`} value={form.name} onChange={e => { setForm({ ...form, name: e.target.value }); setErrors({ ...errors, name: false }); }} placeholder="e.g. CNC Plasma Cutter" />
+                  {errors.name && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">Please fill the field</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Machine ID</label>
@@ -836,23 +912,80 @@ function MachineView({ data, refresh }) {
                 </div>
               </div>
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Make</label>
-                <input required className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all" value={form.make} onChange={e => setForm({ ...form, make: e.target.value })} placeholder="e.g. Voortman" />
+                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Make <span className="text-red-500">*</span></label>
+                <input className={`w-full px-4 py-3 rounded-xl border text-sm font-bold text-slate-700 outline-none focus:ring-4 transition-all ${errors.make ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-amber-400 focus:ring-amber-500/5'}`} value={form.make} onChange={e => { setForm({ ...form, make: e.target.value }); setErrors({ ...errors, make: false }); }} placeholder="e.g. Voortman" />
+                {errors.make && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">Please fill the field</p>}
               </div>
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop</label>
-                  <select
-                    required
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50"
-                    value={form.shop}
-                    onChange={e => setForm({ ...form, shop: e.target.value })}
-                  >
-                    <option value="">Select Shop</option>
-                    <option value="shop1">shop1</option>
-                    <option value="shop2">shop2</option>
-                    <option value="shop3">shop3</option>
-                  </select>
+                  <div className="flex items-center justify-between">
+                    <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">
+                      {isNewShop ? "Shop Number" : "Shop"} <span className="text-red-500">*</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsNewShop(!isNewShop);
+                        setErrors({ ...errors, shop: false });
+                        if (!isNewShop) {
+                          setCustomShopNumber('');
+                          setShopName('');
+                        } else {
+                          setForm(prev => ({ ...prev, shop: '' }));
+                          setShopName('');
+                        }
+                      }}
+                      className="text-[9px] font-black text-amber-500 uppercase tracking-wider hover:text-amber-400"
+                    >
+                      {isNewShop ? "Select Existing" : "+ Add New"}
+                    </button>
+                  </div>
+                  {isNewShop ? (
+                    <div>
+                      <input
+                        className={`w-full px-4 py-3 rounded-xl border text-sm font-bold text-slate-700 outline-none focus:ring-4 transition-all ${errors.shop ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-amber-400 focus:ring-amber-500/5'}`}
+                        value={customShopNumber}
+                        onChange={e => { setCustomShopNumber(e.target.value); setErrors({ ...errors, shop: false }); }}
+                        placeholder="e.g. Shop 1"
+                      />
+                      {errors.shop && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">Please fill the field</p>}
+                    </div>
+                  ) : (
+                    <div>
+                      <select
+                        className={`w-full px-4 py-3 rounded-xl border text-sm font-bold text-slate-700 outline-none appearance-none bg-slate-50/50 focus:ring-4 transition-all ${errors.shop ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' : 'border-slate-200 focus:border-amber-400 focus:ring-amber-500/5'}`}
+                        value={form.shop}
+                        onChange={e => {
+                          setErrors({ ...errors, shop: false });
+                          if (e.target.value === "_NEW_") {
+                            setIsNewShop(true);
+                            setCustomShopNumber('');
+                            setShopName('');
+                          } else {
+                            setForm({ ...form, shop: e.target.value });
+                            setShopName(shopMap[e.target.value] || '');
+                          }
+                        }}
+                      >
+                        <option value="">Select Shop</option>
+                        {existingShopNumbers.map(num => (
+                          <option key={num} value={num}>{num}</option>
+                        ))}
+                        <option value="_NEW_">+ Add New Shop...</option>
+                      </select>
+                      {errors.shop && <p className="text-[10px] text-red-500 font-bold ml-1 mt-1">Please fill the field</p>}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest ml-1">Shop Name</label>
+                  <input
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                    value={shopName}
+                    onChange={e => setShopName(e.target.value)}
+                    placeholder="e.g. Fabrication"
+                  />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">

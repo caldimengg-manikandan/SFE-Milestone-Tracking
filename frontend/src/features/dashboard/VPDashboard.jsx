@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
-  Tooltip, ResponsiveContainer, Legend, ReferenceLine
+  Tooltip, ResponsiveContainer, Legend, ReferenceLine, LabelList
 } from 'recharts';
 import { dashboardAPI, projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../../services/api';
 
@@ -544,170 +544,7 @@ export default function VPDashboard() {
 
 
 
-      {/* ══ SECTION 2 — BID PERFORMANCE ══════════════════════ */}
-      <Panel>
-        <PanelHeader title="Bid Performance Analytics" sub="Total Quoted vs Won">
-          <ToggleGroup options={[['yoy', 'Year-on-Year'], ['mom', 'Month-on-Month']]} value={bidView} onChange={setBidView} />
-          <ToggleGroup options={[['value', 'Revenue $'], ['count', 'Count']]} value={bidMetric} onChange={setBidMetric} />
-          {bidView === 'mom' && (
-            <select value={bidYear} onChange={e => setBidYear(parseInt(e.target.value))}
-              className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
-              {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
-                const y = 2012 + i;
-                return <option key={y} value={y}>{y}</option>;
-              })}
-            </select>
-          )}
-        </PanelHeader>
-
-        <div className="p-6">
-          {/* Summary pills */}
-          <div className="flex flex-wrap gap-2 mb-6">
-            {[
-              { label: 'Total', value: bids.length, cls: 'bg-slate-100 text-slate-700' },
-              { label: 'Won', value: wonBids.length, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100' },
-              { label: `Won (${TODAY.getFullYear()})`, value: `${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold' },
-              { label: 'Lost', value: bids.filter(b => b.won_lost === 'Lost').length, cls: 'bg-red-50 text-red-700 border border-red-100' },
-              { label: 'Pending', value: bids.filter(b => b.won_lost === 'Pending').length, cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
-            ].map((p, i) => (
-              <span key={i} className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide rounded ${p.cls}`}>
-                {p.label}: <span className="text-sm font-black">{p.value}</span>
-              </span>
-            ))}
-          </div>
-
-          <ResponsiveContainer width="100%" height={260}>
-            <ComposedChart
-              data={bidChart}
-              barGap={4}
-              onClick={(state) => {
-                if (bidView === 'yoy' && state && state.activeLabel) {
-                  const yr = parseInt(state.activeLabel);
-                  if (!isNaN(yr)) {
-                    setBidYear(yr);
-                    setBidView('mom');
-                  }
-                }
-              }}
-              style={{ cursor: bidView === 'yoy' ? 'pointer' : 'default' }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false}
-                tickFormatter={v => bidMetric === 'value' ? fmtMoney(v) : v}
-                ticks={bidTicks}
-                domain={bidDomain} />
-              <Tooltip content={<ChartTooltip isValue={bidMetric === 'value'} />} />
-              <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
-              <Bar
-                dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
-                name="Total Quoted"
-                fill="#000000ff"
-                radius={[2, 2, 0, 0]}
-                maxBarSize={36}
-                onClick={(data) => {
-                  if (bidView === 'yoy' && data && data.year) {
-                    const yr = parseInt(data.year);
-                    if (!isNaN(yr)) {
-                      setBidYear(yr);
-                      setBidView('mom');
-                    }
-                  }
-                }}
-              />
-              <Bar
-                dataKey={bidMetric === 'value' ? 'won' : 'wonCount'}
-                name="Won / Awarded"
-                fill="#f59e0b"
-                radius={[2, 2, 0, 0]}
-                maxBarSize={36}
-                onClick={(data) => {
-                  if (bidView === 'yoy' && data && data.year) {
-                    const yr = parseInt(data.year);
-                    if (!isNaN(yr)) {
-                      setBidYear(yr);
-                      setBidView('mom');
-                    }
-                  }
-                }}
-              />
-            </ComposedChart>
-          </ResponsiveContainer>
-        </div>
-      </Panel>
-
-{/* ══ SECTION 3 — EXECUTIVE ADVISOR ════════════════ */}
-      <Panel>
-            <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
-              <Lightbulb className="w-4 h-4 text-amber-500" />
-            </PanelHeader>
-            <div className="p-6 space-y-5">
-              {aiInsight ? (
-                <>
-                  {/* Metric row */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: 'Available', value: aiInsight.available.toLocaleString(), unit: 'hrs', color: 'text-emerald-600' },
-                      { label: 'Required', value: aiInsight.required.toLocaleString(), unit: 'hrs', color: 'text-amber-600' },
-                      { label: aiInsight.balance >= 0 ? 'Surplus' : 'Deficit', value: Math.abs(aiInsight.balance).toLocaleString(), unit: 'hrs', color: aiInsight.balance >= 0 ? 'text-blue-600' : 'text-red-600' },
-                    ].map((m, i) => (
-                      <div key={i} className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
-                        <p className={`text-base font-black leading-none ${m.color}`}>{m.value}</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{m.unit}</p>
-                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  {/* Utilisation bar */}
-                  <div>
-                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-slate-500">
-                      <span>Load Utilisation</span>
-                      <span className={aiInsight.pct > 100 ? 'text-red-600' : aiInsight.pct > 85 ? 'text-amber-600' : 'text-emerald-600'}>
-                        {aiInsight.pct}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-500
-                        ${aiInsight.pct > 100 ? 'bg-red-500' : aiInsight.pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${Math.min(100, aiInsight.pct)}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Swift Actions */}
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
-                      <Zap className="w-3 h-3" /> Swift Actions
-                    </p>
-                    <div className="space-y-2">
-                      {aiInsight.actions.map((a, i) => {
-                        const cls = {
-                          critical: 'bg-red-50 border-red-100 text-red-700',
-                          warning: 'bg-amber-50 border-amber-100 text-amber-700',
-                          success: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-                          info: 'bg-slate-50 border-slate-200 text-slate-600',
-                        }[a.sev];
-                        return (
-                          <div key={i} className={`border rounded px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${cls}`}>
-                            {a.text}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-40 gap-2">
-                  <Info className="w-7 h-7 text-slate-300" />
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                    No capacity data.<br />Add Workforce Master records.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Panel>
-
-      {/* ══ SECTION 4 — DAILY ACTIVITY FEED ═══════════════ */}
+      {/* ══ SECTION 2 — DAILY ACTIVITY FEED ═══════════════ */}
       <Panel>
         <PanelHeader
           title="Daily Activity Feed"
@@ -798,34 +635,203 @@ export default function VPDashboard() {
                 {Object.entries(EVT).map(([k, v]) => (
                   <div key={k} className="flex items-center gap-2">
                     <span className={`w-2.5 h-2.5 rounded-full ${v.dot}`} />
-                    <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest">{v.label}</span>
+                    <span className="text-[9px] font-bold text-slate-500 uppercase tracking-wider">{v.label}</span>
                   </div>
                 ))}
               </div>
-
-              {/* Stats */}
-              <div className="flex items-center gap-2">
-                <span className="text-[9px] font-black text-slate-400 uppercase tracking-[0.15em]">
-                  {MONTHS_FULL[TODAY.getMonth()]} {TODAY.getFullYear()} Target Summary:
-                </span>
-                <div className="flex items-center gap-3">
-                  {[
-                    { label: "Bids Due", k: 'bid_due', dot: 'bg-red-500' },
-                    { label: "Quotes Submitted", k: 'quote_date', dot: 'bg-rose-500' },
-                    { label: "Awarded", k: 'awarded_date', dot: 'bg-yellow-600' },
-                    { label: "Fab Starts", k: 'fab_start', dot: 'bg-fuchsia-500' },
-                  ].map((s, i) => (
-                    <span key={i} className="inline-flex items-center gap-1 text-[9px] font-black text-slate-700 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
-                      <span className={`w-1 h-1 rounded-full ${s.dot}`} />
-                      {s.label}: {monthEventCounts[s.k] || 0}
-                    </span>
-                  ))}
-                </div>
+              {/* Monthly summary */}
+              <div className="flex flex-wrap items-center gap-3 text-[9px] font-black uppercase tracking-widest text-slate-500">
+                <span className="whitespace-nowrap">{MONTHS_FULL[TODAY.getMonth()]} {TODAY.getFullYear()} Target Summary:</span>
+                {Object.entries(EVT).map(([k, v]) => (
+                  <span key={k} className="flex items-center gap-1">
+                    <span className={`w-2 h-2 rounded-full ${v.dot}`} />
+                    <span className="whitespace-nowrap">{v.label.split(' ')[0]}s: {monthEventCounts[k] || 0}</span>
+                  </span>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </Panel>
+
+      {/* ══ SECTION 3 — BID PERFORMANCE ══════════════════════ */}
+      <Panel>
+        <PanelHeader title="Bid Performance Analytics" sub="Total Quoted vs Won">
+          <ToggleGroup options={[['yoy', 'Year-on-Year'], ['mom', 'Month-on-Month']]} value={bidView} onChange={setBidView} />
+          <ToggleGroup options={[['value', 'Revenue $'], ['count', 'Count']]} value={bidMetric} onChange={setBidMetric} />
+          {bidView === 'mom' && (
+            <select value={bidYear} onChange={e => setBidYear(parseInt(e.target.value))}
+              className="text-[9px] font-black uppercase tracking-wider border border-slate-300 px-2 py-1.5 bg-white outline-none text-slate-600 cursor-pointer">
+              {Array.from({ length: TODAY.getFullYear() + 4 - 2012 + 1 }, (_, i) => {
+                const y = 2012 + i;
+                return <option key={y} value={y}>{y}</option>;
+              })}
+            </select>
+          )}
+        </PanelHeader>
+
+        <div className="p-6">
+          {/* Summary pills */}
+          <div className="flex flex-wrap gap-2 mb-6">
+            {[
+              { label: 'Total', value: bids.length, cls: 'bg-slate-100 text-slate-700' },
+              { label: 'Won', value: wonBids.length, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100' },
+              { label: `Won (${TODAY.getFullYear()})`, value: `${wonBidsCurrentYear.length} (${fmtMoney(wonBidsCurrentYearValue)})`, cls: 'bg-emerald-50 text-emerald-700 border border-emerald-100 font-bold' },
+              { label: 'Lost', value: bids.filter(b => b.won_lost === 'Lost').length, cls: 'bg-red-50 text-red-700 border border-red-100' },
+              { label: 'Pending', value: bids.filter(b => b.won_lost === 'Pending').length, cls: 'bg-amber-50 text-amber-700 border border-amber-100' },
+            ].map((p, i) => (
+              <span key={i} className={`flex items-center gap-2 px-3 py-1.5 text-[10px] font-black uppercase tracking-wide rounded ${p.cls}`}>
+                {p.label}: <span className="text-sm font-black">{p.value}</span>
+              </span>
+            ))}
+          </div>
+
+          <ResponsiveContainer width="100%" height={300}>
+            <ComposedChart
+              data={bidChart}
+              barGap={4}
+              margin={{ top: 20, right: 10, left: 10, bottom: 0 }}
+              onClick={(state) => {
+                if (bidView === 'yoy' && state && state.activeLabel) {
+                  const yr = parseInt(state.activeLabel);
+                  if (!isNaN(yr)) {
+                    setBidYear(yr);
+                    setBidView('mom');
+                  }
+                }
+              }}
+              style={{ cursor: bidView === 'yoy' ? 'pointer' : 'default' }}
+            >
+              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
+              <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+                tickFormatter={v => bidMetric === 'value' ? fmtMoney(v) : v}
+                ticks={bidTicks}
+                domain={bidDomain} />
+              <Tooltip content={<ChartTooltip isValue={bidMetric === 'value'} />} />
+              <Legend verticalAlign="top" height={32} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.1em' }} />
+              <Bar
+                dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
+                name="Total Quoted"
+                fill="#000000ff"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={36}
+                onClick={(data) => {
+                  if (bidView === 'yoy' && data && data.year) {
+                    const yr = parseInt(data.year);
+                    if (!isNaN(yr)) {
+                      setBidYear(yr);
+                      setBidView('mom');
+                    }
+                  }
+                }}
+              >
+                <LabelList
+                  dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
+                  position="top"
+                  style={{ fontSize: '8px', fontWeight: 900, fill: '#334155' }}
+                  formatter={v => v > 0 ? (bidMetric === 'value' ? fmtMoney(v) : v) : ''}
+                />
+              </Bar>
+              <Bar
+                dataKey={bidMetric === 'value' ? 'won' : 'wonCount'}
+                name="Won / Awarded"
+                fill="#f59e0b"
+                radius={[2, 2, 0, 0]}
+                maxBarSize={36}
+                onClick={(data) => {
+                  if (bidView === 'yoy' && data && data.year) {
+                    const yr = parseInt(data.year);
+                    if (!isNaN(yr)) {
+                      setBidYear(yr);
+                      setBidView('mom');
+                    }
+                  }
+                }}
+              >
+                <LabelList
+                  dataKey={bidMetric === 'value' ? 'won' : 'wonCount'}
+                  position="top"
+                  style={{ fontSize: '8px', fontWeight: 900, fill: '#b45309' }}
+                  formatter={v => v > 0 ? (bidMetric === 'value' ? fmtMoney(v) : v) : ''}
+                />
+              </Bar>
+            </ComposedChart>
+          </ResponsiveContainer>
+        </div>
+      </Panel>
+
+{/* ══ SECTION 3 — EXECUTIVE ADVISOR ════════════════ */}
+      <Panel>
+            <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+            </PanelHeader>
+            <div className="p-6 space-y-5">
+              {aiInsight ? (
+                <>
+                  {/* Metric row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Available', value: aiInsight.available.toLocaleString(), unit: 'hrs', color: 'text-emerald-600' },
+                      { label: 'Required', value: aiInsight.required.toLocaleString(), unit: 'hrs', color: 'text-amber-600' },
+                      { label: aiInsight.balance >= 0 ? 'Surplus' : 'Deficit', value: Math.abs(aiInsight.balance).toLocaleString(), unit: 'hrs', color: aiInsight.balance >= 0 ? 'text-blue-600' : 'text-red-600' },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
+                        <p className={`text-base font-black leading-none ${m.color}`}>{m.value}</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{m.unit}</p>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Utilisation bar */}
+                  <div>
+                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-slate-500">
+                      <span>Load Utilisation</span>
+                      <span className={aiInsight.pct > 100 ? 'text-red-600' : aiInsight.pct > 85 ? 'text-amber-600' : 'text-emerald-600'}>
+                        {aiInsight.pct}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500
+                        ${aiInsight.pct > 100 ? 'bg-red-500' : aiInsight.pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, aiInsight.pct)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Swift Actions */}
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                      <Zap className="w-3 h-3" /> Swift Actions
+                    </p>
+                    <div className="space-y-2">
+                      {aiInsight.actions.map((a, i) => {
+                        const cls = {
+                          critical: 'bg-red-50 border-red-100 text-red-700',
+                          warning: 'bg-amber-50 border-amber-100 text-amber-700',
+                          success: 'bg-emerald-50 border-emerald-100 text-emerald-700',
+                          info: 'bg-slate-50 border-slate-200 text-slate-600',
+                        }[a.sev];
+                        return (
+                          <div key={i} className={`border rounded px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${cls}`}>
+                            {a.text}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 gap-2">
+                  <Info className="w-7 h-7 text-slate-300" />
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                    No capacity data.<br />Add Workforce Master records.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Panel>
+
 
     </div>
   );
