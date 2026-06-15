@@ -1,4 +1,4 @@
-import { useState, useEffect, Fragment, useMemo } from 'react';
+import { useState, useEffect, Fragment, useMemo, useRef } from 'react';
 import {
   Users, FolderKanban, BarChart3, TrendingUp, ArrowUpRight, ArrowDownRight,
   Clock, CheckCircle2, AlertTriangle, Box, Loader2, X, Calendar, Search,
@@ -98,6 +98,118 @@ const PanelHeader = ({ title, sub, children }) => (
 );
 
 /* ── Configs ── */
+
+/* ─────────────────────────────────────────────────────────
+   MONTH MULTI SELECT COMPONENT
+   ───────────────────────────────────────────────────────── */
+function MonthMultiSelect({ selectedValues, onChange, disabled }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef(null);
+
+  const MONTHS = [
+    { id: 'All', label: 'All' },
+    { id: 'January', label: 'Jan' },
+    { id: 'February', label: 'Feb' },
+    { id: 'March', label: 'Mar' },
+    { id: 'April', label: 'Apr' },
+    { id: 'May', label: 'May' },
+    { id: 'June', label: 'Jun' },
+    { id: 'July', label: 'Jul' },
+    { id: 'August', label: 'Aug' },
+    { id: 'September', label: 'Sep' },
+    { id: 'October', label: 'Oct' },
+    { id: 'November', label: 'Nov' },
+    { id: 'December', label: 'Dec' }
+  ];
+
+  const currentSelected = useMemo(() => {
+    if (!selectedValues) return ['All'];
+    return selectedValues.split(',').map(v => v.trim()).filter(Boolean);
+  }, [selectedValues]);
+
+  const displayLabel = useMemo(() => {
+    if (currentSelected.includes('All')) return 'All';
+    const shortNames = currentSelected.map(id => {
+      const found = MONTHS.find(m => m.id === id);
+      return found ? found.label : id;
+    });
+    if (shortNames.length > 2) {
+      return `${shortNames.length} Months`;
+    }
+    return shortNames.join(', ');
+  }, [currentSelected]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleToggle = (id) => {
+    if (disabled) return;
+    let nextSelected = [];
+    if (id === 'All') {
+      nextSelected = ['All'];
+    } else {
+      const isSelected = currentSelected.includes(id);
+      const tempSelected = currentSelected.filter(item => item !== 'All');
+      if (isSelected) {
+        nextSelected = tempSelected.filter(item => item !== id);
+      } else {
+        nextSelected = [...tempSelected, id];
+      }
+      if (nextSelected.length === 0) {
+        nextSelected = ['All'];
+      }
+    }
+    onChange(nextSelected.join(','));
+  };
+
+  return (
+    <div ref={containerRef} className="relative inline-block text-left animate-fade-in">
+      <div>
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => setIsOpen(!isOpen)}
+          className="inline-flex justify-between items-center gap-1.5 w-24 text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded disabled:bg-slate-50 disabled:cursor-not-allowed select-none transition-all duration-200 focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 hover:bg-slate-50"
+        >
+          <span className="truncate">{displayLabel}</span>
+          <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 shrink-0 ${isOpen ? 'rotate-180 text-amber-500' : ''}`} />
+        </button>
+      </div>
+
+      {isOpen && (
+        <div className="absolute z-50 right-0 mt-1.5 w-40 max-h-60 overflow-y-auto bg-slate-50/95 border border-slate-200/60 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.08)] backdrop-blur-sm dropdown-scrollbar py-1.5 flex flex-col gap-1">
+          {MONTHS.map((opt) => {
+            const isSelected = currentSelected.includes(opt.id);
+            return (
+              <button
+                key={opt.id}
+                type="button"
+                onClick={() => handleToggle(opt.id)}
+                className={`text-left px-3 py-2 mx-1.5 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all duration-150 border outline-none flex items-center justify-between ${
+                  isSelected
+                    ? 'bg-amber-100/90 text-amber-800 border-amber-200/80 shadow-sm'
+                    : 'bg-white text-slate-600 border-slate-100/40 hover:bg-slate-100/70 hover:text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.02)] hover:scale-[1.01]'
+                }`}
+              >
+                <span>{opt.label}</span>
+                {isSelected && (
+                  <CheckCircle2 className="w-3.5 h-3.5 text-amber-600 shrink-0 ml-1" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function Dashboard() {
   const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
@@ -1319,17 +1431,10 @@ export default function Dashboard() {
                     </label>
 
                     {includeSaturdays && (
-                      <select
-                        value={saturdaysMonth}
-                        onChange={(e) => setSaturdaysMonth(e.target.value)}
-                        className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
-                      >
-                        <option value="All">All</option>
-                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
-                          const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
-                          return <option key={fullMonth} value={fullMonth}>{m}</option>;
-                        })}
-                      </select>
+                      <MonthMultiSelect
+                        selectedValues={saturdaysMonth}
+                        onChange={setSaturdaysMonth}
+                      />
                     )}
 
                     <label className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest cursor-pointer select-none">
@@ -1343,17 +1448,10 @@ export default function Dashboard() {
                     </label>
 
                     {includeSundays && (
-                      <select
-                        value={sundaysMonth}
-                        onChange={(e) => setSundaysMonth(e.target.value)}
-                        className="text-[10px] font-bold text-slate-500 uppercase tracking-tighter border border-slate-300 px-2 py-1.5 outline-none bg-white cursor-pointer rounded animate-fade-in"
-                      >
-                        <option value="All">All</option>
-                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, idx) => {
-                          const fullMonth = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'][idx];
-                          return <option key={fullMonth} value={fullMonth}>{m}</option>;
-                        })}
-                      </select>
+                      <MonthMultiSelect
+                        selectedValues={sundaysMonth}
+                        onChange={setSundaysMonth}
+                      />
                     )}
                   </div>
 

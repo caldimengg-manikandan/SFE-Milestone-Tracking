@@ -309,15 +309,18 @@ class DashboardStatsView(APIView):
             days_in_month = calendar.monthrange(t_year, idx + 1)[1]
             
             # Check if Saturdays/Sundays should be included as working days for this month
+            sats_months_list = [x.strip().lower() for x in saturdays_month.split(',') if x.strip()]
+            suns_months_list = [x.strip().lower() for x in sundays_month.split(',') if x.strip()]
+
             include_sats_for_this_month = include_saturdays and (
-                saturdays_month.lower() == 'all' or 
-                saturdays_month.lower() == m_name.lower() or 
-                saturdays_month.lower() == m_short.lower()
+                'all' in sats_months_list or 
+                m_name.lower() in sats_months_list or 
+                m_short.lower() in sats_months_list
             )
             include_suns_for_this_month = include_sundays and (
-                sundays_month.lower() == 'all' or 
-                sundays_month.lower() == m_name.lower() or 
-                sundays_month.lower() == m_short.lower()
+                'all' in suns_months_list or 
+                m_name.lower() in suns_months_list or 
+                m_short.lower() in suns_months_list
             )
             
             working_days_in_month = 0
@@ -409,6 +412,9 @@ class DashboardStatsView(APIView):
             announcements_list.append({
                 'id': ann.id,
                 'title': ann.title,
+                'message': ann.message,
+                'from_date': str(ann.from_date),
+                'to_date': str(ann.to_date),
                 'priority': priority
             })
 
