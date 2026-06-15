@@ -143,7 +143,7 @@ export default function EstimationErectionLayout() {
   })();
 
   return (
-    <div className="w-full h-full flex flex-col overflow-hidden bg-slate-50/50">
+    <div className="w-full flex flex-col bg-slate-50/50">
       {/* Top Header Selector & Nav */}
       <div className="bg-white border-b border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between px-6 py-3 gap-4 shrink-0">
 
@@ -201,7 +201,7 @@ export default function EstimationErectionLayout() {
       </div>
 
       {/* Dynamic Content Outlet */}
-      <div className="flex-1 overflow-auto flex flex-col">
+      <div className="flex-1 flex flex-col">
         {!selectedProjectId && !location.pathname.endsWith('/estimation') ? (
           <div className="flex-1 flex flex-col items-center justify-center p-8 text-center max-w-lg mx-auto">
             <div className="w-16 h-16 rounded-2xl bg-amber-50 border border-amber-100 flex items-center justify-center text-amber-500 mb-4 animate-pulse">
