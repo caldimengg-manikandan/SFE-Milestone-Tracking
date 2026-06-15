@@ -9,7 +9,7 @@ import { Plus, Trash } from "lucide-react";
 
 const SECTION_MAP = {
   "Structural Steel": ["COL", "BEAM", "GIRT", "SAG", "RF", "CA", "CR"],
-  "X-Bracing": ["XBDA_B", "XBDA_W", "XBTA_B", "XBTA_W", "XBDR_V", "XBDR_H"],
+  "X-Bracing": ["DAB", "DAW", "TAB", "TAW", "VQR", "HQR"],
   "Perimeter Plates & Angles": ["PA", "PAL", "PAL2", "PAL5", "WAL_L", "WAL_M", "WAL_H", "HAS", "SBFC", "MSA", "TSA_CLIPS", "BSA"],
   "Moments & Miscellaneous": ["MOMENTS", "MISC"],
   "Bolts & Anchors": ["BOLTS", "EXP_BOLTS", "ADH_ANCHORS"],
@@ -76,7 +76,7 @@ export default function ErectionTakeoffTab() {
       setCustomUnits((prev) => {
         if (prev.map(u => u.toLowerCase()).includes(trimmed)) return prev;
         const updated = [...prev, trimmed];
-        try { localStorage.setItem(`customUnits_${projectId}`, JSON.stringify(updated)); } catch (e) {}
+        try { localStorage.setItem(`customUnits_${projectId}`, JSON.stringify(updated)); } catch (e) { }
         return updated;
       });
     }
@@ -226,7 +226,7 @@ export default function ErectionTakeoffTab() {
       const linesToUpdate = takeoff.member_lines.filter(
         (l) => l.input_unit?.toLowerCase() === unitToRemove.toLowerCase()
       );
-      
+
       for (const line of linesToUpdate) {
         // Update locally
         setTakeoff((prev) => {
@@ -247,7 +247,7 @@ export default function ErectionTakeoffTab() {
           console.error("Failed to revert unit for line:", line.id, err);
         }
       }
-      
+
       await fetchData();
     }
   };
@@ -594,7 +594,7 @@ export default function ErectionTakeoffTab() {
               <span className="font-mono text-slate-800 font-bold">{computed.unload_hours} hrs</span>
             </div>
             <div className="flex justify-between text-sm border-t border-slate-100 pt-3">
-              <span className="text-slate-500 font-medium">Raw Total Hours (O80)</span>
+              <span className="text-slate-500 font-medium">Raw Total Hours</span>
               <span className="font-mono text-amber-600 font-bold">{computed.total_raw_hours} hrs</span>
             </div>
             <div className="flex justify-between text-sm">
@@ -610,7 +610,7 @@ export default function ErectionTakeoffTab() {
               <span className="font-mono text-slate-800 font-bold">{computed.crew_size} IW / {computed.crew_days_rounded} Days</span>
             </div>
             <div className="flex justify-between text-sm">
-              <span className="text-slate-500 font-medium">Scheduled Hours (O83)</span>
+              <span className="text-slate-500 font-medium">Scheduled Hours</span>
               <span className="font-mono text-slate-800 font-bold">{computed.total_scheduled_hours} hrs</span>
             </div>
           </div>
@@ -647,7 +647,7 @@ export default function ErectionTakeoffTab() {
             </thead>
             <tbody>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Ironworker Foreman (A82)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Ironworker Foreman</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.foreman_hours}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
                 <td className="px-4 py-2 text-right">
@@ -664,7 +664,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.foreman_cost)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Ironworker (A84)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Ironworker</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.ironworker_hours}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
                 <td className="px-4 py-2 text-right">
@@ -681,7 +681,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.ironworker_cost)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Crane (A86)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Crane</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.crane_hours}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
                 <td className="px-4 py-2 text-right">
@@ -705,7 +705,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.equipment_rental)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Field Studs (A90)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Field Studs</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.field_studs_qty}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">PC</td>
                 <td className="px-4 py-2 text-right">
@@ -722,7 +722,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.field_studs_cost)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Material (A91)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Material</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.perimeter_cable_qty}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">LF</td>
                 <td className="px-4 py-2 text-right">
@@ -739,7 +739,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.cable_material_cost)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Shop Labor (A92)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Shop Labor</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.perimeter_cable_qty}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">LF</td>
                 <td className="px-4 py-2 text-right">
@@ -756,7 +756,7 @@ export default function ErectionTakeoffTab() {
                 <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.cable_shop_labor_cost)}</td>
               </tr>
               <tr className="border-b border-slate-100 hover:bg-slate-50/50">
-                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Field Labor (A93)</td>
+                <td className="px-4 py-2 text-xs font-semibold">Perimeter Cable - Field Labor</td>
                 <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">{computed.cable_field_labor_hours}</td>
                 <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
                 <td className="px-4 py-2 text-right">
@@ -867,6 +867,44 @@ export default function ErectionTakeoffTab() {
                       />
                     </td>
                     <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.per_diem_cost)}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                    <td className="px-4 py-2 text-xs font-semibold">Weeks Travel for Driver M,F Overnights To and From the Site</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">
+                      {(computed.travel_hours > 6 ? Math.max(0, computed.travel_hours - 2) * computed.num_weeks : 0).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
+                    <td className="px-4 py-2 text-right">
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="weeks_travel_driver_rate"
+                        disabled={isReadOnly}
+                        className="w-24 bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded px-2 py-0.5 text-xs outline-none transition-all text-right font-mono"
+                        value={takeoff.weeks_travel_driver_rate !== null && takeoff.weeks_travel_driver_rate !== undefined ? takeoff.weeks_travel_driver_rate : ""}
+                        onChange={handleConstantChange}
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.weeks_driver_travel_cost)}</td>
+                  </tr>
+                  <tr className="border-b border-slate-100 hover:bg-slate-50/50">
+                    <td className="px-4 py-2 text-xs font-semibold">Weeks Travel for Passenger M,F Overnights To the Site</td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-slate-600">
+                      {(computed.travel_hours > 6 ? (Math.max(0, computed.travel_hours - 2) / 2) * computed.num_weeks * (computed.crew_size - 1) : 0).toFixed(2)}
+                    </td>
+                    <td className="px-4 py-2 text-center text-xs text-slate-400">Hrs</td>
+                    <td className="px-4 py-2 text-right">
+                      <input
+                        type="number"
+                        step="0.01"
+                        name="weeks_travel_passenger_rate"
+                        disabled={isReadOnly}
+                        className="w-24 bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded px-2 py-0.5 text-xs outline-none transition-all text-right font-mono"
+                        value={takeoff.weeks_travel_passenger_rate !== null && takeoff.weeks_travel_passenger_rate !== undefined ? takeoff.weeks_travel_passenger_rate : ""}
+                        onChange={handleConstantChange}
+                      />
+                    </td>
+                    <td className="px-4 py-2 text-right font-mono text-xs text-emerald-600 font-bold">{formatCurrency(computed.weeks_passenger_travel_cost)}</td>
                   </tr>
                 </>
               )}

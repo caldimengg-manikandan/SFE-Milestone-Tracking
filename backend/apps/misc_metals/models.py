@@ -25,7 +25,7 @@ class MiscMetalsEstimate(models.Model):
         verbose_name = "Misc Metals Estimate"
 
     def __str__(self):
-        return f"MiscMetals for {self.project.job_number}"
+        return f"MiscMetals for {self.project.code}"
 
 
 class StairFlight(models.Model):

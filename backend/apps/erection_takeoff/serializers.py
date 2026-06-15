@@ -73,18 +73,31 @@ class ErectionTakeoffSerializer(serializers.ModelSerializer):
 
     def get_computed(self, obj):
         try:
+            # Proactively sync BidSummary from project's estimation_data to guarantee freshness
+            from projects.models import sync_bid_summary_from_estimation_data, Project
+            try:
+                sync_bid_summary_from_estimation_data(sender=Project, instance=obj.project)
+            except Exception as sync_err:
+                import logging
+                logging.getLogger(__name__).error("Failed to sync bid summary in get_computed: %s", sync_err)
+
             from apps.erection_takeoff.services import compute_erection_totals
             try:
                 rate = obj.project.rate_config
             except Exception:
                 rate = None
             try:
-                bid = obj.project.bid_summary
+                # Retrieve fresh BidSummary from DB to avoid any relation caching issues
+                from apps.bid_summary.models import BidSummary
+                bid = BidSummary.objects.filter(project=obj.project).first()
             except Exception:
                 bid = None
             totals = compute_erection_totals(obj, rate, bid)
             # Remove the rows — already in member_lines
             totals.pop("rows", None)
             return totals
-        except Exception:
+        except Exception as e:
+            import logging
+            logging.getLogger(__name__).error("Error in ErectionTakeoffSerializer.get_computed: %s", e)
             return {}
+

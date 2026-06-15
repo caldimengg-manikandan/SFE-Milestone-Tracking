@@ -44,7 +44,7 @@ class FieldMomentConnTakeoff(models.Model):
         verbose_name = "Field Moment Connection Takeoff"
 
     def __str__(self):
-        return f"FMC Takeoff for {self.project.job_number}"
+        return f"FMC Takeoff for {self.project.code}"
 
 
 class FieldMomentConnLine(models.Model):

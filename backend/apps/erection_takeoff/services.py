@@ -16,12 +16,12 @@ MEMBER_TO_CATEGORY = {
     "CA": "Structural Steel",
     "CR": "Structural Steel",
     # X-Bracing
-    "XBDA_B": "X-Bracing",
-    "XBDA_W": "X-Bracing",
-    "XBTA_B": "X-Bracing",
-    "XBTA_W": "X-Bracing",
-    "XBDR_V": "X-Bracing",
-    "XBDR_H": "X-Bracing",
+    "DAB": "X-Bracing",
+    "DAW": "X-Bracing",
+    "TAB": "X-Bracing",
+    "TAW": "X-Bracing",
+    "VQR": "X-Bracing",
+    "HQR": "X-Bracing",
     # Perimeter Plates & Angles
     "PA": "Perimeter Plates & Angles",
     "PAL": "Perimeter Plates & Angles",
@@ -188,10 +188,22 @@ def compute_erection_totals(erection_takeoff, rate_config, bid_summary):
         is_excl = line.member_type and line.member_type.member_code == "DECK_15_18_ROOF"
         if is_decking and not is_excl:
             decking_tonnage_sum += Decimal(str(r["crane_picks"]))
+    # Helper to fetch from estimation Sections of Project if available
+    project = erection_takeoff.project
+    est_sec = project.estimation_data.get("estimationSections", {}) if (project and project.estimation_data) else {}
 
-    # Unload Trucks inputs from Bid Summary
-    freight_out_trucks = Decimal(str(bid_summary.freight_out_trucks or 0)) if bid_summary else Decimal("0")
-    joist_deck_tons = Decimal(str(bid_summary.joist_deck_tons or 0)) if bid_summary else Decimal("0")
+    def get_val(key, bid_val):
+        val = est_sec.get(key)
+        if val is not None and str(val).strip() != '':
+            try:
+                return Decimal(str(val))
+            except Exception:
+                pass
+        return Decimal(str(bid_val or 0))
+
+    # Unload Trucks inputs from Bid Summary or Project estimation Sections
+    freight_out_trucks = get_val("numTrucks", bid_summary.freight_out_trucks if bid_summary else 0)
+    joist_deck_tons = get_val("steelJoistTons", bid_summary.joist_deck_tons if bid_summary else 0)
 
     # A6 Unload Trucks: ROUNDUP(freight_out_trucks + joist_deck_tons/10 + decking_tonnage_sum/10, 0)
     unload_trucks_raw = freight_out_trucks + (joist_deck_tons / Decimal("10")) + (decking_tonnage_sum / Decimal("10"))
@@ -237,21 +249,21 @@ def compute_erection_totals(erection_takeoff, rate_config, bid_summary):
     crane_cost = crane_hours * Decimal(str(erection_takeoff.crane_rate))
 
     # Equipment Rental Cost (from field default or override)
-    equipment_rental = Decimal(str(erection_takeoff.equipment_rental or 9000))
+    equipment_rental = Decimal(str(erection_takeoff.equipment_rental if erection_takeoff.equipment_rental is not None else 0))
 
     # Studs Cost
     field_studs_qty = Decimal(str(erection_takeoff.field_studs_qty or 0))
     field_studs_cost = field_studs_qty * Decimal(str(erection_takeoff.field_studs_rate))
 
     # Perimeter Cable Costs
-    perimeter_cable_qty = Decimal(str(erection_takeoff.perimeter_cable_qty or 380))
+    perimeter_cable_qty = Decimal(str(erection_takeoff.perimeter_cable_qty if erection_takeoff.perimeter_cable_qty is not None else 0))
     cable_material_cost = perimeter_cable_qty * Decimal(str(erection_takeoff.perimeter_cable_material_rate))
     cable_shop_labor_cost = perimeter_cable_qty * Decimal(str(erection_takeoff.perimeter_cable_shop_rate))
     cable_field_labor_hours = math.ceil(float(perimeter_cable_qty) / 20.0)
     cable_field_labor_cost = Decimal(str(cable_field_labor_hours)) * Decimal(str(erection_takeoff.perimeter_cable_field_rate))
 
     # Travel & Per Diem
-    travel_hours = Decimal(str(bid_summary.freight_out_hours_each or 0)) if bid_summary else Decimal("0")
+    travel_hours = get_val("hoursPerTruck", bid_summary.freight_out_hours_each if bid_summary else 0)
     # D96 Overnight flag
     is_overnight = "yes" if (travel_hours - Decimal("2")) > Decimal("4") else "no"
 

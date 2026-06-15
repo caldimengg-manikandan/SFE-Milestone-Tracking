@@ -61,10 +61,10 @@ class ErectionTakeoff(models.Model):
     crew_size = models.IntegerField(default=5)  # Q7 crew size
     foreman_hours = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # A82 foreman hours override
     field_studs_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # A90 field studs quantity
-    perimeter_cable_qty = models.DecimalField(max_digits=10, decimal_places=2, default=380)  # A91 perimeter cable plan feet
+    perimeter_cable_qty = models.DecimalField(max_digits=10, decimal_places=2, default=0)  # A91 perimeter cable plan feet
 
     # Equipment Rental field (linked to cost code 2.05)
-    equipment_rental = models.DecimalField(max_digits=12, decimal_places=2, default="9000.00")
+    equipment_rental = models.DecimalField(max_digits=12, decimal_places=2, default="0.00")
 
     # Editable rates for the self-perform costing sheet
     foreman_rate = models.DecimalField(max_digits=10, decimal_places=2, default=75.00)
@@ -87,7 +87,7 @@ class ErectionTakeoff(models.Model):
         verbose_name_plural = "Erection Takeoffs"
 
     def __str__(self):
-        return f"ErectionTakeoff for {self.project.job_number}"
+        return f"ErectionTakeoff for {self.project.code}"
 
 
 class ErectionMemberLine(models.Model):
@@ -134,7 +134,7 @@ class ErectionMemberLine(models.Model):
                 self.crane_picks_formula = self.member_type.crane_picks_formula
             if not self.category:
                 from apps.erection_takeoff.services import MEMBER_TO_CATEGORY
-                self.category = MEMBER_TO_CATEGORY.get(self.member_type.member_code, "")
+                self.category = MEMBER_TO_CATEGORY.get(str(self.member_type.member_code), "")
             if not self.sort_order:
                 self.sort_order = self.member_type.sort_order
         else:
