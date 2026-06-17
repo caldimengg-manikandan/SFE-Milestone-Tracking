@@ -60,7 +60,7 @@ class EstimateSnapshot(models.Model):
         ordering = ["-version_number"]
 
     def __str__(self):
-        return f"Snapshot v{self.version_number} — {self.project.job_number}"
+        return f"Snapshot v{self.version_number} — {self.project.code}"
 
     def save(self, *args, **kwargs):
         """Prevent modification after creation."""

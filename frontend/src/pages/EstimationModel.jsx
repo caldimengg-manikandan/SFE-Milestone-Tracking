@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   Calculator,
   Trash2,
@@ -15,6 +15,8 @@ import EstimationSummary from './EstimationSummary';
 import { toast } from 'react-hot-toast';
 import FormattedDateInput from '../components/forms/FormattedDateInput';
 import SearchableDropdown from '../components/SearchableDropdown';
+import { useAutoSave } from '../hooks/useAutoSave';
+import AutoSaveIndicator from '../components/AutoSaveIndicator';
 
 const DEFAULT_PROJECT_INFO = {
   projectId: '',
@@ -230,8 +232,15 @@ export default function EstimationModel() {
       if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 0;
       return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
     }
-    return DEFAULT_ESTIMATION_SECTIONS;
   });
+
+  const { saveState, lastSaved, triggerSave } = useAutoSave(1500);
+
+  const loadedDataRef = useRef(JSON.stringify({
+    projectInfo,
+    bidEnquiry,
+    estimationSections
+  }));
 
   // --- Effect to sync projectInfo when context changes or wonRfqs are fetched ---
   useEffect(() => {
@@ -249,8 +258,12 @@ export default function EstimationModel() {
         location: resolvedLocation
       };
       
+      let nextProjectInfoFull = nextProjectInfo;
+      let nextBidEnquiry = DEFAULT_BID_ENQUIRY;
+      let nextEstimationSections = DEFAULT_ESTIMATION_SECTIONS;
+      
       if (estData.bidEnquiry && estData.estimationSections) {
-        setProjectInfo({
+        nextProjectInfoFull = {
           ...nextProjectInfo,
           ...estData.projectInfo,
           projectId: selected.id,
@@ -259,20 +272,26 @@ export default function EstimationModel() {
           salesman: selected.project_manager_name || '',
           startDate: selected.erection_date || '',
           location: resolvedLocation
-        });
-        setBidEnquiry(estData.bidEnquiry);
-        setEstimationSections(estData.estimationSections);
-      } else {
-        setProjectInfo(nextProjectInfo);
-        setBidEnquiry(DEFAULT_BID_ENQUIRY);
-        setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+        };
+        nextBidEnquiry = estData.bidEnquiry;
+        nextEstimationSections = estData.estimationSections;
       }
+      
+      setProjectInfo(nextProjectInfoFull);
+      setBidEnquiry(nextBidEnquiry);
+      setEstimationSections(nextEstimationSections);
+      
+      loadedDataRef.current = JSON.stringify({
+        projectInfo: nextProjectInfoFull,
+        bidEnquiry: nextBidEnquiry,
+        estimationSections: nextEstimationSections
+      });
     } else if (contextProjectId && String(contextProjectId).startsWith('rfq_') && wonRfqs.length > 0) {
       const rfqId = String(contextProjectId).replace('rfq_', '');
       const matchedRfq = wonRfqs.find(r => String(r.id) === String(rfqId));
       if (matchedRfq) {
         const code = matchedRfq.sfe_job_no ? String(matchedRfq.sfe_job_no) : matchedRfq.quote_no;
-        setProjectInfo({
+        const nextProjectInfo = {
           ...DEFAULT_PROJECT_INFO,
           projectId: '',
           project: matchedRfq.project_name || '',
@@ -280,17 +299,33 @@ export default function EstimationModel() {
           salesman: matchedRfq.primary_estimator ? (matchedRfq.primary_estimator.full_name || matchedRfq.primary_estimator.initials || '') : '',
           startDate: matchedRfq.bid_due_date || '',
           location: matchedRfq.location || '',
-        });
-        setBidEnquiry({
+        };
+        const nextBidEnquiry = {
           ...DEFAULT_BID_ENQUIRY,
           millWeight: matchedRfq.ton_steel ? String(Math.round(matchedRfq.ton_steel * 2000)) : '',
+        };
+        const nextEstimationSections = DEFAULT_ESTIMATION_SECTIONS;
+        
+        setProjectInfo(nextProjectInfo);
+        setBidEnquiry(nextBidEnquiry);
+        setEstimationSections(nextEstimationSections);
+        
+        loadedDataRef.current = JSON.stringify({
+          projectInfo: nextProjectInfo,
+          bidEnquiry: nextBidEnquiry,
+          estimationSections: nextEstimationSections
         });
-        setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
       }
     } else if (contextProjectId === '') {
       setProjectInfo(DEFAULT_PROJECT_INFO);
       setBidEnquiry(DEFAULT_BID_ENQUIRY);
       setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
+      
+      loadedDataRef.current = JSON.stringify({
+        projectInfo: DEFAULT_PROJECT_INFO,
+        bidEnquiry: DEFAULT_BID_ENQUIRY,
+        estimationSections: DEFAULT_ESTIMATION_SECTIONS
+      });
     }
   }, [contextProject, contextProjectId, wonRfqs]);
 
@@ -333,6 +368,12 @@ export default function EstimationModel() {
       localStorage.removeItem('sfe_est_project');
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
+      
+      loadedDataRef.current = JSON.stringify({
+        projectInfo: DEFAULT_PROJECT_INFO,
+        bidEnquiry: DEFAULT_BID_ENQUIRY,
+        estimationSections: DEFAULT_ESTIMATION_SECTIONS
+      });
       return;
     }
     
@@ -363,8 +404,12 @@ export default function EstimationModel() {
             location: resolvedLocation
           };
           
+          let nextProjectInfoFull = nextProjectInfo;
+          let nextBidEnquiry = DEFAULT_BID_ENQUIRY;
+          let nextEstimationSections = DEFAULT_ESTIMATION_SECTIONS;
+          
           if (estData.bidEnquiry && estData.estimationSections) {
-            setProjectInfo({
+            nextProjectInfoFull = {
               ...nextProjectInfo,
               ...estData.projectInfo,
               projectId: selected.id,
@@ -373,16 +418,23 @@ export default function EstimationModel() {
               salesman: selected.project_manager_name || '',
               startDate: selected.erection_date || '',
               location: resolvedLocation
-            });
-            setBidEnquiry(estData.bidEnquiry);
-            setEstimationSections(estData.estimationSections);
+            };
+            nextBidEnquiry = estData.bidEnquiry;
+            nextEstimationSections = estData.estimationSections;
             toast.success(`Calculations loaded for ${selected.name}`);
           } else {
-            setProjectInfo(nextProjectInfo);
-            setBidEnquiry(DEFAULT_BID_ENQUIRY);
-            setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
             toast.success(`Calculations reset for ${selected.name}`);
           }
+          
+          setProjectInfo(nextProjectInfoFull);
+          setBidEnquiry(nextBidEnquiry);
+          setEstimationSections(nextEstimationSections);
+          
+          loadedDataRef.current = JSON.stringify({
+            projectInfo: nextProjectInfoFull,
+            bidEnquiry: nextBidEnquiry,
+            estimationSections: nextEstimationSections
+          });
         }
       } catch (err) {
         console.error('Failed to fetch project details:', err);
@@ -405,6 +457,12 @@ export default function EstimationModel() {
       setBidEnquiry(DEFAULT_BID_ENQUIRY);
       setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
       toast.success(`Pre-filled details for unsynced project: ${selectedRfq.project_name}`);
+      
+      loadedDataRef.current = JSON.stringify({
+        projectInfo: nextProjectInfo,
+        bidEnquiry: DEFAULT_BID_ENQUIRY,
+        estimationSections: DEFAULT_ESTIMATION_SECTIONS
+      });
     }
   };
 
@@ -418,17 +476,24 @@ export default function EstimationModel() {
           if (selected && selected.estimation_data) {
             const estData = selected.estimation_data;
             if (estData.bidEnquiry && estData.estimationSections) {
-              setProjectInfo(prev => ({
-                ...prev,
+              const nextProj = {
+                ...projectInfo,
                 ...estData.projectInfo,
                 projectId: selected.id,
                 project: selected.name,
                 quoteNum: selected.code || '',
                 salesman: selected.project_manager_name || '',
                 startDate: selected.erection_date || ''
-              }));
+              };
+              setProjectInfo(nextProj);
               setBidEnquiry(estData.bidEnquiry);
               setEstimationSections(estData.estimationSections);
+              
+              loadedDataRef.current = JSON.stringify({
+                projectInfo: nextProj,
+                bidEnquiry: estData.bidEnquiry,
+                estimationSections: estData.estimationSections
+              });
             }
           }
         } catch (err) {
@@ -442,7 +507,7 @@ export default function EstimationModel() {
 
   const handleSaveToDatabase = async (status = 'in progress') => {
     const isZero = totalTons === 0 && totalLaborHours === 0 && totalDirectCosts === 0 && finalBidAmount === 0 && miscellaneousFinalPrice === 0;
-    const finalStatus = isZero ? 'yet to start' : status;
+    const finalStatus = (status === 'in progress') ? 'in progress' : (isZero ? 'yet to start' : status);
 
     if (status === 'submitted') {
       const confirmMsg = isZero 
@@ -482,7 +547,7 @@ export default function EstimationModel() {
           total_manhours: Math.round(totalLaborHours * 100) / 100,
           manhour_ton: totalTons > 0 ? Math.round((totalLaborHours / totalTons) * 100) / 100 : 0,
           erection_date: projectInfo.startDate || selectedRfq.contract_executed_date || selectedRfq.awarded_job_date || null,
-          status: 'Yet to Start',
+          status: status === 'in progress' ? 'In Progress' : 'Yet to Start',
           estimation_data: {
             projectInfo: nextProjectInfo,
             bidEnquiry,
@@ -520,7 +585,7 @@ export default function EstimationModel() {
         if (status === 'submitted') {
           toast.success(isZero ? 'Project created and reset to Yet to Start!' : 'Project created and estimation submitted successfully!');
         } else {
-          toast.success(isZero ? 'Project created and reset to Yet to Start!' : 'Project created and draft saved successfully!');
+          toast.success('Project created and draft saved successfully!');
         }
       } else {
         // Existing Project! Just update it.
@@ -535,14 +600,16 @@ export default function EstimationModel() {
             estimationSections
           }
         };
-        if (isZero) {
+        if (status === 'in progress') {
+          payload.status = 'In Progress';
+        } else if (isZero) {
           payload.status = 'Yet to Start';
         }
         await projectAPI.patch(currentProjectId, payload);
         if (status === 'submitted') {
           toast.success(isZero ? 'Project reset to Yet to Start!' : 'Estimation submitted successfully!');
         } else {
-          toast.success(isZero ? 'Project reset to Yet to Start!' : 'Draft saved successfully!');
+          toast.success('Draft saved successfully!');
         }
         if (outletContext?.refreshProject) {
           await outletContext.refreshProject();
@@ -769,6 +836,34 @@ export default function EstimationModel() {
 
   const miscellaneousFinalPrice = miscellaneousTotalBeforeProfit + miscellaneousProfitAmount + miscellaneousMiscellaneousTotal;
 
+  // Auto-save to Database
+  useEffect(() => {
+    if (!projectInfo.projectId) return;
+
+    const currentDataStr = JSON.stringify({ projectInfo, bidEnquiry, estimationSections });
+    if (loadedDataRef.current === currentDataStr) {
+      return;
+    }
+
+    triggerSave(async () => {
+      const payload = {
+        total_ton: Math.round(totalTons * 100) / 100,
+        total_manhours: Math.round(totalLaborHours * 100) / 100,
+        manhour_ton: totalTons > 0 ? Math.round((totalLaborHours / totalTons) * 100) / 100 : 0,
+        estimation_data: {
+          projectInfo: {
+            ...projectInfo,
+            estimationStatus: projectInfo.estimationStatus || 'in progress'
+          },
+          bidEnquiry,
+          estimationSections
+        }
+      };
+      await projectAPI.patch(projectInfo.projectId, payload);
+      loadedDataRef.current = currentDataStr;
+    });
+  }, [projectInfo, bidEnquiry, estimationSections, totalTons, totalLaborHours]);
+
   // Clear Form handler
   const handleClear = () => {
     if (window.confirm("Are you sure you want to clear all fields?")) {
@@ -776,6 +871,12 @@ export default function EstimationModel() {
       setEstimationSections(DEFAULT_ESTIMATION_SECTIONS);
       localStorage.removeItem('sfe_est_bid_enquiry');
       localStorage.removeItem('sfe_est_sections');
+      
+      loadedDataRef.current = JSON.stringify({
+        projectInfo,
+        bidEnquiry: DEFAULT_BID_ENQUIRY,
+        estimationSections: DEFAULT_ESTIMATION_SECTIONS
+      });
     }
   };
 
@@ -2231,6 +2332,9 @@ export default function EstimationModel() {
         </div>
 
         <div className="flex items-center gap-3 shrink-0">
+          {projectInfo.projectId && (
+            <AutoSaveIndicator state={saveState} lastSaved={lastSaved} />
+          )}
           <button
             onClick={() => handleSaveToDatabase('in progress')}
             disabled={!selectedRfqId || !!isSaving}

@@ -508,19 +508,15 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
     const matchedProj = projects.find(p => p.code === code || p.name === rfq.project_name);
     if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
-      const vals = calculateEstimationValues(matchedProj);
-      const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
-      if (isZero) {
-        estStatus = 'yet to start';
+      const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+      if (savedStatus === 'submitted') {
+        estStatus = 'submitted';
+      } else if (savedStatus === 'rebid') {
+        estStatus = 'rebid';
+      } else if (savedStatus === 'in progress') {
+        estStatus = 'in progress';
       } else {
-        const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
-        if (savedStatus === 'submitted') {
-          estStatus = 'submitted';
-        } else if (savedStatus === 'rebid') {
-          estStatus = 'rebid';
-        } else {
-          estStatus = 'in progress';
-        }
+        estStatus = 'yet to start';
       }
     }
     const matchesStatus = statusFilter === 'all' || estStatus === statusFilter;
@@ -619,18 +615,15 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       
       let estStatus = 'yet to start';
       if (matched && matched.estimation_data && Object.keys(matched.estimation_data).length > 0) {
-        const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
-        if (isZero) {
-          estStatus = 'yet to start';
+        const savedStatus = matched.estimation_data?.projectInfo?.estimationStatus;
+        if (savedStatus === 'submitted') {
+          estStatus = 'submitted';
+        } else if (savedStatus === 'rebid') {
+          estStatus = 'rebid';
+        } else if (savedStatus === 'in progress') {
+          estStatus = 'in progress';
         } else {
-          const savedStatus = matched.estimation_data?.projectInfo?.estimationStatus;
-          if (savedStatus === 'submitted') {
-            estStatus = 'submitted';
-          } else if (savedStatus === 'rebid') {
-            estStatus = 'rebid';
-          } else {
-            estStatus = 'in progress';
-          }
+          estStatus = 'yet to start';
         }
       }
       const formattedStatus = estStatus === 'submitted' ? 'Submitted' : (estStatus === 'rebid' ? 'Rebid' : (estStatus === 'in progress' ? 'In Progress' : 'Yet to Start'));
@@ -862,18 +855,15 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
                     let estStatus = 'yet to start';
                     if (matchedProj && matchedProj.estimation_data && Object.keys(matchedProj.estimation_data).length > 0) {
-                      const isZero = vals.finalBidAmount === 0 && vals.miscellaneousFinalPrice === 0 && vals.totalMaterialCost === 0 && vals.plantLaborAndShip === 0;
-                      if (isZero) {
-                        estStatus = 'yet to start';
+                      const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
+                      if (savedStatus === 'submitted') {
+                        estStatus = 'submitted';
+                      } else if (savedStatus === 'rebid') {
+                        estStatus = 'rebid';
+                      } else if (savedStatus === 'in progress') {
+                        estStatus = 'in progress';
                       } else {
-                        const savedStatus = matchedProj.estimation_data?.projectInfo?.estimationStatus;
-                        if (savedStatus === 'submitted') {
-                          estStatus = 'submitted';
-                        } else if (savedStatus === 'rebid') {
-                          estStatus = 'rebid';
-                        } else {
-                          estStatus = 'in progress';
-                        }
+                        estStatus = 'yet to start';
                       }
                     }
 

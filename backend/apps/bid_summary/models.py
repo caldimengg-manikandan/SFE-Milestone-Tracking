@@ -83,7 +83,7 @@ class BidSummary(models.Model):
         verbose_name_plural = "Bid Summaries"
 
     def __str__(self):
-        return f"BidSummary for {self.project.job_number}"
+        return f"BidSummary for {self.project.code}"
 
 
 class BidMaterialLine(models.Model):
