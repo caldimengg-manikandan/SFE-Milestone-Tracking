@@ -1,0 +1,1 @@
+const fs = require('fs'); const lines = fs.readFileSync('src/features/dashboard/Dashboard.jsx', 'utf8').split('\n'); const newLines = [...lines.slice(0, 763), '          {/* Charts Row */}', '          <div className=\"grid grid-cols-1 gap-6\">', ...lines.slice(1024)]; fs.writeFileSync('src/features/dashboard/Dashboard.jsx', newLines.join('\n'));

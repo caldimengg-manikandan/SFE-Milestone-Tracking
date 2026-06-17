@@ -330,18 +330,18 @@ export default function ProjectMaster() {
         s.seq_no,
         s.tons,
         s.item_description,
-        s.scheduled_ofa_date,
-        s.actual_ofa_date || '-',
-        s.scheduled_bfa_date,
-        s.actual_bfa_date || '-'
+        formatDate(s.scheduled_ofa_date),
+        s.actual_ofa_date ? formatDate(s.actual_ofa_date) : '-',
+        formatDate(s.scheduled_bfa_date),
+        s.actual_bfa_date ? formatDate(s.actual_bfa_date) : '-'
       ];
       if (showFieldMeasure) {
-        row.push(s.scheduled_field_measure_date || '-');
+        row.push(s.scheduled_field_measure_date ? formatDate(s.scheduled_field_measure_date) : '-');
       }
       row.push(
-        s.rts_date,
+        s.rts_date ? formatDate(s.rts_date) : '-',
         s.plant_lead_time_weeks,
-        s.scheduled_erection_date,
+        s.scheduled_erection_date ? formatDate(s.scheduled_erection_date) : '-',
         s.budget_plant_hours,
         s.budget_field_hours,
         s.actual_plant_hours,
@@ -756,13 +756,13 @@ export default function ProjectMaster() {
 
             // Draw Milestone markers
             const milestones = [
-              { date: s.scheduled_ofa_date, color: [168, 85, 247] },
-              { date: s.actual_ofa_date, color: [236, 72, 153] },
-              { date: s.scheduled_bfa_date, color: [6, 182, 212] },
-              { date: s.actual_bfa_date, color: [20, 184, 166] },
-              ...(showFieldMeasure ? [{ date: s.scheduled_field_measure_date, color: [249, 115, 22] }] : []),
-              { date: s.rts_date, color: [30, 41, 59] },
-              { date: s.scheduled_erection_date, color: [79, 70, 229] }
+              { date: s.scheduled_ofa_date, color: [168, 85, 247] }, // OFA Scheduled - Purple
+              { date: s.actual_ofa_date, color: [255, 140, 0] }, // OFA Actual - Bright Orange (high contrast)
+              { date: s.scheduled_bfa_date, color: [6, 182, 212] }, // BFA Scheduled - Teal (high contrast)
+              { date: s.actual_bfa_date, color: [0, 255, 0] }, // BFA Actual - Bright Green (high contrast)
+               ...(showFieldMeasure ? [{ date: s.scheduled_field_measure_date, color: [0, 128, 255] }] : []), // Field Measure - Cyan (high contrast)
+              { date: s.rts_date, color: [30, 41, 59] }, // RTS - Slate
+              { date: s.scheduled_erection_date, color: [79, 70, 229] } // Erection - Indigo
             ];
 
             milestones.forEach(ms => {
@@ -772,10 +772,10 @@ export default function ProjectMaster() {
                 if (xMs >= timelineStart && xMs <= timelineStart + timelineWidth) {
                   // White halo
                   doc.setFillColor(255, 255, 255);
-                  doc.circle(xMs, barY + barHeight / 2, 1.4, 'F');
+                  doc.circle(xMs, barY + barHeight / 2, 2.0, 'F'); // White halo
                   // Colored dot
                   doc.setFillColor(ms.color[0], ms.color[1], ms.color[2]);
-                  doc.circle(xMs, barY + barHeight / 2, 1.0, 'F');
+                  doc.circle(xMs, barY + barHeight / 2, 1.5, 'F');
                 }
               }
             });
@@ -830,9 +830,9 @@ export default function ProjectMaster() {
 
         const dotLegend1 = [
           { name: "Scheduled OFA", color: [168, 85, 247], x: 142 },
-          { name: "Actual OFA", color: [236, 72, 153], x: 177 },
-          { name: "Scheduled BFA", color: [6, 182, 212], x: 212 },
-          { name: "Actual BFA", color: [20, 184, 166], x: 247 }
+          { name: "Actual OFA", color: [255, 140, 0], x: 177 }, // Bright Orange
+          { name: "Scheduled BFA", color: [6, 182, 212], x: 212 }, // Teal
+          { name: "Actual BFA", color: [0, 255, 0], x: 247 } // Bright Green
         ];
 
         dotLegend1.forEach(st => {

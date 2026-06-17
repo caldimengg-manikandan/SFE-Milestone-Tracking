@@ -514,13 +514,14 @@ export default function PlanCreation() {
       return { label: 'In Progress', color: [245, 158, 11] };
     };
 
-      const milestoneColors = {
-        scheduled_ofa_date: [139, 92, 246], actual_ofa_date: [107, 114, 128],
-        scheduled_bfa_date: [6, 182, 212], actual_bfa_date: [20, 184, 166],
-        ...(isFMRequired ? { scheduled_field_measure_date: [249, 115, 22] } : {}),
-        rts_date: [30, 41, 59],
-        scheduled_erection_date: [79, 70, 229],
-      };
+    const milestoneColors = {
+      scheduled_ofa_date: [139, 92, 246], actual_ofa_date: [107, 114, 128],
+      scheduled_bfa_date: [255, 0, 0], // Bright Red
+      actual_bfa_date: [0, 255, 0], // Bright Green
+      ...(isFMRequired ? { scheduled_field_measure_date: [249, 115, 22] } : {}),
+      rts_date: [30, 41, 59],
+      scheduled_erection_date: [79, 70, 229],
+    };
 
     const rowH = 14;
     sortedSchedules.forEach(s => {
@@ -633,7 +634,7 @@ export default function PlanCreation() {
 
     const dotLegend1 = [
       { name: "Scheduled OFA", color: [139, 92, 246], x: 142 },
-      { name: "Actual OFA", color: [107, 114, 128], x: 177 },
+      { name: "Actual OFA", color: [255, 140, 0], x: 177 },
       { name: "Scheduled BFA", color: [6, 182, 212], x: 212 },
       { name: "Actual BFA", color: [20, 184, 166], x: 247 }
     ];
@@ -650,7 +651,7 @@ export default function PlanCreation() {
     // Line 2 for Milestone dots
     const legY2 = legY + 5;
     const dotLegend2 = [
-      ...(isFMRequired ? [{ name: "Field Measure", color: [249, 115, 22], x: 142 }] : []),
+      ...(isFMRequired ? [{ name: "Field Measure", color: [0, 128, 255], x: 142 }] : []), // Cyan
       { name: "RTS", color: [30, 41, 59], x: 177 },
       { name: "Scheduled Erection", color: [79, 70, 229], x: 212 }
     ];
