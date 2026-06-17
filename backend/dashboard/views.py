@@ -236,15 +236,53 @@ class DashboardStatsView(APIView):
             active_indices = [(start_month_idx + i) % 12 for i in range(int(duration_months))]
             return target_month_idx in active_indices
 
+        from bids.models import Holiday
+        holiday_dates = set(Holiday.objects.filter(date__year=t_year).values_list('date', flat=True))
+
         bar_data = []
         for idx, (m_name, m_short) in enumerate(zip(months_names, months_short)):
-            # 1. Available Manhours for this month
+            # Calculate working days in this specific month
+            import calendar
+            import datetime
+            days_in_month = calendar.monthrange(t_year, idx + 1)[1]
+            
+            # Check if Saturdays/Sundays should be included as working days for this month
+            sats_months_list = [x.strip().lower() for x in saturdays_month.split(',') if x.strip()]
+            suns_months_list = [x.strip().lower() for x in sundays_month.split(',') if x.strip()]
+
+            include_sats_for_this_month = include_saturdays and (
+                'all' in sats_months_list or 
+                m_name.lower() in sats_months_list or 
+                m_short.lower() in sats_months_list
+            )
+            include_suns_for_this_month = include_sundays and (
+                'all' in suns_months_list or 
+                m_name.lower() in suns_months_list or 
+                m_short.lower() in suns_months_list
+            )
+            
+            working_days_in_month = 0
+            for day in range(1, days_in_month + 1):
+                day_date = datetime.date(t_year, idx + 1, day)
+                if day_date in holiday_dates:
+                    continue
+                day_of_week = day_date.weekday()
+                if day_of_week == 5: # Saturday
+                    if include_sats_for_this_month:
+                        working_days_in_month += 1
+                elif day_of_week == 6: # Sunday
+                    if include_suns_for_this_month:
+                        working_days_in_month += 1
+                else: # Mon-Fri
+                    working_days_in_month += 1
+
+            # 1. Available Manhours for this month (using calculated working days instead of hardcoded 20)
             m_manpower = manpower_entries.filter(month__iexact=m_name)
             available_hours = 0.0
             for item in m_manpower:
                 mh = float(item.manhours) if item.manhours is not None else 8.0
                 ot = float(item.overtime) if item.overtime is not None else 0.0
-                available_hours += (mh + ot) * 20.0
+                available_hours += (mh + ot) * working_days_in_month
                 
             # 2. Required Manhours breakdown for this month
             struct_fab = 0.0
@@ -304,44 +342,12 @@ class DashboardStatsView(APIView):
                             struct_ton += item_w
             
             # Calculate dynamic tonnage capacity for this specific month from Capacity configuration module
-            import calendar
-            import datetime
-            days_in_month = calendar.monthrange(t_year, idx + 1)[1]
-            
-            # Check if Saturdays/Sundays should be included as working days for this month
-            sats_months_list = [x.strip().lower() for x in saturdays_month.split(',') if x.strip()]
-            suns_months_list = [x.strip().lower() for x in sundays_month.split(',') if x.strip()]
-
-            include_sats_for_this_month = include_saturdays and (
-                'all' in sats_months_list or 
-                m_name.lower() in sats_months_list or 
-                m_short.lower() in sats_months_list
-            )
-            include_suns_for_this_month = include_sundays and (
-                'all' in suns_months_list or 
-                m_name.lower() in suns_months_list or 
-                m_short.lower() in suns_months_list
-            )
-            
-            working_days_in_month = 0
-            for day in range(1, days_in_month + 1):
-                day_of_week = datetime.date(t_year, idx + 1, day).weekday()
-                if day_of_week == 5: # Saturday
-                    if include_sats_for_this_month:
-                        working_days_in_month += 1
-                elif day_of_week == 6: # Sunday
-                    if include_suns_for_this_month:
-                        working_days_in_month += 1
-                else: # Mon-Fri
-                    working_days_in_month += 1
-
             month_capacity = 0.0
             for c in Capacity.objects.all():
                 c_months = [m.strip().lower() for m in (getattr(c, 'months', '') or '').split(',') if m.strip()]
                 if not c_months or m_name.lower() in c_months:
                     day_cap = float(c.capacity_per_day or c.rate_per_day or 0)
                     month_capacity += day_cap * working_days_in_month
-
 
             bar_data.append({
                 'name': m_short,

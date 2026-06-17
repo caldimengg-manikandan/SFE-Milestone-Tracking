@@ -33,6 +33,26 @@ const fmtMoney = (v) => {
   return `$${n.toFixed(0)}`;
 };
 
+const RenderMinBar = (props) => {
+  const { fill, x, y, width, height, value } = props;
+  if (!value || value <= 0) return null;
+  const minH = 4;
+  const activeHeight = height < minH ? minH : height;
+  const activeY = height < minH ? y - (minH - height) : y;
+  const r = 2; // radius
+  
+  const path = `
+    M ${x},${activeY + activeHeight}
+    L ${x},${activeY + r}
+    Q ${x},${activeY} ${x + r},${activeY}
+    L ${x + width - r},${activeY}
+    Q ${x + width},${activeY} ${x + width},${activeY + r}
+    L ${x + width},${activeY + activeHeight}
+    Z
+  `;
+  return <path d={path} fill={fill} />;
+};
+
 const parseMonthYear = (str) => {
   if (!str) return null;
   if (str.match(/^\d{4}-\d{2}-\d{2}$/)) {
@@ -48,6 +68,30 @@ const parseMonthYear = (str) => {
   if (!ym || month === null) return null;
   const y = parseInt(ym[0]);
   return { month, year: y < 100 ? 2000 + y : y };
+};
+
+const parseYearMonthFromQuoteNo = (b) => {
+  if (!b) return null;
+  const q = b.quote_no || '';
+  const m = q.match(/^(\d{2})-(\d{2})-/);
+  if (m) {
+    return {
+      year: 2000 + parseInt(m[1], 10),
+      month: parseInt(m[2], 10) - 1 // 0-indexed month
+    };
+  }
+  // fallback
+  const dateStr = b.quote_date || b.awarded_job_date || b.created_at;
+  if (dateStr) {
+    const dt = new Date(dateStr);
+    if (!isNaN(dt.getTime())) {
+      return {
+        year: dt.getFullYear(),
+        month: dt.getMonth()
+      };
+    }
+  }
+  return null;
 };
 
 /* Classify project delay based on its sequences */
@@ -254,22 +298,33 @@ export default function VPDashboard() {
   const wonBidsCurrentYear = useMemo(() => {
     const curYear = TODAY.getFullYear();
     return wonBids.filter(b => {
-      const dt = new Date(b.awarded_job_date || b.created_at);
-      return dt.getFullYear() === curYear;
+      const ym = parseYearMonthFromQuoteNo(b);
+      return ym && ym.year === curYear;
     });
   }, [wonBids]);
   const wonBidsCurrentYearValue = useMemo(() => {
     return wonBidsCurrentYear.reduce((s, b) => s + parseFloat(b.awarded_amount || b.bid_amount || 0), 0);
   }, [wonBidsCurrentYear]);
   const latestWins = useMemo(() => {
-    return wonBids.filter(b => {
-      const dt = new Date(b.awarded_job_date || b.created_at);
-      return dt.getFullYear() === bidYear;
-    }).sort((a, b) => new Date(b.awarded_job_date || b.created_at) - new Date(a.awarded_job_date || a.created_at)).slice(0, 6);
-  }, [wonBids, bidYear]);
+    const curYear = TODAY.getFullYear();
+    return wonBids
+      .filter(b => {
+        const ym = parseYearMonthFromQuoteNo(b);
+        return ym && ym.year === curYear;
+      })
+      .sort((a, b) => new Date(b.awarded_job_date || b.quote_date || b.created_at) - new Date(a.awarded_job_date || a.quote_date || a.created_at))
+      .slice(0, 8);
+  }, [wonBids]);
 
   const latestQuotes = useMemo(() => {
-    return [...bids].sort((a, b) => new Date(b.quote_date || b.created_at) - new Date(a.quote_date || a.created_at)).slice(0, 8);
+    const curYear = TODAY.getFullYear();
+    return bids
+      .filter(b => {
+        const ym = parseYearMonthFromQuoteNo(b);
+        return ym && ym.year === curYear;
+      })
+      .sort((a, b) => new Date(b.quote_date || b.created_at) - new Date(a.quote_date || a.created_at))
+      .slice(0, 10);
   }, [bids]);
 
   const kpi = useMemo(() => {
@@ -296,7 +351,9 @@ export default function VPDashboard() {
     if (bidView === 'yoy') {
       const m = {};
       bids.forEach(b => {
-        const yr = new Date(b.awarded_job_date || b.created_at).getFullYear();
+        const ym = parseYearMonthFromQuoteNo(b);
+        if (!ym) return;
+        const yr = ym.year;
         if (!m[yr]) m[yr] = { year: String(yr), quoted: 0, won: 0, quotedCount: 0, wonCount: 0 };
         m[yr].quoted += parseFloat(b.bid_amount || 0);
         m[yr].quotedCount += 1;
@@ -306,11 +363,14 @@ export default function VPDashboard() {
     }
     const rows = MONTHS.map(m => ({ month: m, quoted: 0, won: 0, quotedCount: 0, wonCount: 0 }));
     bids.forEach(b => {
-      const dt = new Date(b.awarded_job_date || b.created_at);
-      if (dt.getFullYear() !== bidYear) return;
-      const mi = dt.getMonth();
-      rows[mi].quoted += parseFloat(b.bid_amount || 0); rows[mi].quotedCount += 1;
-      if (b.won_lost === 'Won') { rows[mi].won += parseFloat(b.awarded_amount || b.bid_amount || 0); rows[mi].wonCount += 1; }
+      const ym = parseYearMonthFromQuoteNo(b);
+      if (!ym) return;
+      if (ym.year !== bidYear) return;
+      const mi = ym.month;
+      if (mi >= 0 && mi < 12) {
+        rows[mi].quoted += parseFloat(b.bid_amount || 0); rows[mi].quotedCount += 1;
+        if (b.won_lost === 'Won') { rows[mi].won += parseFloat(b.awarded_amount || b.bid_amount || 0); rows[mi].wonCount += 1; }
+      }
     });
     return rows;
   }, [bids, bidView, bidYear]);
@@ -451,13 +511,6 @@ export default function VPDashboard() {
         details: `Awarded Amount: ${fmtMoney(b.awarded_amount)} · SFE Job No: ${b.sfe_job_no || 'N/A'}`,
         extra: `Awarded`
       });
-      add(b.fab_start_date || b.fabrication_start_date, {
-        type: 'fab_start',
-        label: `Fabrication Start: ${b.project_name || b.quote_no}`,
-        projectCode: b.quote_no || 'N/A',
-        details: `SFE Job No: ${b.sfe_job_no || 'N/A'}`,
-        extra: `Fab Start`
-      });
     });
     return ev;
   }, [bids]);
@@ -478,7 +531,7 @@ export default function VPDashboard() {
 
   // Overall monthly stats (for the current month)
   const monthEventCounts = useMemo(() => {
-    const c = { bid_due: 0, quote_date: 0, awarded_date: 0, fab_start: 0 };
+    const c = { bid_due: 0, quote_date: 0, awarded_date: 0 };
     const curYear = TODAY.getFullYear();
     const curMonth = TODAY.getMonth();
     Object.entries(calEvents).forEach(([k, arr]) => {
@@ -493,7 +546,6 @@ export default function VPDashboard() {
     bid_due: { label: 'Bid Due Date', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border border-red-100' },
     quote_date: { label: 'Quote Submitted Date', dot: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700 border border-rose-100' },
     awarded_date: { label: 'Awarded Date', dot: 'bg-yellow-600', badge: 'bg-yellow-50 text-yellow-750 border border-yellow-200' },
-    fab_start: { label: 'Fab Start Date', dot: 'bg-fuchsia-500', badge: 'bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100' },
   };
 
   /* ── Loading ── */
@@ -533,6 +585,33 @@ export default function VPDashboard() {
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
                   {b.bid_amount > 0 && <span className="text-[10px] font-black text-sky-600">· {fmtMoney(b.bid_amount)}</span>}
                   {b.quote_date && <span className="text-[9px] text-slate-400">Quoted {fmt(b.quote_date)}</span>}
+                  <span className="text-slate-300 mx-2">|</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ══ ANNOUNCEMENT BAR — Latest Wins ═══════════════════ */}
+      {latestWins.length > 0 && (
+        <div className="flex items-center border border-slate-300 bg-white overflow-hidden mt-2">
+          <div className="shrink-0 flex items-center gap-2 px-4 py-2.5 bg-emerald-500">
+            <Trophy className="w-3.5 h-3.5 text-white" />
+            <span className="text-[9px] font-black text-white uppercase tracking-[0.25em] whitespace-nowrap">Latest Wins</span>
+          </div>
+          <div className="overflow-hidden flex-1 border-l border-slate-300">
+            <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
+              {[...latestWins, ...latestWins].map((b, i) => (
+                <span key={i} className="inline-flex items-center gap-2 mx-8">
+                  <Trophy className="w-3 h-3 text-emerald-500 shrink-0" />
+                  <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
+                  {(b.awarded_amount > 0 || b.bid_amount > 0) && (
+                    <span className="text-[10px] font-black text-emerald-600">· {fmtMoney(b.awarded_amount || b.bid_amount)}</span>
+                  )}
+                  {(b.awarded_job_date || b.quote_date) && (
+                    <span className="text-[9px] text-slate-400">Won {fmt(b.awarded_job_date || b.quote_date)}</span>
+                  )}
                   <span className="text-slate-300 mx-2">|</span>
                 </span>
               ))}
@@ -703,8 +782,8 @@ export default function VPDashboard() {
               style={{ cursor: bidView === 'yoy' ? 'pointer' : 'default' }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={false} tickLine={false}
+              <XAxis dataKey={bidView === 'yoy' ? 'year' : 'month'} tick={{ fontSize: 9, fontWeight: 800, fill: '#252525ff' }} axisLine={{ stroke: '#cbd5e1', strokeWidth: 1 }} tickLine={{ stroke: '#cbd5e1' }} />
+              <YAxis tick={{ fontSize: 9, fontWeight: 800, fill: '#94a3b8' }} axisLine={{ stroke: '#cbd5e1', strokeWidth: 1 }} tickLine={{ stroke: '#cbd5e1' }}
                 tickFormatter={v => bidMetric === 'value' ? fmtMoney(v) : v}
                 ticks={bidTicks}
                 domain={bidDomain} />
@@ -714,8 +793,8 @@ export default function VPDashboard() {
                 dataKey={bidMetric === 'value' ? 'quoted' : 'quotedCount'}
                 name="Total Quoted"
                 fill="#000000ff"
-                radius={[2, 2, 0, 0]}
                 maxBarSize={36}
+                shape={<RenderMinBar />}
                 onClick={(data) => {
                   if (bidView === 'yoy' && data && data.year) {
                     const yr = parseInt(data.year);
@@ -737,8 +816,8 @@ export default function VPDashboard() {
                 dataKey={bidMetric === 'value' ? 'won' : 'wonCount'}
                 name="Won / Awarded"
                 fill="#f59e0b"
-                radius={[2, 2, 0, 0]}
                 maxBarSize={36}
+                shape={<RenderMinBar />}
                 onClick={(data) => {
                   if (bidView === 'yoy' && data && data.year) {
                     const yr = parseInt(data.year);

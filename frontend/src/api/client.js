@@ -102,4 +102,6 @@ export const dashboardAPI = {
   jobAnalytics: () => api.get('/rfq-dashboard/job-analytics/'),
   salesCycle: (year) => api.get('/rfq-dashboard/sales-cycle/', { params: year ? { year } : {} }),
   futureCapacity: () => api.get('/rfq-dashboard/future-capacity/'),
+  bidEstimationSummary: () => api.get('/rfq-dashboard/bid-estimation-summary/'),
 }
+
