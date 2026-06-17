@@ -21,6 +21,7 @@ class User(AbstractUser):
         ('readonly', 'Read-Only'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
+    initials = models.CharField(max_length=10, blank=True, default='')
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)

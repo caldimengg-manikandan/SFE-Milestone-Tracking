@@ -18,7 +18,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined', 'allowed_modules']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined', 'allowed_modules', 'initials']
         read_only_fields = ['id', 'date_joined']
 
     def update(self, instance, validated_data):
@@ -42,7 +42,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name', 'role', 'phone', 'department']
+        fields = ['email', 'password', 'first_name', 'last_name', 'role', 'phone', 'department', 'initials']
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -54,5 +54,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             role=validated_data.get('role', 'employee'),
             phone=validated_data.get('phone', ''),
             department=validated_data.get('department', ''),
+            initials=validated_data.get('initials', ''),
         )
         return user
