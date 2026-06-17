@@ -215,7 +215,7 @@ export default function Dashboard() {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const isAdmin = user.role === 'admin';
 
-  const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
+  const [dashboardMode, setDashboardMode] = useState(isAdmin ? 'executive' : 'operations'); // 'operations' | 'executive'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [tonnageYear, setTonnageYear] = useState(new Date().getFullYear().toString());
   const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -569,19 +569,10 @@ export default function Dashboard() {
             <div
               className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
               style={{
-                left: dashboardMode === 'operations' ? '4px' : 'calc(50% + 2px)',
+                left: dashboardMode === 'executive' ? '4px' : 'calc(50% + 2px)',
                 width: 'calc(50% - 6px)',
               }}
             />
-            <button
-              onClick={() => setDashboardMode('operations')}
-              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
-                dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <LayoutDashboard className="w-3.5 h-3.5" />
-              Operations
-            </button>
             <button
               onClick={() => setDashboardMode('executive')}
               className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
@@ -590,6 +581,15 @@ export default function Dashboard() {
             >
               <Crown className="w-3.5 h-3.5" />
               Bid and Estimation
+            </button>
+            <button
+              onClick={() => setDashboardMode('operations')}
+              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+                dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              Operations
             </button>
           </div>
         </div>
