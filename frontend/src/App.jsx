@@ -25,6 +25,7 @@ import EstimationSummary from './pages/EstimationSummary';
 import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 import HolidayCalendar from './pages/Bids/HolidayCalendar';
+import UserAccess from './pages/UserAccess';
 
 // ── Estimation Erection Imports ──────────────────────────────────────────────
 import EstimationErectionLayout from './pages/EstimationErection/EstimationErectionLayout';
@@ -77,33 +78,37 @@ export default function App() {
           }
         >
           <Route index element={<Navigate to="/dashboard" replace />} />
-          <Route path="dashboard" element={<Dashboard />} />
+          <Route path="dashboard" element={<ProtectedRoute moduleKey="/dashboard"><Dashboard /></ProtectedRoute>} />
           <Route path="estimation" element={<Navigate to="/estimation-erection/estimation" replace />} />
-          <Route path="estimation-summary" element={<EstimationSummary />} />
+          <Route path="estimation-summary" element={<ProtectedRoute moduleKey="/estimation-summary"><EstimationSummary /></ProtectedRoute>} />
           
           {/* Bid Management Routes */}
-          <Route path="bids/enquiry" element={<BidEnquiry />} />
-          <Route path="bids/schedule" element={<InternalBidSchedule />} />
-          <Route path="bids/holidays" element={<HolidayCalendar />} />
+          <Route path="bids/enquiry" element={<ProtectedRoute moduleKey="/rfq"><BidEnquiry /></ProtectedRoute>} />
+          <Route path="bids/schedule" element={<ProtectedRoute moduleKey="/bids/schedule"><InternalBidSchedule /></ProtectedRoute>} />
+          <Route path="bids/holidays" element={<ProtectedRoute moduleKey="/bids/holidays"><HolidayCalendar /></ProtectedRoute>} />
 
-          <Route path="employees" element={<EmployeeMaster />} />
-          <Route path="customers" element={<CustomerMaster />} />
-          <Route path="detailers" element={<DetailerMaster />} />
-          <Route path="projects" element={<ProjectMaster />} />
-          <Route path="steel-budget/input" element={<SteelBudgetInput />} />
-          <Route path="steel-budget/result" element={<SteelBudgetResult />} />
+          <Route path="employees" element={<ProtectedRoute moduleKey="employees"><EmployeeMaster /></ProtectedRoute>} />
+          <Route path="customers" element={<ProtectedRoute moduleKey="customers"><CustomerMaster /></ProtectedRoute>} />
+          <Route path="detailers" element={<ProtectedRoute moduleKey="detailers"><DetailerMaster /></ProtectedRoute>} />
+          <Route path="projects" element={<ProtectedRoute moduleKey="projects"><ProjectMaster /></ProtectedRoute>} />
+          <Route path="steel-budget/input" element={<ProtectedRoute moduleKey="steel-budget/input"><SteelBudgetInput /></ProtectedRoute>} />
+          <Route path="steel-budget/result" element={<ProtectedRoute moduleKey="steel-budget/result"><SteelBudgetResult /></ProtectedRoute>} />
           
           {/* Structural Schedule Routes */}
-          <Route path="structural/plan-creation" element={<PlanCreation />} />
-          <Route path="structural/plan-tracking" element={<PlanTracking />} />
+          <Route path="structural/plan-creation" element={<ProtectedRoute moduleKey="/structural/plan-creation"><PlanCreation /></ProtectedRoute>} />
+          <Route path="structural/plan-tracking" element={<ProtectedRoute moduleKey="/structural/plan-tracking"><PlanTracking /></ProtectedRoute>} />
           
           {/* Production Management Routes */}
-          <Route path="production/process-master" element={<ProcessMaster />} />
-          <Route path="production/priority-schedule" element={<ProductionPrioritySchedule />} />
-          <Route path="production/capacity-mapping/:tab?" element={<CapacityMapping />} />
+          <Route path="production/process-master" element={<ProtectedRoute moduleKey="/production/process-master"><ProcessMaster /></ProtectedRoute>} />
+          <Route path="production/priority-schedule" element={<ProtectedRoute moduleKey="/production/priority-schedule"><ProductionPrioritySchedule /></ProtectedRoute>} />
+          <Route path="production/capacity-mapping/:tab?" element={
+            <ProtectedRoute moduleKey="/production/capacity-mapping/capacity,/production/capacity-mapping/machine,/production/capacity-mapping/manpower">
+              <CapacityMapping />
+            </ProtectedRoute>
+          } />
 
           {/* Integrated RFQ & Dashboards */}
-          <Route path="rfq" element={<RFQLayout />}>
+          <Route path="rfq" element={<ProtectedRoute moduleKey="/rfq"><RFQLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="data-entry" replace />} />
             <Route path="data-entry" element={<DataEntryPage />} />
             <Route path="bid-performance" element={<BidPerformancePage />} />
@@ -112,10 +117,10 @@ export default function App() {
             <Route path="sales-cycle" element={<SalesCyclePage />} />
             <Route path="capacity" element={<FutureCapacityPage />} />
           </Route>
-          <Route path="rfq/print" element={<div className="rfq-scope w-full h-full"><PrintSetupPage /></div>} />
+          <Route path="rfq/print" element={<ProtectedRoute moduleKey="/rfq"><div className="rfq-scope w-full h-full"><PrintSetupPage /></div></ProtectedRoute>} />
 
           {/* Integrated Estimation Erection */}
-          <Route path="estimation-erection" element={<EstimationErectionLayout />}>
+          <Route path="estimation-erection" element={<ProtectedRoute moduleKey="/estimation-erection"><EstimationErectionLayout /></ProtectedRoute>}>
             <Route index element={<Navigate to="estimation" replace />} />
             <Route path="estimation" element={<EstimationModel />} />
             <Route path="erection-takeoff" element={<ErectionTakeoffTab />} />
@@ -126,9 +131,9 @@ export default function App() {
             <Route path="contacts" element={<CoreTab />} />
           </Route>
 
-
-          <Route path="settings" element={<Settings />} />
-          <Route path="announcements" element={<Announcements />} />
+          <Route path="settings" element={<ProtectedRoute moduleKey="settings"><Settings /></ProtectedRoute>} />
+          <Route path="announcements" element={<ProtectedRoute moduleKey="announcements"><Announcements /></ProtectedRoute>} />
+          <Route path="user-access" element={<ProtectedRoute adminOnly={true}><UserAccess /></ProtectedRoute>} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

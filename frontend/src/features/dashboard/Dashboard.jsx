@@ -212,6 +212,9 @@ function MonthMultiSelect({ selectedValues, onChange, disabled }) {
 }
 
 export default function Dashboard() {
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'admin';
+
   const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [tonnageYear, setTonnageYear] = useState(new Date().getFullYear().toString());
@@ -558,37 +561,39 @@ export default function Dashboard() {
       )}
 
       {/* ─── Premium Mode Switcher ──────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        {/* Tab Switcher Pill */}
-        <div className="relative grid grid-cols-2 bg-slate-100 rounded-2xl p-1 self-start shadow-inner w-full max-w-[420px]">
-          {/* Sliding background */}
-          <div
-            className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={{
-              left: dashboardMode === 'operations' ? '4px' : 'calc(50% + 2px)',
-              width: 'calc(50% - 6px)',
-            }}
-          />
-          <button
-            onClick={() => setDashboardMode('operations')}
-            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
-              dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            Operations
-          </button>
-          <button
-            onClick={() => setDashboardMode('executive')}
-            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
-              dashboardMode === 'executive' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <Crown className="w-3.5 h-3.5" />
-            Bid and Estimation
-          </button>
+      {isAdmin && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+          {/* Tab Switcher Pill */}
+          <div className="relative grid grid-cols-2 bg-slate-100 rounded-2xl p-1 self-start shadow-inner w-full max-w-[420px]">
+            {/* Sliding background */}
+            <div
+              className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+              style={{
+                left: dashboardMode === 'operations' ? '4px' : 'calc(50% + 2px)',
+                width: 'calc(50% - 6px)',
+              }}
+            />
+            <button
+              onClick={() => setDashboardMode('operations')}
+              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+                dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              Operations
+            </button>
+            <button
+              onClick={() => setDashboardMode('executive')}
+              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+                dashboardMode === 'executive' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              Bid and Estimation
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ─── VP Dashboard Mount ─────────────────────────────── */}
       <div className={dashboardMode === 'executive' ? 'block page-enter' : 'hidden'}>
@@ -1544,11 +1549,11 @@ export default function Dashboard() {
                       <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
                       
                       {/* Total Tonnage Bar */}
-                      <Bar dataKey="total_ton" name="Total Tonnage" fill="#6366f1" radius={0}>
+                      <Bar dataKey="total_ton" name="Planned Capacity" fill="#6366f1" radius={0}>
                         <LabelList dataKey="total_ton" position="top" formatter={(val) => val > 0 ? val.toLocaleString(undefined, { maximumFractionDigits: 1 }) : ''} style={{ fontSize: 9, fontWeight: 800, fill: '#6366f1' }} />
                       </Bar>
                       {/* Capacity Line (Black Dot Thread) */}
-                      <Line type="monotone" dataKey="tonnage_capacity" name="Tonnage Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="tonnage_capacity" name="Available Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

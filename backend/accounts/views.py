@@ -29,6 +29,7 @@ def login_view(request):
             'name': user.get_full_name() or user.username,
             'email': user.email,
             'role': user.role,
+            'allowed_modules': user.allowed_modules,
         },
     })
     
@@ -196,3 +197,33 @@ def delete_account_view(request):
     user = request.user
     user.delete()
     return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def list_users_view(request):
+    """List all users for admin access control."""
+    if not request.user.is_admin:
+        return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+    users = User.objects.all().order_by('-date_joined')
+    serializer = UserSerializer(users, many=True)
+    return Response(serializer.data)
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_user_access_view(request, pk):
+    """Update a user's allowed_modules (admin only)."""
+    if not request.user.is_admin:
+        return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+    allowed_modules = request.data.get('allowed_modules')
+    if allowed_modules is not None:
+        if not isinstance(allowed_modules, list):
+            return Response({'detail': 'allowed_modules must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.allowed_modules = allowed_modules
+        user.save()
+        
+    return Response(UserSerializer(user).data)

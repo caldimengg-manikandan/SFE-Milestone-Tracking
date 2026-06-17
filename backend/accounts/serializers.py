@@ -18,7 +18,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined', 'allowed_modules']
         read_only_fields = ['id', 'date_joined']
 
     def update(self, instance, validated_data):
