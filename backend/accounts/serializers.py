@@ -7,12 +7,18 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = authenticate(username=data.get('email'), password=data.get('password'))
-        if not user:
+        # Retrieve user by email (case‑insensitive)
+        try:
+            user = User.objects.get(email__iexact=data.get('email'))
+        except User.DoesNotExist:
+            raise serializers.ValidationError('Invalid email or password')
+        # Verify the password
+        if not user.check_password(data.get('password')):
             raise serializers.ValidationError('Invalid email or password')
         if not user.is_active:
             raise serializers.ValidationError('Account is disabled')
         data['user'] = user
+        return data
         return data
 
 class UserSerializer(serializers.ModelSerializer):

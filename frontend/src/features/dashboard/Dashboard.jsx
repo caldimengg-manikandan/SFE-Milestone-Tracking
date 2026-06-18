@@ -255,12 +255,12 @@ export default function Dashboard() {
 
   const grouped = useMemo(() => {
     const g = { delayed: [], light_delay: [], on_track: [], yet_to_start: [], completed: [] };
-    
+
     // Inject is_complete from production priority items OR gantt data (ship_date)
     const enhancedSchedules = schedules.map(s => {
       const proj = projects.find(p => String(p.id) === String(s.project?.id || s.project));
       const pItem = priorityItems.find(pi => pi.job_number === proj?.code && pi.sequence_number === s.seq_no);
-      
+
       let isGanttComplete = false;
       if (data?.ganttData?.tasks) {
         for (const t of data.ganttData.tasks) {
@@ -271,7 +271,7 @@ export default function Dashboard() {
           }
         }
       }
-      
+
       return { ...s, is_complete: pItem?.is_complete || isGanttComplete || false };
     });
 
@@ -280,6 +280,24 @@ export default function Dashboard() {
       const mapStatus = status === 'completed_delayed' ? 'completed' : status;
       if (g[mapStatus]) {
         g[mapStatus].push(s);
+      }
+    });
+
+    // Add placeholder entries for projects that have no sequences (Yet to Start)
+    const projectsWithSeqs = new Set(enhancedSchedules.map(s => String(s.project?.id || s.project)));
+    projects.forEach(p => {
+      if (!projectsWithSeqs.has(String(p.id))) {
+        const placeholder = {
+          project: p.id,
+          id: `placeholder-${p.id}`,
+          seq_no: null,
+          item_description: '',
+          rts_date: null,
+          actual_rts_date: null,
+          ship_date: null,
+          actual_ship_date: null,
+        };
+        g.yet_to_start.push(placeholder);
       }
     });
 
@@ -858,23 +876,28 @@ export default function Dashboard() {
                     <div className="divide-y divide-slate-100">
                       {Object.values(projsWithSeqs).map(({ proj, seqs: projSeqs }) => {
                         if (!proj) return null;
-                        const isOpen = openProjects[proj.id];
+                        const isYetToStart = activeHierarchyTab === 'yet_to_start';
+                        const isOpen = !isYetToStart && openProjects[proj.id];
                         return (
                           <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
                             {/* Project row */}
-                            <button
-                              onClick={() => setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
-                              className="w-full flex items-center gap-3 px-8 py-3.5 hover:bg-white/60 transition-colors text-left bg-white"
+                            <div
+                              onClick={() => !isYetToStart && setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
+                              className={`w-full flex items-center gap-3 px-8 py-3.5 transition-colors text-left bg-white ${isYetToStart ? '' : 'cursor-pointer hover:bg-white/60'}`}
                             >
                               <div className={`w-0.5 h-5 ${cfg.dot}`} />
-                              {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                              {!isYetToStart && (
+                                isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name || 'N/A'}</p>
                               </div>
                               {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`} />}
-                              <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
-                            </button>
+                              {!isYetToStart && (
+                                <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
+                              )}
+                            </div>
 
                             {/* Sequence table */}
                             {isOpen && (

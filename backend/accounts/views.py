@@ -16,6 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
+    print('Login request data:', request.data)
     """Authenticate user and return JWT token inside HttpOnly cookie."""
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
