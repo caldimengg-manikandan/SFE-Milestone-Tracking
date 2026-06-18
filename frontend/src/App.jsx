@@ -11,8 +11,10 @@ import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import SteelBudgetInput from './pages/SteelBudgetInput';
 import SteelBudgetResult from './pages/SteelBudgetResult';
+import ProductionLayout, { ProductionIndex } from './pages/Production/ProductionLayout';
 import ProductionPrioritySchedule from './pages/Production/ProductionPrioritySchedule';
 import ProcessMaster from './pages/Production/ProcessMaster';
+import ProcessMasterSettings from './pages/Production/ProcessMasterSettings';
 import CustomerMaster from './pages/CustomerMaster';
 import DetailerMaster from './pages/DetailerMaster';
 import PlanCreation from './pages/Structural/PlanCreation';
@@ -99,8 +101,12 @@ export default function App() {
           <Route path="structural/plan-tracking" element={<ProtectedRoute moduleKey="/structural/plan-tracking"><PlanTracking /></ProtectedRoute>} />
           
           {/* Production Management Routes */}
-          <Route path="production/process-master" element={<ProtectedRoute moduleKey="/production/process-master"><ProcessMaster /></ProtectedRoute>} />
-          <Route path="production/priority-schedule" element={<ProtectedRoute moduleKey="/production/priority-schedule"><ProductionPrioritySchedule /></ProtectedRoute>} />
+          <Route path="production" element={<ProtectedRoute moduleKey="/production/priority-schedule,/production/process-master"><ProductionLayout /></ProtectedRoute>}>
+            <Route index element={<ProductionIndex />} />
+            <Route path="priority-schedule" element={<ProtectedRoute moduleKey="/production/priority-schedule"><ProductionPrioritySchedule /></ProtectedRoute>} />
+            <Route path="process-master" element={<ProtectedRoute moduleKey="/production/process-master"><ProcessMaster /></ProtectedRoute>} />
+          </Route>
+          <Route path="production/master-settings" element={<ProtectedRoute moduleKey="/production/priority-schedule,/production/process-master"><ProcessMasterSettings /></ProtectedRoute>} />
           <Route path="production/capacity-mapping/:tab?" element={
             <ProtectedRoute moduleKey="/production/capacity-mapping/capacity,/production/capacity-mapping/machine,/production/capacity-mapping/manpower">
               <CapacityMapping />

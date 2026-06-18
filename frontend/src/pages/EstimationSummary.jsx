@@ -154,8 +154,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const activeTaxMultiplier = 1 + activeUseTaxPercentVal / 100;
   const activeMiscellaneousJoistDeckTotal = (activeMiscellaneousJoistDeckCost * activeTaxMultiplier) * activeMiscellaneousJoistDeckMultiplierVal;
 
-  const activeMiscellaneousOtherCostsSum = activeMiscMetalCostVal + activeSafetyCost + activeLeedSubmissionCostVal;
-  const activeMiscellaneousOtherCostsTotal = activeMiscellaneousOtherCostsSum * activeMiscellaneousOtherCostMultiplierVal;
+  const activeMiscellaneousOtherCostsTotal = activeTotalBuyoutCosts * activeMiscellaneousOtherCostMultiplierVal;
 
   const activeMiscellaneousTotalBeforeProfit = activeMiscellaneousSubTotal + activeMiscellaneousErectionTotal + activeMiscellaneousJoistDeckTotal + activeMiscellaneousOtherCostsTotal;
   const activeMiscellaneousProfitAmount = activeMiscellaneousTotalBeforeProfit * (activeProfitPercentVal / 100);
@@ -433,7 +432,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const miscellaneousErectionTotal = subletErectionCost * miscellaneousErectionMultiplier;
     const taxMultiplier = 1 + useTaxPercent / 100;
     const miscellaneousJoistDeckTotal = ((steelJoistCost + deckCost) * taxMultiplier) * miscellaneousJoistDeckMultiplier;
-    const miscellaneousOtherCostsTotal = (miscMetalCost + safetyCost + leedSubmissionCost) * miscellaneousOtherCostMultiplier;
+    const miscellaneousOtherCostsTotal = totalBuyoutCosts * miscellaneousOtherCostMultiplier;
     const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
     
     const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercent / 100);

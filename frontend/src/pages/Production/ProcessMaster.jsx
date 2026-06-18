@@ -190,7 +190,7 @@ export default function ProcessMaster() {
   };
 
   return (
-    <div className="h-[calc(100vh-72px)] -m-4 sm:-m-6 lg:-m-8 bg-slate-50/30 flex flex-col overflow-hidden">
+    <div className="h-[calc(100vh-116px)] -m-4 sm:-m-6 lg:-m-8 bg-slate-50/30 flex flex-col overflow-hidden">
       <div className="flex-none bg-white border-b border-slate-200 shadow-sm z-30 p-3 lg:px-6 space-y-3 animate-fade-in" ref={filterRef}>
         {/* Search and Action Bar */}
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">

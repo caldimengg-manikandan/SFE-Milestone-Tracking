@@ -81,8 +81,8 @@ const navSections = [
   {
     label: 'PRODUCTION MANAGEMENT',
     items: [
-      { name: 'Production Schedule', path: '/production/priority-schedule', icon: ListChecks, moduleKey: '/production/priority-schedule' },
-      { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet, moduleKey: '/production/process-master' },
+      { name: 'Production Schedule', path: '/production', icon: ListChecks, moduleKey: '/production/priority-schedule,/production/process-master' },
+      { name: 'Process Master Settings', path: '/production/master-settings', icon: Settings, moduleKey: '/production/priority-schedule,/production/process-master' },
     ],
   },
   {
@@ -116,12 +116,15 @@ export default function Sidebar({
   const user = propUser || JSON.parse(sessionStorage.getItem('user') || '{}');
   const allowedModules = user.allowed_modules || [];
   const isAdmin = user.role === 'admin';
+  console.log('Sidebar Debug:', { isAdmin, role: user.role, allowedModules, user });
 
   const filteredNavSections = navSections.map(section => {
     const filteredItems = section.items.filter(item => {
       if (isAdmin) return true;
       if (item.adminOnly) return false;
-      return allowedModules.includes(item.moduleKey);
+      if (!item.moduleKey) return false;
+      const keysToCheck = item.moduleKey.split(',');
+      return keysToCheck.some(k => allowedModules.includes(k.trim()));
     });
     return { ...section, items: filteredItems };
   }).filter(section => section.items.length > 0);

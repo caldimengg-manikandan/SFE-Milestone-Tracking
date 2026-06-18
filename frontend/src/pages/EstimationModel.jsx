@@ -827,8 +827,7 @@ export default function EstimationModel() {
   const taxMultiplier = 1 + useTaxPercentVal / 100;
   const miscellaneousJoistDeckTotal = (miscellaneousJoistDeckCost * taxMultiplier) * miscellaneousJoistDeckMultiplierVal;
 
-  const miscellaneousOtherCostsSum = miscMetalCostVal + additionalSafetyCostsVal + ccipCostsVal + leedSubmissionCostVal;
-  const miscellaneousOtherCostsTotal = miscellaneousOtherCostsSum * miscellaneousOtherCostMultiplierVal;
+  const miscellaneousOtherCostsTotal = totalBuyoutCosts * miscellaneousOtherCostMultiplierVal;
 
   const miscellaneousTotalBeforeProfit = miscellaneousSubTotal + miscellaneousErectionTotal + miscellaneousJoistDeckTotal + miscellaneousOtherCostsTotal;
   const miscellaneousProfitAmount = miscellaneousTotalBeforeProfit * (profitPercentVal / 100);

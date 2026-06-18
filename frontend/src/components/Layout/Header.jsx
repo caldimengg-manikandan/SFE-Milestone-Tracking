@@ -65,6 +65,10 @@ export default function Header({ onMenuClick }) {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const currentTitle = location.pathname.includes('estimation-erection')
     ? 'Estimation'
+    : location.pathname.includes('/production/master-settings')
+    ? 'Process Master Settings'
+    : (location.pathname.startsWith('/production') && !location.pathname.includes('capacity-mapping'))
+    ? 'Production Schedule'
     : (pageTitles[location.pathname] || 'Estimation Model');
   const initials = user.name
     ? user.name.split(' ').map((n) => n[0]).join('').toUpperCase().slice(0, 2)
