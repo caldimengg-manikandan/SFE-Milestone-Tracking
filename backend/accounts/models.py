@@ -1,6 +1,15 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+def get_default_modules():
+    return [
+        '/dashboard', '/rfq', '/bids/schedule', '/bids/holidays', '/estimation-summary',
+        '/estimation-erection', 'employees', 'customers', 'detailers', 'steel-budget/input',
+        'steel-budget/result', 'projects', '/structural/plan-creation', '/structural/plan-tracking',
+        '/production/priority-schedule', '/production/process-master', '/production/capacity-mapping/capacity',
+        '/production/capacity-mapping/machine', '/production/capacity-mapping/manpower', 'settings', 'announcements'
+    ]
+
 class User(AbstractUser):
     """Custom user model for SFE."""
     ROLE_CHOICES = [
@@ -12,6 +21,7 @@ class User(AbstractUser):
         ('readonly', 'Read-Only'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
+    initials = models.CharField(max_length=10, blank=True, default='')
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
@@ -21,6 +31,8 @@ class User(AbstractUser):
     # Soft-lock: set when someone is actively editing a project
     editing_project_id = models.IntegerField(null=True, blank=True)
     editing_since = models.DateTimeField(null=True, blank=True)
+
+    allowed_modules = models.JSONField(default=get_default_modules, blank=True)
 
     class Meta:
         db_table = 'users'

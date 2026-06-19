@@ -7,18 +7,24 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField(write_only=True)
 
     def validate(self, data):
-        user = authenticate(username=data.get('email'), password=data.get('password'))
-        if not user:
+        # Retrieve user by email (case‑insensitive)
+        try:
+            user = User.objects.get(email__iexact=data.get('email'))
+        except User.DoesNotExist:
+            raise serializers.ValidationError('Invalid email or password')
+        # Verify the password
+        if not user.check_password(data.get('password')):
             raise serializers.ValidationError('Invalid email or password')
         if not user.is_active:
             raise serializers.ValidationError('Account is disabled')
         data['user'] = user
         return data
+        return data
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined']
+        fields = ['id', 'email', 'first_name', 'last_name', 'role', 'phone', 'department', 'profile_picture', 'is_active', 'date_joined', 'allowed_modules', 'initials']
         read_only_fields = ['id', 'date_joined']
 
     def update(self, instance, validated_data):
@@ -42,7 +48,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'password', 'first_name', 'last_name', 'role', 'phone', 'department']
+        fields = ['email', 'password', 'first_name', 'last_name', 'role', 'phone', 'department', 'initials']
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -54,5 +60,6 @@ class RegisterSerializer(serializers.ModelSerializer):
             role=validated_data.get('role', 'employee'),
             phone=validated_data.get('phone', ''),
             department=validated_data.get('department', ''),
+            initials=validated_data.get('initials', ''),
         )
         return user

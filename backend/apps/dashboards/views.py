@@ -220,6 +220,86 @@ class SalesCycleDashboardView(APIView):
         return Response({'data': rows})
 
 
+class BidEstimationSummaryView(APIView):
+    """
+    Groups RFQ records by the year prefix embedded in quote_no (format: YY-MM-SEQ).
+    Returns per-year counts: total_quoted, total_won, total_lost, total_pending
+    and the total awarded/bid amount for won quotes.
+    Used to drive the Bid & Estimation Dashboard year-over-year bar chart.
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        import re as _re
+        current_year_2d = timezone.now().year % 100  # e.g. 26 for 2026
+
+        # Build a dict keyed by 2-digit year (int)
+        year_data = {}
+
+        bids = RFQMaster.objects.filter(deleted_at__isnull=True)
+        for bid in bids:
+            q = bid.quote_no or ''
+            m = _re.match(r'^(\d{2})-', q)
+            if not m:
+                continue
+            yy = int(m.group(1))  # e.g. 26
+            full_year = 2000 + yy  # e.g. 2026
+
+            if yy not in year_data:
+                year_data[yy] = {
+                    'year_prefix': yy,
+                    'year': full_year,
+                    'total_quoted': 0,
+                    'total_won': 0,
+                    'total_lost': 0,
+                    'total_pending': 0,
+                    'total_won_amount': 0.0,
+                    'total_bid_amount': 0.0,
+                }
+
+            year_data[yy]['total_quoted'] += 1
+            year_data[yy]['total_bid_amount'] += safe_float(bid.bid_amount) or 0.0
+
+            wl = bid.won_lost or 'Pending'
+            if wl == 'Won':
+                year_data[yy]['total_won'] += 1
+                year_data[yy]['total_won_amount'] += (
+                    safe_float(bid.awarded_amount) or safe_float(bid.bid_amount) or 0.0
+                )
+            elif wl == 'Lost':
+                year_data[yy]['total_lost'] += 1
+            else:
+                year_data[yy]['total_pending'] += 1
+
+        # Sort by year ascending
+        rows = [year_data[yy] for yy in sorted(year_data.keys())]
+
+        # Overall summary stats
+        all_bids = list(bids)
+        total_all  = len(all_bids)
+        total_won  = sum(1 for b in all_bids if b.won_lost == 'Won')
+        total_lost = sum(1 for b in all_bids if b.won_lost == 'Lost')
+        total_pend = sum(1 for b in all_bids if b.won_lost not in ('Won', 'Lost'))
+
+        # Current year stats (by quote_no prefix)
+        cy_row = year_data.get(current_year_2d, {})
+        current_year_won = cy_row.get('total_won', 0)
+        current_year_won_amount = cy_row.get('total_won_amount', 0.0)
+
+        return Response({
+            'data': rows,
+            'summary': {
+                'total': total_all,
+                'total_won': total_won,
+                'total_lost': total_lost,
+                'total_pending': total_pend,
+                'current_year': 2000 + current_year_2d,
+                'current_year_won': current_year_won,
+                'current_year_won_amount': round(current_year_won_amount, 2),
+            }
+        })
+
+
 class FutureCapacityView(APIView):
     permission_classes = [IsAuthenticated]
 

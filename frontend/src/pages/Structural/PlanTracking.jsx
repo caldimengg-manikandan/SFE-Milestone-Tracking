@@ -154,6 +154,10 @@ export default function PlanTracking() {
   // 2. Helper to get filtered schedules for a specific project
   const getFilteredSchedulesForProject = (projId) => {
     const projectSchedules = trackingData.filter(s => String(s.project?.id || s.project) === String(projId));
+    // If the project is currently selected, display all its sequences regardless of search term.
+    if (selectedProject && selectedProject.id === projId) {
+      return projectSchedules;
+    }
     return projectSchedules.filter(item =>
       item.item_description?.toLowerCase().includes(search.toLowerCase()) ||
       item.category?.toLowerCase().includes(search.toLowerCase()) ||

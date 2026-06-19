@@ -44,6 +44,11 @@ export const authAPI = {
   changePassword: (data) => api.post('/auth/profile/change-password/', data),
   deleteAccount: () => api.delete('/auth/profile/delete/'),
   me: () => api.get('/auth/me/'),
+  listUsers: () => api.get('/auth/users/'),
+  updateUserAccess: (id, allowed_modules) => api.patch(`/auth/users/${id}/access/`, { allowed_modules }),
+  createUser: (data) => api.post('/auth/users/', data),
+  updateUser: (id, data) => api.patch(`/auth/users/${id}/`, data),
+  deleteUser: (id) => api.delete(`/auth/users/${id}/`),
 };
 
 /* ── Employee API ── */

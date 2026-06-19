@@ -212,7 +212,10 @@ function MonthMultiSelect({ selectedValues, onChange, disabled }) {
 }
 
 export default function Dashboard() {
-  const [dashboardMode, setDashboardMode] = useState('operations'); // 'operations' | 'executive'
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const isAdmin = user.role === 'admin';
+
+  const [dashboardMode, setDashboardMode] = useState(isAdmin ? 'executive' : 'operations'); // 'operations' | 'executive'
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
   const [tonnageYear, setTonnageYear] = useState(new Date().getFullYear().toString());
   const [includeSaturdays, setIncludeSaturdays] = useState(false);
@@ -252,12 +255,12 @@ export default function Dashboard() {
 
   const grouped = useMemo(() => {
     const g = { delayed: [], light_delay: [], on_track: [], yet_to_start: [], completed: [] };
-    
+
     // Inject is_complete from production priority items OR gantt data (ship_date)
     const enhancedSchedules = schedules.map(s => {
       const proj = projects.find(p => String(p.id) === String(s.project?.id || s.project));
       const pItem = priorityItems.find(pi => pi.job_number === proj?.code && pi.sequence_number === s.seq_no);
-      
+
       let isGanttComplete = false;
       if (data?.ganttData?.tasks) {
         for (const t of data.ganttData.tasks) {
@@ -268,7 +271,7 @@ export default function Dashboard() {
           }
         }
       }
-      
+
       return { ...s, is_complete: pItem?.is_complete || isGanttComplete || false };
     });
 
@@ -277,6 +280,24 @@ export default function Dashboard() {
       const mapStatus = status === 'completed_delayed' ? 'completed' : status;
       if (g[mapStatus]) {
         g[mapStatus].push(s);
+      }
+    });
+
+    // Add placeholder entries for projects that have no sequences (Yet to Start)
+    const projectsWithSeqs = new Set(enhancedSchedules.map(s => String(s.project?.id || s.project)));
+    projects.forEach(p => {
+      if (!projectsWithSeqs.has(String(p.id))) {
+        const placeholder = {
+          project: p.id,
+          id: `placeholder-${p.id}`,
+          seq_no: null,
+          item_description: '',
+          rts_date: null,
+          actual_rts_date: null,
+          ship_date: null,
+          actual_ship_date: null,
+        };
+        g.yet_to_start.push(placeholder);
       }
     });
 
@@ -558,37 +579,39 @@ export default function Dashboard() {
       )}
 
       {/* ─── Premium Mode Switcher ──────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
-        {/* Tab Switcher Pill */}
-        <div className="relative grid grid-cols-2 bg-slate-100 rounded-2xl p-1 self-start shadow-inner w-full max-w-[420px]">
-          {/* Sliding background */}
-          <div
-            className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
-            style={{
-              left: dashboardMode === 'operations' ? '4px' : 'calc(50% + 2px)',
-              width: 'calc(50% - 6px)',
-            }}
-          />
-          <button
-            onClick={() => setDashboardMode('operations')}
-            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
-              dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <LayoutDashboard className="w-3.5 h-3.5" />
-            Operations
-          </button>
-          <button
-            onClick={() => setDashboardMode('executive')}
-            className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
-              dashboardMode === 'executive' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
-            }`}
-          >
-            <Crown className="w-3.5 h-3.5" />
-            Bid and Estimation
-          </button>
+      {isAdmin && (
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-1">
+          {/* Tab Switcher Pill */}
+          <div className="relative grid grid-cols-2 bg-slate-100 rounded-2xl p-1 self-start shadow-inner w-full max-w-[420px]">
+            {/* Sliding background */}
+            <div
+              className="absolute top-1 bottom-1 rounded-xl bg-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]"
+              style={{
+                left: dashboardMode === 'executive' ? '4px' : 'calc(50% + 2px)',
+                width: 'calc(50% - 6px)',
+              }}
+            />
+            <button
+              onClick={() => setDashboardMode('executive')}
+              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+                dashboardMode === 'executive' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <Crown className="w-3.5 h-3.5" />
+              Bid and Estimation
+            </button>
+            <button
+              onClick={() => setDashboardMode('operations')}
+              className={`relative z-10 flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-[0.18em] transition-colors duration-200 ${
+                dashboardMode === 'operations' ? 'text-slate-900' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              Operations
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* ─── VP Dashboard Mount ─────────────────────────────── */}
       <div className={dashboardMode === 'executive' ? 'block page-enter' : 'hidden'}>
@@ -853,23 +876,28 @@ export default function Dashboard() {
                     <div className="divide-y divide-slate-100">
                       {Object.values(projsWithSeqs).map(({ proj, seqs: projSeqs }) => {
                         if (!proj) return null;
-                        const isOpen = openProjects[proj.id];
+                        const isYetToStart = activeHierarchyTab === 'yet_to_start';
+                        const isOpen = !isYetToStart && openProjects[proj.id];
                         return (
                           <div key={proj.id} className="border-b border-slate-100/60 last:border-b-0">
                             {/* Project row */}
-                            <button
-                              onClick={() => setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
-                              className="w-full flex items-center gap-3 px-8 py-3.5 hover:bg-white/60 transition-colors text-left bg-white"
+                            <div
+                              onClick={() => !isYetToStart && setOpenProjects(p => ({ ...p, [proj.id]: !p[proj.id] }))}
+                              className={`w-full flex items-center gap-3 px-8 py-3.5 transition-colors text-left bg-white ${isYetToStart ? '' : 'cursor-pointer hover:bg-white/60'}`}
                             >
                               <div className={`w-0.5 h-5 ${cfg.dot}`} />
-                              {isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />}
+                              {!isYetToStart && (
+                                isOpen ? <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0" /> : <ChevronRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                              )}
                               <div className="flex-1 min-w-0">
                                 <p className="text-[12px] font-bold text-slate-800 truncate">{proj.name}</p>
                                 <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{proj.code} · {proj.customer_name || 'N/A'}</p>
                               </div>
                               {cfg.blink && <span className={`w-2 h-2 rounded-full ${cfg.dot} ${cfg.blink} shrink-0`} />}
-                              <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
-                            </button>
+                              {!isYetToStart && (
+                                <span className={`text-[9px] font-black px-2 py-0.5 border rounded shrink-0 ${cfg.badge}`}>{projSeqs.length} Seq</span>
+                              )}
+                            </div>
 
                             {/* Sequence table */}
                             {isOpen && (
@@ -1544,11 +1572,11 @@ export default function Dashboard() {
                       <Legend verticalAlign="top" height={36} wrapperStyle={{ fontSize: '9px', fontWeight: 800, textTransform: 'uppercase' }} />
                       
                       {/* Total Tonnage Bar */}
-                      <Bar dataKey="total_ton" name="Total Tonnage" fill="#6366f1" radius={0}>
+                      <Bar dataKey="total_ton" name="Planned Capacity" fill="#6366f1" radius={0}>
                         <LabelList dataKey="total_ton" position="top" formatter={(val) => val > 0 ? val.toLocaleString(undefined, { maximumFractionDigits: 1 }) : ''} style={{ fontSize: 9, fontWeight: 800, fill: '#6366f1' }} />
                       </Bar>
                       {/* Capacity Line (Black Dot Thread) */}
-                      <Line type="monotone" dataKey="tonnage_capacity" name="Tonnage Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
+                      <Line type="monotone" dataKey="tonnage_capacity" name="Available Capacity" stroke="#000000" strokeWidth={2} dot={{ r: 4, fill: '#000000', stroke: '#000000' }} activeDot={{ r: 6 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>

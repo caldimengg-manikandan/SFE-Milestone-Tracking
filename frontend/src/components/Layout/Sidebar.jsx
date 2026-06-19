@@ -29,6 +29,7 @@ import {
   DollarSign,
   TrendingUp,
   CalendarCheck,
+  Shield,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -36,72 +37,74 @@ const navSections = [
   {
     label: 'OVERVIEW',
     items: [
-      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+      { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard, moduleKey: '/dashboard' },
     ],
   },
   {
     label: 'BID MANAGEMENT',
     items: [
-      { name: 'RFQ Master', path: '/rfq', icon: FileSpreadsheet },
-      { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange },
-      { name: 'Holiday Calendar', path: '/bids/holidays', icon: CalendarCheck },
-      { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3 },
-      { name: 'Estimation', path: '/estimation-erection', icon: Layers },
+      { name: 'RFQ Master', path: '/rfq', icon: FileSpreadsheet, moduleKey: '/rfq' },
+      { name: 'Internal Bid Schedule', path: '/bids/schedule', icon: CalendarRange, moduleKey: '/bids/schedule' },
+      { name: 'Holiday Calendar', path: '/bids/holidays', icon: CalendarCheck, moduleKey: '/bids/holidays' },
+      { name: 'Estimation Summary', path: '/estimation-summary', icon: BarChart3, moduleKey: '/estimation-summary' },
+      { name: 'Estimation', path: '/estimation-erection', icon: Layers, moduleKey: '/estimation-erection' },
     ],
   },
   {
     label: 'MANAGEMENT',
     items: [
-      { name: 'Employee Master', path: 'employees', icon: Users },
-      { name: 'Customer Master', path: 'customers', icon: Building2 },
-      { name: 'Detailer Master', path: 'detailers', icon: Layers },
+      { name: 'Employee Master', path: 'employees', icon: Users, moduleKey: 'employees' },
+      { name: 'Customer Master', path: 'customers', icon: Building2, moduleKey: 'customers' },
+      { name: 'Detailer Master', path: 'detailers', icon: Layers, moduleKey: 'detailers' },
     ],
   },
   {
     label: 'BUDGET ESTIMATOR',
     items: [
-      { name: 'Design Inputs', path: 'steel-budget/input', icon: FileSpreadsheet },
-      { name: 'Estimation Result', path: 'steel-budget/result', icon: BarChart3 },
+      { name: 'Design Inputs', path: 'steel-budget/input', icon: FileSpreadsheet, moduleKey: 'steel-budget/input' },
+      { name: 'Estimation Result', path: 'steel-budget/result', icon: BarChart3, moduleKey: 'steel-budget/result' },
     ],
   },
   {
     label: 'PROJECT MANAGEMENT',
     items: [
-      { name: 'Project Master', path: 'projects', icon: FolderKanban },
+      { name: 'Project Master', path: 'projects', icon: FolderKanban, moduleKey: 'projects' },
     ],
   },
   {
     label: 'STRUCTURAL SCHEDULE',
     items: [
-      { name: 'Plan Creation', path: '/structural/plan-creation', icon: Plus },
-      { name: 'Plan Tracking', path: '/structural/plan-tracking', icon: ListChecks },
+      { name: 'Plan Creation', path: '/structural/plan-creation', icon: Plus, moduleKey: '/structural/plan-creation' },
+      { name: 'Plan Tracking', path: '/structural/plan-tracking', icon: ListChecks, moduleKey: '/structural/plan-tracking' },
     ],
   },
   {
     label: 'PRODUCTION MANAGEMENT',
     items: [
-      { name: 'Production Schedule', path: '/production/priority-schedule', icon: ListChecks },
-      { name: 'Process Master', path: '/production/process-master', icon: FileSpreadsheet },
+      { name: 'Production Schedule', path: '/production', icon: ListChecks, moduleKey: '/production/priority-schedule,/production/process-master' },
+      { name: 'Process Master Settings', path: '/production/master-settings', icon: Settings, moduleKey: '/production/priority-schedule,/production/process-master' },
     ],
   },
   {
     label: 'CAPACITY MAPPING',
     items: [
-      { name: 'Capacity Configuration', path: '/production/capacity-mapping/capacity', icon: Settings2 },
-      { name: 'Machine Master', path: '/production/capacity-mapping/machine', icon: Cpu },
-      { name: 'Workforce Master', path: '/production/capacity-mapping/manpower', icon: Users2 },
+      { name: 'Capacity Configuration', path: '/production/capacity-mapping/capacity', icon: Settings2, moduleKey: '/production/capacity-mapping/capacity' },
+      { name: 'Machine Master', path: '/production/capacity-mapping/machine', icon: Cpu, moduleKey: '/production/capacity-mapping/machine' },
+      { name: 'Workforce Master', path: '/production/capacity-mapping/manpower', icon: Users2, moduleKey: '/production/capacity-mapping/manpower' },
     ],
   },
   {
     label: 'SYSTEM',
     items: [
-      { name: 'Settings', path: 'settings', icon: Settings },
-      { name: 'Announcement', path: 'announcements', icon: Megaphone },
+      { name: 'Settings', path: 'settings', icon: Settings, moduleKey: 'settings' },
+      { name: 'Announcement', path: 'announcements', icon: Megaphone, moduleKey: 'announcements' },
+      { name: 'User Access', path: '/user-access', icon: Shield, adminOnly: true },
     ],
   },
 ];
 
 export default function Sidebar({
+  user: propUser,
   isCollapsed,
   onToggleCollapse,
   isMobileOpen,
@@ -110,7 +113,21 @@ export default function Sidebar({
   const location = useLocation();
   const navigate = useNavigate();
 
-  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  const user = propUser || JSON.parse(sessionStorage.getItem('user') || '{}');
+  const allowedModules = user.allowed_modules || [];
+  const isAdmin = user.role === 'admin';
+  console.log('Sidebar Debug:', { isAdmin, role: user.role, allowedModules, user });
+
+  const filteredNavSections = navSections.map(section => {
+    const filteredItems = section.items.filter(item => {
+      if (isAdmin) return true;
+      if (item.adminOnly) return false;
+      if (!item.moduleKey) return false;
+      const keysToCheck = item.moduleKey.split(',');
+      return keysToCheck.some(k => allowedModules.includes(k.trim()));
+    });
+    return { ...section, items: filteredItems };
+  }).filter(section => section.items.length > 0);
   const initials = user.name
     ? user.name
         .split(' ')
@@ -195,7 +212,7 @@ export default function Sidebar({
 
         {/* ── Navigation ── */}
         <nav className="flex-1 overflow-y-scroll overflow-x-hidden py-4 px-3 sidebar-scrollbar">
-          {navSections.map((section, sIdx) => (
+          {filteredNavSections.map((section, sIdx) => (
             <div key={section.label} className={sIdx > 0 ? 'mt-6' : ''}>
               {/* Section Label */}
               {!isCollapsed && (

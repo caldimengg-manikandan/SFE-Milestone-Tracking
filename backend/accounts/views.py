@@ -16,6 +16,7 @@ from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 @authentication_classes([])
 @permission_classes([AllowAny])
 def login_view(request):
+    print('Login request data:', request.data)
     """Authenticate user and return JWT token inside HttpOnly cookie."""
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -29,6 +30,7 @@ def login_view(request):
             'name': user.get_full_name() or user.username,
             'email': user.email,
             'role': user.role,
+            'allowed_modules': user.allowed_modules,
         },
     })
     
@@ -196,3 +198,72 @@ def delete_account_view(request):
     user = request.user
     user.delete()
     return Response({'message': 'Account deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def admin_users_list_create_view(request):
+    """List or create users (admin only)."""
+    if not request.user.is_admin:
+        return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        
+    if request.method == 'GET':
+        users = User.objects.all().order_by('-date_joined')
+        serializer = UserSerializer(users, many=True)
+        return Response(serializer.data)
+        
+    elif request.method == 'POST':
+        serializer = RegisterSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+@api_view(['PATCH', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def admin_user_detail_view(request, pk):
+    """Update user properties or delete user (admin only)."""
+    if not request.user.is_admin:
+        return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+        
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+    if request.method == 'PATCH':
+        data = request.data
+        serializer = UserSerializer(user, data=data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            if 'password' in data and data['password']:
+                user.set_password(data['password'])
+                user.save()
+            return Response(UserSerializer(user).data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        
+    elif request.method == 'DELETE':
+        if user.id == request.user.id:
+            return Response({'detail': 'You cannot delete yourself.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.delete()
+        return Response({'message': 'User deleted successfully.'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['PATCH'])
+@permission_classes([IsAuthenticated])
+def update_user_access_view(request, pk):
+    """Update a user's allowed_modules (admin only)."""
+    if not request.user.is_admin:
+        return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
+    try:
+        user = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'detail': 'User not found.'}, status=status.HTTP_404_NOT_FOUND)
+        
+    allowed_modules = request.data.get('allowed_modules')
+    if allowed_modules is not None:
+        if not isinstance(allowed_modules, list):
+            return Response({'detail': 'allowed_modules must be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        user.allowed_modules = allowed_modules
+        user.save()
+        
+    return Response(UserSerializer(user).data)

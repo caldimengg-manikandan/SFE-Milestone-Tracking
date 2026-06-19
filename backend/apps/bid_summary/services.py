@@ -248,7 +248,7 @@ def compute_bid_summary_totals(bid_summary, rate_config):
     billing_joist_deck_cost = (joist_deck_total * (Decimal("1") + use_tax_rate) * joist_deck_markup).quantize(Decimal("0.01"))
     # Other markup
     billing_other_buyout_cost = (
-        (misc_metals + osha_posts_cost + safety_ccip + leed_data) * other_buyout_markup
+        total_buyout_costs * other_buyout_markup
     ).quantize(Decimal("0.01"))
 
     # Total (Row 74)
