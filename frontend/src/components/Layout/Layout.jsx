@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ChatbotWidget from '../Chatbot/ChatbotWidget';
 import { authAPI } from '../../services/api';
 
 export default function Layout() {
@@ -74,6 +75,9 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Floating Chatbot Assist */}
+      <ChatbotWidget />
     </div>
   );
 }

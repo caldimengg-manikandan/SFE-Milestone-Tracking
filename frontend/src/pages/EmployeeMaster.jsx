@@ -54,6 +54,12 @@ export default function EmployeeMaster() {
     setDesignationFilter('All');
   }, [deptFilter]);
 
+  useEffect(() => {
+    const handleRefresh = () => fetchEmployees();
+    window.addEventListener('refresh-employees', handleRefresh);
+    return () => window.removeEventListener('refresh-employees', handleRefresh);
+  }, []);
+
   const handleDelete = async (id) => {
     if (window.confirm('Are you sure you want to delete this employee?')) {
       try {
