@@ -27,6 +27,7 @@ urlpatterns = [
     path('api/production/', include('production.urls')),
     path('api/dashboard/', include('dashboard.urls')),
     path('api/bids/', include('bids.urls')),
+    path('api/chatbot/', include('chatbot.urls')),
     
     # Integrated RFQ & Dashboards module APIs
     path('api/rfq/', include('apps.rfq.urls')),

@@ -41,6 +41,7 @@ INSTALLED_APPS = [
     'apps.estimate_data',
     'apps.field_moment_conn',
     'apps.misc_metals',
+    'chatbot',
 ]
 
 MIDDLEWARE = [
@@ -168,3 +169,8 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'support@caldimengg.in').st
 # Media Files
 MEDIA_URL = '/SFE-media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Chatbot Offline Configuration
+OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
+LLM_API_KEY = os.getenv('LLM_API_KEY', '')

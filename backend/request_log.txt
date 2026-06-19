@@ -255,3 +255,11 @@ Auth header: None
 Status: 200
 Content: {"count":1,"next":null,"previous":null,"results":[{"id":1,"title":"title","message":"tttttttttttt","from_date":"2026-06-15","to_date":"2026-06-18","is_active":true,"created_by_name":"Dany","created_at":"2026-06-15T14:38:14.245724+05:30"}]}
 
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+

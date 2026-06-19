@@ -1,0 +1,198 @@
+================================================================================
+STEEL FAB ENTERPRISES (SFE) MILESTONE TRACKING SYSTEM - WORKFLOW DOCUMENT
+================================================================================
+
+This document details the complete functional architecture, workflows, modules, 
+and button-by-button operations of the SFE Milestone Tracking and Estimation Portal.
+Use this file as reference context to train or ground chatbot assistance workflows.
+
+--------------------------------------------------------------------------------
+1. GLOBAL INTERFACE WORKFLOWS & NAVIGATION
+--------------------------------------------------------------------------------
+* NAVIGATION SIDEBAR (Layout/Sidebar.jsx):
+  Located on the left side of the screen. Supports Desktop collapsing to compact mode
+  and Mobile sliding responsive navigation drawer. Contains sections:
+  - OVERVIEW: System dashboards.
+  - BID MANAGEMENT: RFQ logging, calendars, schedules, and estimation tabs.
+  - MANAGEMENT: Directories for Employees, Customers, and Detailers.
+  - BUDGET ESTIMATOR: Quick structural budget estimators.
+  - PROJECT MANAGEMENT: Detailed projects and milestones master lists.
+  - STRUCTURAL SCHEDULE: Detailing plan creation and Gantt timeline tracking.
+  - PRODUCTION MANAGEMENT: Priority scheduling and routing process master.
+  - CAPACITY MAPPING: Resource configuration, machine master, and workforce shifts.
+  - SYSTEM: Settings and global announcements.
+
+* NAVIGATION HEADER (Layout/Header.jsx):
+  Located at the top of the main content pane.
+  - "Menu" icon (lucide Menu): Toggles sidebar drawer on mobile.
+  - "Back" button (lucide ArrowLeft): Returns user to previous URL.
+  - Centered Title: Dynamically displays active module name.
+  - Clock/Date indicator: Displays real-time local date and time.
+  - "Notifications" bell (lucide Bell): Toggles a dropdown pane displaying alerts.
+  - Profile Avatar: Displays current user initials/image. Toggles a menu to logout.
+  - "Sign Out" button: Clears session credentials and returns user to login page.
+
+* FLOATING ASSISTANT WIDGET (Chatbot/ChatbotWidget.jsx):
+  - Floating Orange Icon (bottom-right corner): Toggles the Chatbot pane.
+  - Settings (Gear) Icon in header: Opens Context Manager. Allows admins to upload 
+    workflow documents. Displays offline Ollama connection and model statuses.
+  - "New" Button (+ symbol in sidebar): Resets the context and starts a new session.
+  - Citation tags: Lists page numbers from which RAG information was sourced.
+
+--------------------------------------------------------------------------------
+2. OVERVIEW MODULE
+--------------------------------------------------------------------------------
+* DASHBOARD:
+  Aggregates overall statistics for bids, projects, timelines, and announcements.
+  - Cards: High-level numbers of active bids, late projects, and pending RFQs.
+  - Announcement list: Displays system-wide alerts broadcast by administrators.
+
+--------------------------------------------------------------------------------
+3. BID MANAGEMENT MODULES
+--------------------------------------------------------------------------------
+* RFQ MASTER (rfq/):
+  Log and process Request for Quotation documents.
+  - "Add RFQ" button: Opens a form modal to input client name, date received, 
+    due date, estimators assigned, and scope of work details.
+  - Estimators Assignee grid: Assign estimators, set estimator levels.
+  - Dollar Dashboard: Evaluates historical bid amounts, average values, win rates.
+  - Job Analytics: Evaluates win/loss metrics grouped by sector, scale, and client.
+  - Print Setup: Exports data sheets to printable formats.
+
+* INTERNAL BID SCHEDULE:
+  Tracks critical internal milestones before bid submission.
+  - Calendar View: Interactive calendar marking upcoming estimate review meetings.
+  - List View: Filterable lists of review dates.
+  - "Add Entry" button: Schedules estimator review sessions, assignees, dates.
+
+* HOLIDAY CALENDAR:
+  Central log of non-working days used to adjust estimation/production schedules.
+  - "Add Holiday" button: Opens a modal with Name, Start Date, and End Date fields.
+  - Table: Lists holidays with "Edit" (pencil) and "Delete" (trashcan) controls.
+
+* ESTIMATION & ERECTION (estimation-erection/):
+  The primary module for structural engineering weight and cost estimations.
+  Contains 6 main tabs inside EstimationErectionLayout:
+
+  1. CORE TAB (CoreTab.jsx):
+     - Calculates core structural formulas and coefficients.
+     - Controls: Fields for base parameters (e.g. building dimensions, spans).
+     - Calculation buttons: Recalculate weights, run formulas.
+
+  2. BREAKDOWN TAB (BreakdownTab.jsx):
+     - Breaks down structural steel elements into component categories (columns, 
+       beams, bracing, trusses).
+     - Controls: Editable tables with weight rows, save coefficients.
+
+  3. ERECTION TAKEOFF TAB (ErectionTakeoffTab.jsx):
+     - Computes the costs associated with hoisting and erecting the structure.
+     - Input fields: Crane tonnage, rental days, rigging crew size, travel rates.
+     - "Recalculate Erection Costs" button: Computes final erection prices.
+
+  4. FIELD MOMENT CONNECTION TAB (FieldMomentConnTab.jsx):
+     - Calculates joint welding, bolting, and splice connection requirements.
+     - Fields: Bolt diameters, connection counts, field weld lengths.
+     - Calculation controls: Updates detailing hours and material weight add-ons.
+
+  5. MISC METALS TAB (MiscMetalsTab.jsx):
+     - Inputs for secondary steel members (staircases, handrails, ladders, gratings).
+     - Controls: Unit inputs (tons/meters), unit costs.
+     - Buttons: Saves miscellaneous metals components breakdown.
+
+  6. ESTIMATE DATA TAB (EstimateDataTab.jsx):
+     - Reference table of master material rates, detailing rates, and shop labor rates.
+     - Controls: Edit rates inline, click "Save Rates" to commit updates.
+
+--------------------------------------------------------------------------------
+4. DIRECTORY MANAGEMENT MODULES
+--------------------------------------------------------------------------------
+* EMPLOYEE MASTER:
+  Database of shop technicians, estimators, and managers.
+  - "Add Employee" button: Opens a modal with fields: Name, Role, Email, Phone.
+  - Filters: Quick filtering by Role (Estimator, Shop Staff, Administrator).
+  - Actions: Edit profile details, delete employee records.
+
+* CUSTOMER MASTER:
+  Database of structural contracting clients.
+  - "Add Customer" button: Modal fields: Company Name, Contact Person, Email, Rating.
+  - Search bar: Real-time search by Company Name.
+  - Actions: Edit Customer profile, Delete records.
+
+* DETAILER MASTER:
+  Database of external engineering detailers who translate concepts to shop drawings.
+  - "Add Detailer" button: Modal fields: Detailer Name, Specialization, Capacity.
+  - Actions: Edit capacity details, Delete records.
+
+--------------------------------------------------------------------------------
+5. BUDGET ESTIMATOR MODULE
+--------------------------------------------------------------------------------
+* DESIGN INPUTS:
+  - Form: Enter width, length, height, roof slope, and frame spacing specifications.
+  - "Calculate Budget" button: Sends data to estimation rules engine.
+
+* ESTIMATION RESULT:
+  - Tonnage summary: Shows computed structural weights in tons.
+  - Cost summary: Estimates fabrication labor, material, and logistics cost ranges.
+  - "Export PDF" button: Generates a proposal budget sheet.
+
+--------------------------------------------------------------------------------
+6. PROJECT & MILESTONE MANAGEMENT MODULES
+--------------------------------------------------------------------------------
+* PROJECT MASTER:
+  Main repository of ongoing construction projects.
+  - "Add Project" button: Modal fields: Project Name, Customer, Start/End Dates.
+  - Project Cards: Displays active projects, visual progress meters.
+  - "Manage Milestones" link: Navigates directly to the project's milestones list.
+
+* MILESTONE MANAGEMENT:
+  Checks deliverables and deadlines.
+  - "Add Milestone" button: Modal fields: Title, Project, Assignee, Due Date.
+  - Filter Tabs (All, Completed, In Progress, Overdue, Pending): Quick toggles.
+  - "Edit" icon (pencil): Updates milestone status (e.g. from Pending to In Progress).
+  - "Delete" icon (trashcan): Deletes milestone.
+
+--------------------------------------------------------------------------------
+7. STRUCTURAL SCHEDULE MODULES
+--------------------------------------------------------------------------------
+* PLAN CREATION:
+  Sets sequence and releases detailing phases to production.
+  - "Create Phase" button: Defines structural sequence names and boundaries.
+  - Input tables: Map tonnages to specific detailing zones.
+
+* PLAN TRACKING:
+  - Gantt Chart (GanttChart.jsx): Visualization of phase timelines.
+  - Timeline slider: Zoom in/out of weekly/monthly timeline views.
+  - Progress checks: Marks detailing, fabrication, and shipping steps.
+
+--------------------------------------------------------------------------------
+8. PRODUCTION MANAGEMENT MODULES
+--------------------------------------------------------------------------------
+* PRODUCTION PRIORITY SCHEDULE:
+  Tracks raw materials through shop processes (Plate, Angle, Structural).
+  - Prioritize Table: Set priority ranks for components.
+  - "Update Schedule" button: Updates production release sequencing.
+  - Status Indicators: Displays material stages (Not Started, Cutting, Assembled, Welded, Painted, Loaded).
+
+* PROCESS MASTER:
+  Configures fabrication shop stations.
+  - "Add Process Station" button: Defines new routing steps (e.g., CNC Plasma, Shotblast, Priming).
+  - Station lists: Shows routing sequence patterns.
+
+--------------------------------------------------------------------------------
+9. CAPACITY MAPPING MODULES
+--------------------------------------------------------------------------------
+* CAPACITY CONFIGURATION:
+  - Form: Inputs monthly output targets (in tons).
+  - "Save Config" button: Updates baseline efficiency variables.
+
+* MACHINE MASTER:
+  - "Add Machine" button: Modal fields: Machine Name, Station, Efficiency Rating.
+  - Machine table: Monitors downtime and capacity constraints.
+
+* WORKFORCE MASTER:
+  - "Add Shift Allocation" button: Modal fields: Employee, Shift (Morning, Night, Swing), Allocated station.
+  - Allocation grid: Prevents resource double-booking.
+
+================================================================================
+END OF FILE
+================================================================================

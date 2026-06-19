@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
+import ChatbotWidget from '../Chatbot/ChatbotWidget';
 
 export default function Layout() {
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -49,6 +50,9 @@ export default function Layout() {
           </div>
         </main>
       </div>
+
+      {/* Floating Chatbot Assist */}
+      <ChatbotWidget />
     </div>
   );
 }

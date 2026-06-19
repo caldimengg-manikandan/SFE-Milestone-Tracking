@@ -72,6 +72,15 @@ export default function ProjectMaster() {
     fetchAllSchedules();
   }, []);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      fetchProjects();
+      fetchAllSchedules();
+    };
+    window.addEventListener('refresh-projects', handleRefresh);
+    return () => window.removeEventListener('refresh-projects', handleRefresh);
+  }, []);
+
   // Recalculate all budget plant hours if project-wide manhour/ton changes
   useEffect(() => {
     const mhTonStr = autocalculateManhourTon();
