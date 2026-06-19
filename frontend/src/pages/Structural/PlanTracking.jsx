@@ -268,8 +268,7 @@ export default function PlanTracking() {
                                     <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white text-[10px] font-bold uppercase tracking-wider">
                                       <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-1">Sequence</th>
                                       <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-2">Item Description</th>
-                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-3">Material</th>
-                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-4">Weight</th>
+                                      <th className="px-1 py-3 border-r border-white/10 text-center sticky-col-3">Weight</th>
                                       
                                       <th className="px-1 py-3 border-r border-white/10 text-center w-[5%]">Scheduled OFA Date</th>
                                       <th className="px-1 py-3 border-r border-white/10 text-center w-[7%]">Actual OFA Date</th>
@@ -303,9 +302,7 @@ export default function PlanTracking() {
                                           <tr key={item.id} className={`${isNotInScope ? 'bg-slate-200/60 row-not-in-scope' : 'hover:bg-slate-50/50'} transition-colors`}>
                                             <td className="px-1 py-2 text-slate-900 text-[10px] font-semibold border-r border-slate-100 truncate sticky-col-1" title={item.seq_no}>{item.seq_no}</td>
                                             <td className="px-1 py-2 text-slate-900 text-[10px] font-medium border-r border-slate-100 truncate sticky-col-2" title={item.item_description}>{item.item_description || '-'}</td>
-                                            <td className="px-1 py-2 text-slate-900 text-[10px] font-medium border-r border-slate-100 truncate sticky-col-3" title={item.category}>{item.category || '-'}</td>
-                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 sticky-col-4">{parseFloat(item.tons || 0).toFixed(2)}</td>
-                                            
+                                            <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 sticky-col-3">{parseFloat(item.tons || 0).toFixed(2)}</td>
                                             <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 whitespace-nowrap">{formatDate(item.scheduled_ofa_date)}</td>
                                             <td className="px-1 py-2 text-center text-slate-900 text-[10px] font-medium border-r border-slate-100 relative">
                                               <FormattedDateInput
@@ -368,7 +365,7 @@ export default function PlanTracking() {
                                       })
                                     ) : (
                                       <tr>
-                                        <td colSpan="19" className="px-6 py-12 text-center text-slate-400">
+                                        <td colSpan="18" className="px-6 py-12 text-center text-slate-400">
                                           No tracking sequences found matching search or project.
                                         </td>
                                       </tr>

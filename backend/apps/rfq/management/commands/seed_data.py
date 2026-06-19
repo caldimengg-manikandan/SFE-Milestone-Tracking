@@ -2,9 +2,10 @@
 Management command: python manage.py seed_data
 Seeds all lookup tables with initial data and creates default admin user.
 """
-from django.core.management.base import BaseCommand
+from accounts.models import get_default_modules
 from django.contrib.auth import get_user_model
-from apps.rfq.models import Customer, Estimator, MonthlyBidGoal
+from apps.rfq.models import Estimator, MonthlyBidGoal
+from projects.models import Customer
 
 User = get_user_model()
 
@@ -71,5 +72,14 @@ class Command(BaseCommand):
             )
         else:
             self.stdout.write('  Admin user already exists.')
+            User.objects.create_user(
+                username='admin1',
+                email='admin1@steelfab.com',
+                password='defaultPassword123',
+                role='admin',
+            )
+            user = User.objects.get(username='admin1')
+            user.allowed_modules = get_default_modules()
+            user.save()
 
         self.stdout.write(self.style.SUCCESS('[SUCCESS] Seed data complete.'))

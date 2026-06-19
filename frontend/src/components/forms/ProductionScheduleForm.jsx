@@ -38,6 +38,7 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
   const [projects, setProjects] = useState([]);
   const [selectedProjectIds, setSelectedProjectIds] = useState([]);
   const [showProjectDropdown, setShowProjectDropdown] = useState(false);
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
   const [userChangedProjects, setUserChangedProjects] = useState(false);
   const [planOption, setPlanOption] = useState('auto'); // 'auto', '1month', '3month'
   const [header, setHeader] = useState({
@@ -552,35 +553,51 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                   <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${showProjectDropdown ? 'rotate-180' : ''}`} />
                 </div>
               </div>
-
               {showProjectDropdown && (
                 <div 
-                  className="absolute z-[100] top-[75px] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl max-h-64 overflow-y-auto p-2 animate-in fade-in slide-in-from-top-2 duration-200"
+                  className="absolute z-[100] top-[75px] left-0 right-0 bg-white border border-slate-200 rounded-2xl shadow-2xl p-2 animate-in fade-in slide-in-from-top-2 duration-200"
                   onClick={(e) => e.stopPropagation()}
                 >
-                  <div className="grid grid-cols-1 gap-1">
-                    {projects.length === 0 ? (
-                      <div className="p-4 text-center text-xs text-slate-400">No projects found</div>
-                    ) : projects.map(p => {
-                      const isSelected = selectedProjectIds.includes(p.id);
-                      return (
-                        <div 
-                          key={p.id}
-                          onClick={() => toggleProjectSelection(p.id)}
-                          className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-amber-50 text-amber-700 shadow-sm' : 'hover:bg-slate-50 text-slate-600'}`}
-                        >
-                          <div className="flex flex-col">
-                            <span className="text-xs font-black uppercase tracking-wider">{p.code}</span>
-                            <span className="text-[10px] opacity-70 font-semibold">{p.name}</span>
-                          </div>
-                          {isSelected && (
-                            <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-md">
-                              <Save className="w-2.5 h-2.5 text-white" />
-                            </div>
-                          )}
-                        </div>
+                  <div className="p-2 border-b border-slate-100">
+                    <input 
+                      type="text"
+                      placeholder="Search by code or name..."
+                      value={projectSearchTerm}
+                      onChange={(e) => setProjectSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-slate-200 text-xs font-bold outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                  <div className="grid grid-cols-1 gap-1 mt-1 max-h-48 overflow-y-auto custom-scrollbar">
+                    {(() => {
+                      const filtered = projects.filter(p => 
+                        (p.code || '').toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
+                        (p.name || '').toLowerCase().includes(projectSearchTerm.toLowerCase())
                       );
-                    })}
+                      if (filtered.length === 0) {
+                        return <div className="p-4 text-center text-xs text-slate-400">No matching projects found</div>;
+                      }
+                      return filtered.map(p => {
+                        const isSelected = selectedProjectIds.includes(p.id);
+                        return (
+                          <div 
+                            key={p.id}
+                            onClick={() => toggleProjectSelection(p.id)}
+                            className={`flex items-center justify-between px-4 py-3 rounded-xl cursor-pointer transition-all ${isSelected ? 'bg-amber-50 text-amber-700 shadow-sm' : 'hover:bg-slate-50 text-slate-600'}`}
+                          >
+                            <div className="flex flex-col">
+                              <span className="text-xs font-black uppercase tracking-wider">{p.code}</span>
+                              <span className="text-[10px] opacity-70 font-semibold">{p.name}</span>
+                            </div>
+                            {isSelected && (
+                              <div className="w-5 h-5 rounded-full bg-amber-500 flex items-center justify-center shadow-md">
+                                <Save className="w-2.5 h-2.5 text-white" />
+                              </div>
+                            )}
+                          </div>
+                        );
+                      });
+                    })()}
                   </div>
                 </div>
               )}

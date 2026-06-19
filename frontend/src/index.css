@@ -130,24 +130,17 @@
 .sticky-col-3 {
   position: sticky !important;
   left: 300px;
-  width: 120px;
-  min-width: 120px;
-  max-width: 120px;
-}
-.sticky-col-4 {
-  position: sticky !important;
-  left: 420px;
   width: 80px;
   min-width: 80px;
   max-width: 80px;
 }
 
-th.sticky-col-1, th.sticky-col-2, th.sticky-col-3, th.sticky-col-4 {
+th.sticky-col-1, th.sticky-col-2, th.sticky-col-3 {
   z-index: 20 !important;
   background-color: #f59e0b !important; /* matches header orange/amber start */
 }
 
-td.sticky-col-1, td.sticky-col-2, td.sticky-col-3, td.sticky-col-4 {
+td.sticky-col-1, td.sticky-col-2, td.sticky-col-3 {
   z-index: 10 !important;
   background-color: #ffffff !important;
 }
@@ -155,24 +148,22 @@ td.sticky-col-1, td.sticky-col-2, td.sticky-col-3, td.sticky-col-4 {
 /* Row hover effect for sticky cells */
 tr:hover td.sticky-col-1,
 tr:hover td.sticky-col-2,
-tr:hover td.sticky-col-3,
-tr:hover td.sticky-col-4 {
+tr:hover td.sticky-col-3 {
   background-color: #f8fafc !important; /* subtle gray hover */
 }
 
 /* Keep gray background for not in scope rows */
 tr.row-not-in-scope td.sticky-col-1,
 tr.row-not-in-scope td.sticky-col-2,
-tr.row-not-in-scope td.sticky-col-3,
-tr.row-not-in-scope td.sticky-col-4 {
+tr.row-not-in-scope td.sticky-col-3 {
   background-color: #e2e8f0 !important;
 }
 
 /* Distinct right border for the boundary of frozen columns */
-th.sticky-col-4 {
+th.sticky-col-3 {
   border-right: 2px solid #d97706 !important;
 }
-td.sticky-col-4 {
+td.sticky-col-3 {
   border-right: 2px solid #cbd5e1 !important;
 }
 
