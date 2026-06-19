@@ -117,7 +117,8 @@ def should_use_tools(query):
         
 def parse_json_from_text(text):
     """
-    Tries to extract and parse a JSON object from text (handling markdown code blocks & XML tags).
+    Tries to extract and parse a JSON object from text.
+    Supports markdown blocks, backticks, and XML-style tag wrappers.
     Returns (tool_name, arguments) or (None, None).
     """
     if not text:
@@ -125,32 +126,23 @@ def parse_json_from_text(text):
         
     clean_text = text.strip()
     
-    # 1. Check for XML-like tag patterns: <tool_name>{arguments}</tool_name_or_function>
-    match = re.search(r'<(\w+)>\s*(\{.*?\})\s*</\w+>', clean_text, re.DOTALL)
-    if match:
-        tool_name = match.group(1)
-        args_str = match.group(2)
-        try:
-            args = json.loads(args_str)
-            return tool_name, args
-        except Exception:
-            pass
-
-    # 2. Fall back to standard JSON/markdown code block extraction
-    if clean_text.startswith("```"):
-        lines = clean_text.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        clean_text = "\n".join(lines).strip()
-        
+    # Locate the JSON boundary
     start_idx = clean_text.find("{")
     end_idx = clean_text.rfind("}")
+    
     if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
         json_candidate = clean_text[start_idx:end_idx+1]
         try:
             parsed = json.loads(json_candidate)
+            
+            # Check 1: Check if there is an XML-style opening tag before the JSON block
+            # (e.g., <navigate_to_page>`{...}`)
+            tag_match = re.search(r'<(\w+)>', clean_text[:start_idx])
+            if tag_match:
+                tool_name = tag_match.group(1)
+                return tool_name, parsed
+                
+            # Check 2: Standard JSON tool call structure (name inside the JSON body)
             name = parsed.get("name") or parsed.get("function")
             args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
             if name:
@@ -307,6 +299,7 @@ def get_chatbot_response(chat_session, user_query, user=None):
         bot_response = ollama_res.get('content', '')
 
         # Handle models (like Llama 3.2) writing JSON tool calls in the content text block
+        is_fallback_text_call = False
         if not tool_calls and bot_response:
             parsed_name, parsed_args = parse_json_from_text(bot_response)
             if parsed_name:
@@ -316,6 +309,7 @@ def get_chatbot_response(chat_session, user_query, user=None):
                         "arguments": parsed_args
                     }
                 }]
+                is_fallback_text_call = True
 
         if tool_calls:
             # Append Ollama's response containing the tool call to history
@@ -340,26 +334,34 @@ def get_chatbot_response(chat_session, user_query, user=None):
                     if isinstance(result, dict) and "ui_actions" in result:
                         ui_actions.extend(result["ui_actions"])
                     
-                    # Append execution output as a 'tool' role message
-                    tool_msg = {
-                        "role": "tool",
-                        "content": json.dumps(result)
-                    }
-                    if tool_call.get('id'):
-                        tool_msg["tool_call_id"] = tool_call.get('id')
-                    ollama_messages.append(tool_msg)
+                    if is_fallback_text_call:
+                        # Direct message response from tool handler for text fallbacks
+                        bot_response = result.get('message', 'Action executed successfully.')
+                    else:
+                        # Append execution output as a 'tool' role message
+                        tool_msg = {
+                            "role": "tool",
+                            "content": json.dumps(result)
+                        }
+                        if tool_call.get('id'):
+                            tool_msg["tool_call_id"] = tool_call.get('id')
+                        ollama_messages.append(tool_msg)
                 else:
-                    tool_msg = {
-                        "role": "tool",
-                        "content": json.dumps({"status": "error", "message": f"Tool '{func_name}' is not registered."})
-                    }
-                    if tool_call.get('id'):
-                        tool_msg["tool_call_id"] = tool_call.get('id')
-                    ollama_messages.append(tool_msg)
+                    if is_fallback_text_call:
+                        bot_response = f"Tool '{func_name}' is not registered."
+                    else:
+                        tool_msg = {
+                            "role": "tool",
+                            "content": json.dumps({"status": "error", "message": f"Tool '{func_name}' is not registered."})
+                        }
+                        if tool_call.get('id'):
+                            tool_msg["tool_call_id"] = tool_call.get('id')
+                        ollama_messages.append(tool_msg)
 
-            # Call Ollama again to summarize the execution results
-            final_res = call_local_ollama(ollama_messages)
-            bot_response = final_res.get('content', '')
+            if not is_fallback_text_call:
+                # Call Ollama again to summarize the execution results
+                final_res = call_local_ollama(ollama_messages)
+                bot_response = final_res.get('content', '')
 
     except Exception as e:
         bot_response = f"⚠️ Chatbot Error: {str(e)}"
