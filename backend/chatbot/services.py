@@ -91,7 +91,7 @@ def retrieve_relevant_context(query, limit=5):
 def should_use_tools(query):
     """
     Heuristic to decide if we should pass tools to Ollama.
-    Prevents Llama 3.2 from force-calling/hallucinating tools for general Q&A.
+    Prevents Llama from force-calling/hallucinating tools for general Q&A.
     """
     query_lower = query.lower().strip()
     
@@ -103,17 +103,22 @@ def should_use_tools(query):
     if any(keyword in query_lower for keyword in ["navigate", "go to", "open page", "show page", "take me to", "redirect", "open the"]):
         return True
         
-    # Employee creation keywords
-    if any(keyword in query_lower for keyword in ["add employee", "create employee", "register employee", "new employee", "insert employee"]):
-        return True
-        
-    # Project listing keywords
-    if any(keyword in query_lower for keyword in ["list projects", "show projects", "get projects", "what projects", "active projects", "view projects"]):
-        return True
-        
-    # Employee details search keywords
-    if any(keyword in query_lower for keyword in ["search employee", "find employee", "lookup employee", "details of", "get employee"]):
-        return True
+    # Employee creation keywords (e.g., "add an employee", "create employee")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
+            return True
+            
+    # Employee details search keywords (e.g., "details of employee", "find emp")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["search", "find", "lookup", "details", "get", "show", "view"]):
+            return True
+
+    # Project listing keywords (e.g., "view projects", "list projects")
+    if "project" in query_lower or "proj" in query_lower:
+        if any(verb in query_lower for verb in ["list", "show", "get", "what", "active", "view"]):
+            return True
+            
+    return False
         
 def parse_json_from_text(text):
     """
