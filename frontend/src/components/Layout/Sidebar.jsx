@@ -120,8 +120,11 @@ export default function Sidebar({
 
   const filteredNavSections = navSections.map(section => {
     const filteredItems = section.items.filter(item => {
+      // Admins see all items, including adminOnly ones
       if (isAdmin) return true;
+      // Non-admins cannot see adminOnly items
       if (item.adminOnly) return false;
+      // Ensure item has a moduleKey to check permissions
       if (!item.moduleKey) return false;
       const keysToCheck = item.moduleKey.split(',');
       return keysToCheck.some(k => allowedModules.includes(k.trim()));

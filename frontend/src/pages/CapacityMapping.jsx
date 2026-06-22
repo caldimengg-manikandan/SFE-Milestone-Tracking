@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   BarChart3,
@@ -21,7 +21,7 @@ import {
   Briefcase,
   AlertCircle
 } from 'lucide-react';
-import { machineAPI, manpowerAPI, capacityAPI, projectAPI, rfqAPI } from '../services/api';
+import { machineAPI, manpowerAPI, capacityAPI, projectAPI, rfqAPI, holidayAPI } from '../services/api';
 import FormattedDateInput from '../components/forms/FormattedDateInput';
 
 export default function CapacityMapping() {
@@ -30,7 +30,76 @@ export default function CapacityMapping() {
   const [activeTab, setActiveTab] = useState(tab || 'capacity');
   const [loading, setLoading] = useState(true);
   const [filterShop, setFilterShop] = useState('All');
-  const [filterMonth, setFilterMonth] = useState('All');
+  // Multi-select month filter: array of selected month names. Initialize empty; effectiveMonths will default to current month when none selected.
+  const [filterMonths, setFilterMonths] = useState([]);
+  const effectiveMonths = filterMonths.length === 0 ? [new Date().toLocaleString('default', { month: 'long' })] : filterMonths;
+
+  const [holidayDates, setHolidayDates] = useState(new Set());
+
+  useEffect(() => {
+    const year = new Date().getFullYear();
+    holidayAPI.getAll({ year }).then(res => {
+      const datesArray = res.data.results ?? res.data;
+      const dates = new Set((datesArray || []).map(h => h.date));
+      setHolidayDates(dates);
+    }).catch(err => console.error('Failed to load holidays in parent', err));
+  }, []);
+
+  const calculateWorkingDays = useCallback((monthName, year) => {
+    const monthIdx = new Date(`${monthName} 1, ${year}`).getMonth();
+    const daysInMonth = new Date(year, monthIdx + 1, 0).getDate();
+    let workDays = 0;
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, monthIdx, d);
+      const day = date.getDay(); // 0=Sun,6=Sat
+      if (day === 0 || day === 6) continue; // skip weekends
+      
+      const localYear = date.getFullYear();
+      const localMonth = String(date.getMonth() + 1).padStart(2, '0');
+      const localDay = String(date.getDate()).padStart(2, '0');
+      const localIso = `${localYear}-${localMonth}-${localDay}`;
+      
+      if (holidayDates.has(localIso)) continue; // skip holiday
+      workDays++;
+    }
+    return workDays;
+  }, [holidayDates]);
+
+  const getDaysFactor = useCallback((monthsStr) => {
+    const selected = monthsStr ? monthsStr.split(',').map(m => m.trim()).filter(Boolean) : [];
+    const year = new Date().getFullYear();
+    if (selected.length === 0) {
+      const allMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      let total = 0;
+      allMonths.forEach(m => {
+        total += calculateWorkingDays(m, year);
+      });
+      return total / 12;
+    }
+    let totalDays = 0;
+    selected.forEach(m => {
+      totalDays += calculateWorkingDays(m, year);
+    });
+    return totalDays / selected.length;
+  }, [calculateWorkingDays]);
+
+  const getYearDays = useCallback((monthsStr) => {
+    const selected = monthsStr ? monthsStr.split(',').map(m => m.trim()).filter(Boolean) : [];
+    const year = new Date().getFullYear();
+    if (selected.length === 0) {
+      const allMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+      let total = 0;
+      allMonths.forEach(m => {
+        total += calculateWorkingDays(m, year);
+      });
+      return total;
+    }
+    let totalDays = 0;
+    selected.forEach(m => {
+      totalDays += calculateWorkingDays(m, year);
+    });
+    return totalDays;
+  }, [calculateWorkingDays]);
 
   // Sync activeTab with URL param
   useEffect(() => {
@@ -47,6 +116,31 @@ export default function CapacityMapping() {
   const [capacities, setCapacities] = useState([]);
   const [projects, setProjects] = useState([]);
   const [rfqs, setRfqs] = useState([]);
+
+  // Filter manpower using effectiveMonths with case‑insensitive matching
+  const filteredManpower = useMemo(() => manpower.filter(m => {
+    const monthName = (m.month || '').toLowerCase();
+    return effectiveMonths.some(em => em.toLowerCase() === monthName);
+  }), [manpower, effectiveMonths]);
+
+  const filteredCapacities = useMemo(() => {
+    return capacities.filter(c => {
+      if (filterShop !== 'All' && c.shop) {
+        if (c.shop.toLowerCase() !== filterShop.toLowerCase()) return false;
+      } else if (filterShop !== 'All' && !c.shop) {
+        return false;
+      }
+      const cMonths = c.months ? c.months.split(',').map(m => m.trim()) : [];
+      if (cMonths.length === 0) return true;
+      return cMonths.some(m => effectiveMonths.includes(m));
+    });
+  }, [capacities, filterShop, effectiveMonths]);
+
+  const filteredMachines = useMemo(() => {
+    return filterShop === 'All' ? machines : machines.filter(m => {
+      return m.shop && m.shop.toLowerCase() === filterShop.toLowerCase();
+    });
+  }, [machines, filterShop]);
 
   // Fetch all data
   const fetchData = async () => {
@@ -75,13 +169,10 @@ export default function CapacityMapping() {
     fetchData();
   }, []);
 
-  const filteredManpower = filterMonth === 'All'
-    ? manpower
-    : manpower.filter(m => (m.month || 'June').toLowerCase() === filterMonth.toLowerCase());
+
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Summary Cards - Always Visible */}
       <SummaryView 
         capacities={capacities} 
         machines={machines} 
@@ -90,14 +181,25 @@ export default function CapacityMapping() {
         rfqs={rfqs}
         filterShop={filterShop}
         setFilterShop={setFilterShop}
-        filterMonth={filterMonth}
-        setFilterMonth={setFilterMonth}
+        filterMonths={filterMonths}
+        setFilterMonths={setFilterMonths}
+        holidayDates={holidayDates}
+        calculateWorkingDays={calculateWorkingDays}
       />
 
       {/* Content */}
       <div className="mt-6">
-        {activeTab === 'capacity' && <CapacityView data={capacities} machines={machines} refresh={fetchData} />}
-        {activeTab === 'machine' && <MachineView data={machines} refresh={fetchData} />}
+        {activeTab === 'capacity' && (
+          <CapacityView 
+            data={filteredCapacities} 
+            machines={machines} 
+            refresh={fetchData} 
+            calculateWorkingDays={calculateWorkingDays}
+            getDaysFactor={getDaysFactor}
+            getYearDays={getYearDays}
+          />
+        )}
+        {activeTab === 'machine' && <MachineView data={filteredMachines} allMachines={machines} refresh={fetchData} />}
         {activeTab === 'manpower' && <ManpowerView data={filteredManpower} refresh={fetchData} />}
       </div>
     </div>
@@ -133,44 +235,52 @@ const getYearDays = (monthsStr) => {
   return totalDays;
 };
 
-/* ── Summary Cards Component (Header) ── */
-function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [], filterShop, setFilterShop, filterMonth, setFilterMonth }) {
+function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [], filterShop, setFilterShop, filterMonths, setFilterMonths, holidayDates, calculateWorkingDays }) {
+  const effectiveMonths = filterMonths.length === 0 ? [new Date().toLocaleString('default', { month: 'long' })] : filterMonths;
   const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
+  const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
+// Filter capacities based on selected shop and months (multi-select)
   const filteredCapacities = capacities.filter(c => {
-    if (filterShop !== 'All' && c.shop !== filterShop) return false;
-    if (filterMonth !== 'All') {
-      const cMonths = c.months ? c.months.split(',').map(m => m.trim().toLowerCase()) : [];
-      if (cMonths.length > 0 && !cMonths.includes(filterMonth.toLowerCase())) return false;
+    if (filterShop !== 'All' && c.shop) {
+      if (c.shop.toLowerCase() !== filterShop.toLowerCase()) return false;
+    } else if (filterShop !== 'All' && !c.shop) {
+      return false;
     }
-    return true;
+    // Use effectiveMonths for filtering
+    const cMonths = c.months ? c.months.split(',').map(m => m.trim()) : [];
+    if (cMonths.length === 0) return true;
+    return cMonths.some(m => effectiveMonths.includes(m));
   });
-  const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => m.shop === filterShop);
+  const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => {
+    return m.shop && m.shop.toLowerCase() === filterShop.toLowerCase();
+  });
   
   const totalCapacity = filteredCapacities.reduce((sum, c) => {
-    let monthDays = 22;
-    if (filterMonth !== 'All') {
-      monthDays = MONTH_DAYS[filterMonth] || 22;
-    } else {
-      return sum + (c.capacity_per_month && parseFloat(c.capacity_per_month) > 0
-        ? parseFloat(c.capacity_per_month)
-        : parseFloat(c.capacity_per_day || c.rate_per_day || 0) * (261 / 12));
-    }
     const dayVal = parseFloat(c.capacity_per_day || c.rate_per_day || 0);
-    return sum + (dayVal * monthDays);
+    if (!dayVal) return sum;
+    const cMonths = c.months ? c.months.split(',').map(m => m.trim()) : [];
+    const monthsToCount = cMonths.length === 0 ? effectiveMonths : cMonths.filter(m => effectiveMonths.includes(m));
+    const totalDays = monthsToCount.reduce((d, m) => d + calculateWorkingDays(m, new Date().getFullYear()), 0);
+    return sum + dayVal * totalDays;
   }, 0);
   const machineCount = filteredMachines.length;
 
-  const filteredManpower = filterMonth === 'All' 
-    ? manpower 
-    : manpower.filter(m => (m.month || 'June').toLowerCase() === filterMonth.toLowerCase());
+  // Filter manpower using effectiveMonths with case‑insensitive matching
+  const filteredManpower = manpower.filter(m => {
+    const monthName = (m.month || 'June').toLowerCase();
+    return effectiveMonths.some(em => em.toLowerCase() === monthName);
+  });
 
   const skilledManpower = filteredManpower.length;
 
   const totalMonthlyManhours = filteredManpower.reduce((sum, item) => {
     const mh = item.manhours !== null && item.manhours !== undefined && item.manhours !== '' ? Number(item.manhours) : 8;
     const ot = item.overtime !== null && item.overtime !== undefined && item.overtime !== '' ? Number(item.overtime) : 0;
-    return sum + (mh + ot) * 20;
+    const monthName = (item.month || 'June');
+    const year = new Date().getFullYear();
+    const workDays = calculateWorkingDays(monthName, year);
+    return sum + (mh + ot) * workDays;
   }, 0);
 
   const isScheduleActiveInMonth = (startMonthStr, durationMonths, targetMonthName) => {
@@ -199,7 +309,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
       
       const avg = dur > 0 ? hrs / dur : hrs;
       
-      if (filterMonth === 'All') {
+      if (filterMonths.length === 0) {
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         let activeCount = 0;
         for (const m of months) {
@@ -210,10 +320,13 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
         return avg * activeCount;
       }
       
-      if (isScheduleActiveInMonth(startMonthStr, dur, filterMonth)) {
-        return avg;
+      let total = 0;
+      for (const m of filterMonths) {
+        if (isScheduleActiveInMonth(startMonthStr, dur, m)) {
+          total += avg;
+        }
       }
-      return 0;
+      return total;
     };
 
     const structFab = getAvgIfActive(r.struct_fab_start_month, r.struct_fab_duration_months, r.struct_fab_hours);
@@ -233,8 +346,8 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
 
   const stats = [
     { label: 'Total Capacity', value: `${totalCapacity.toFixed(2)} Tonnes`, sub: filterShop === 'All' ? 'Per Month (Global)' : `Per Month (${filterShop})`, icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Manhours Available', value: `${totalMonthlyManhours} Hours`, sub: filterMonth === 'All' ? 'Per Month (Workforce Master)' : `Per Month (${filterMonth} - Workforce Master)`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Manhours Required', value: `${totalRequiredHours} Hours`, sub: filterMonth === 'All' ? 'All Won Bids Total' : `Won Bids active in ${filterMonth}`, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { label: 'Manhours Available', value: `${totalMonthlyManhours} Hours`, sub: filterMonths.length === 0 ? 'Per Month (Workforce Master)' : filterMonths.length === 12 ? 'Per Month (All Months - Workforce Master)' : `Per Month (${effectiveMonths.join(', ')} - Workforce Master)`, icon: Clock, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { label: 'Manhours Required', value: `${totalRequiredHours} Hours`, sub: effectiveMonths.length === 0 ? 'All Won Bids Total' : filterMonths.length === 12 ? 'Won Bids active in All Months' : `Won Bids active in ${effectiveMonths.join(', ')}`, icon: Briefcase, color: 'text-purple-600', bg: 'bg-purple-50' },
     { label: varianceLabel, value: `${varianceValue} Hours`, sub: varianceSub, icon: AlertCircle, color: varianceColor, bg: varianceBg },
     { label: 'Total Machinery', value: machineCount, sub: 'Production Equipment', icon: Cpu, color: 'text-amber-600', bg: 'bg-amber-50' },
     { label: 'Total Manpower', value: skilledManpower, sub: 'Production Personnel', icon: Users2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
@@ -245,18 +358,36 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-2">
         <h2 className="text-lg font-black text-slate-800 tracking-tight">Performance Overview</h2>
         <div className="flex flex-wrap items-center gap-4">
-          <div className="flex items-center gap-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Month:</label>
-            <select 
-              className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
-              value={filterMonth}
-              onChange={(e) => setFilterMonth(e.target.value)}
-            >
-              <option value="All">All Months</option>
-              {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+          <div className="relative inline-block text-left">
+            <button type="button" className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" onClick={() => setShowMonthDropdown(prev => !prev)}>
+              Filter by Month
+              <svg className="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.66a.75.75 0 01-1.08 0l-4.25-4.66a.75.75 0 01.02-1.06z" clipRule="evenodd"/></svg>
+            </button>
+            {showMonthDropdown && (
+              <div className="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
+                <div className="py-1 max-h-60 overflow-y-auto">
+                  <label className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer">
+                    <input type="checkbox" checked={filterMonths.length === 12} onChange={e => {
+                      if (e.target.checked) {
+                        setFilterMonths(['January','February','March','April','May','June','July','August','September','October','November','December']);
+                      } else {
+                        setFilterMonths([]);
+                      }
+                    }} className="form-checkbox h-4 w-4 text-amber-500 mr-2" />
+                    <span className="text-sm font-semibold text-gray-800">All Months</span>
+                  </label>
+                  {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => (
+                    <label key={m} className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-50">
+                      <input type="checkbox" value={m} checked={filterMonths.includes(m)} onChange={e => {
+                        const checked = e.target.checked;
+                        setFilterMonths(prev => checked ? [...prev, m] : prev.filter(month => month !== m));
+                      }} className="form-checkbox h-4 w-4 text-amber-500 mr-2" />
+                      <span className="text-sm text-gray-700">{m}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Shop:</label>
@@ -288,7 +419,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
 }
 
 /* ── Update Capacity Sub-module ── */
-function CapacityView({ data, machines, refresh }) {
+function CapacityView({ data, machines, refresh, calculateWorkingDays, getDaysFactor, getYearDays }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -302,7 +433,7 @@ function CapacityView({ data, machines, refresh }) {
   };
   const [form, setForm] = useState({
     shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '',
-    capacity_per_day: '', capacity_per_month: '', capacity_per_year: '', months: ''
+    capacity_per_day: '', capacity_per_month: '', months: ''
   });
 
   // Derived data for dynamic dropdowns
@@ -339,21 +470,7 @@ function CapacityView({ data, machines, refresh }) {
     });
   };
 
-  const handleCapacityYearChange = (val) => {
-    const year = val === '' ? '' : parseFloat(val);
-    const factor = getDaysFactor(form.months);
-    const yearDays = getYearDays(form.months);
-    setForm(prev => {
-      const day = year === '' ? '' : year / yearDays;
-      return {
-        ...prev,
-        capacity_per_year: val,
-        capacity_per_day: (day === '' ? '' : day.toFixed(2)),
-        capacity_per_month: (day === '' ? '' : (day * factor).toFixed(2)),
-        rate_per_day: (day === '' ? '' : day.toFixed(2)),
-      };
-    });
-  };
+
 
   const handleOpen = (item = null) => {
     if (item) {
@@ -372,12 +489,12 @@ function CapacityView({ data, machines, refresh }) {
         rate_per_day: item.rate_per_day || '',
         capacity_per_day: dayVal,
         capacity_per_month: monthVal,
-        capacity_per_year: yearVal,
+
         months: item.months || ''
       });
     } else {
       setEditItem(null);
-      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '', capacity_per_day: '', capacity_per_month: '', capacity_per_year: '', months: '' });
+      setForm({ shop: '', location: '', category: 'Machine', machine: '', process: '', rate_per_day: '', capacity_per_day: '', capacity_per_month: '', months: '' });
     }
     setShowModal(true);
   };
@@ -391,7 +508,6 @@ function CapacityView({ data, machines, refresh }) {
         rate_per_day: form.capacity_per_day || form.rate_per_day || 0,
         capacity_per_day: form.capacity_per_day || 0,
         capacity_per_month: form.capacity_per_month || 0,
-        capacity_per_year: form.capacity_per_year || 0,
         months: form.months || ''
       };
       if (editItem) await capacityAPI.update(editItem.id, payload);
@@ -436,7 +552,7 @@ function CapacityView({ data, machines, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10">Machine Name</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Month</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Capacity/Year</th>
+
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
           </thead>
@@ -490,7 +606,7 @@ function CapacityView({ data, machines, refresh }) {
                 
                 let displayMonth;
                 if (item.displayMonthName) {
-                  const days = MONTH_DAYS[item.displayMonthName] || 22;
+                  const days = calculateWorkingDays(item.displayMonthName, new Date().getFullYear());
                   displayMonth = (parseFloat(displayDay) * days).toFixed(1);
                 } else {
                   displayMonth = item.capacity_per_month && parseFloat(item.capacity_per_month) > 0
@@ -551,7 +667,6 @@ function CapacityView({ data, machines, refresh }) {
                     <td className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">{item.machine_name || '-'}</td>
                     <td className="px-6 py-4 text-right font-bold text-emerald-600 whitespace-nowrap">{displayDay} T</td>
                     <td className="px-6 py-4 text-right font-bold text-blue-600 whitespace-nowrap">{displayMonth} T</td>
-                    <td className="px-6 py-4 text-right font-bold text-purple-600 whitespace-nowrap">{displayYear} T</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1">
                         <button onClick={() => handleOpen(item)} className="p-2 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50 transition-all"><Edit2 className="w-4 h-4" /></button>
@@ -690,19 +805,7 @@ function CapacityView({ data, machines, refresh }) {
                     />
                     <p className="text-[9px] text-slate-400 ml-1">Tonnes/Month (cal. days)</p>
                   </div>
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-purple-600 uppercase tracking-widest ml-1 flex items-center gap-1">
-                      <Clock className="w-3 h-3" /> Per Year
-                    </label>
-                    <input
-                      type="number" step="0.01"
-                      className="w-full px-4 py-3 rounded-xl border border-purple-200 text-sm font-bold text-slate-700 outline-none focus:border-purple-400 focus:ring-4 focus:ring-purple-500/10 transition-all bg-purple-50/30"
-                      value={form.capacity_per_year}
-                      onChange={e => handleCapacityYearChange(e.target.value)}
-                      placeholder="0.00"
-                    />
-                    <p className="text-[9px] text-slate-400 ml-1">Tonnes/Year (cal. days)</p>
-                  </div>
+
                 </div>
               </div>
 
@@ -719,7 +822,7 @@ function CapacityView({ data, machines, refresh }) {
 }
 
 /* ── Update Machine Sub-module ── */
-function MachineView({ data, refresh }) {
+function MachineView({ data, allMachines = [], refresh }) {
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -732,7 +835,8 @@ function MachineView({ data, refresh }) {
 
   const shopMap = useMemo(() => {
     const map = {};
-    data.forEach(m => {
+    const targetList = allMachines.length ? allMachines : data;
+    targetList.forEach(m => {
       if (m.shop) {
         if (m.shop.includes(' - ')) {
           const [num, name] = m.shop.split(' - ');
@@ -743,7 +847,7 @@ function MachineView({ data, refresh }) {
       }
     });
     return map;
-  }, [data]);
+  }, [allMachines, data]);
 
   const existingShopNumbers = useMemo(() => {
     return Object.keys(shopMap);
@@ -1103,7 +1207,7 @@ function ManpowerView({ data, refresh }) {
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-center">Month</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Man Hours</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Overtime</th>
-              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Per Week</th>
+              <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Approximate Per Week</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Rate / Day</th>
               <th className="px-6 py-4 font-black uppercase text-[10px] tracking-widest border-b border-white/10 text-right">Actions</th>
             </tr>
