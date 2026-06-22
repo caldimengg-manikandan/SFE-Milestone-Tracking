@@ -374,6 +374,7 @@ export default function ProcessMaster() {
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">in LBS</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Actual RTS Date</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Start Run Date</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Complete Run Date</th>
@@ -467,6 +468,7 @@ export default function ProcessMaster() {
                                             <td className="px-3 py-1.5 text-center font-black text-orange-600">{liveWeight > 0 ? liveWeight.toFixed(2) : '0.00'}</td>
                                             <td className="px-3 py-1.5 text-center font-black text-orange-600">{liveWeight > 0 ? (liveWeight * 2000).toFixed(2) : '0.00'}</td>
                                             <td className="px-3 py-1.5 text-slate-500 font-medium">{formatDate(liveRtsDate)}</td>
+                                            <td className="px-3 py-1.5 text-slate-500 font-medium">{formatDate(item.actual_rts_date)}</td>
                                             <td className="px-3 py-1.5 text-center font-bold text-slate-600">{runDays}</td>
                                             <td className="px-3 py-1.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>
                                             <td className="px-3 py-1.5 text-slate-900 font-bold">{formatDate(item.complete_run_date) || '-'}</td>

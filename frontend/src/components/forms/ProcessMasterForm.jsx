@@ -8,12 +8,84 @@ const DEFAULT_COLUMNS = [
   { key: 'seq', label: 'Seq #', type: 'text', fixed: true },
   { key: 'weight', label: 'Weight', type: 'number', fixed: true },
   { key: 'lbs', label: 'in LBS', type: 'readonly', fixed: true },
-  { key: 'rtsDate', label: 'RTS Date', type: 'date', fixed: true },
+  { key: 'rtsDate', label: 'RTS Date', type: 'readonly', fixed: true },
+  { key: 'actualRtsDate', label: 'Actual RTS Date', type: 'date', fixed: true },
   { key: 'runDays', label: 'Run Days', type: 'readonly', fixed: true },
-  { key: 'startRunDate', label: 'Start Run Date', type: 'date', fixed: true },
+  { key: 'startRunDate', label: 'Start Run Date', type: 'readonly', fixed: true },
   { key: 'completeRunDate', label: 'Complete Run Date', type: 'readonly', fixed: true },
   { key: 'notes', label: 'Notes', type: 'text', fixed: true },
 ];
+
+const parseDateSafe = (dateStr) => {
+  if (!dateStr) return null;
+  if (dateStr instanceof Date) return new Date(dateStr.getTime());
+  
+  const separator = dateStr.includes('-') ? '-' : (dateStr.includes('/') ? '/' : null);
+  if (separator) {
+    const parts = dateStr.split(separator);
+    if (parts.length === 3) {
+      let y, m, d;
+      if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10) - 1;
+        d = parseInt(parts[2], 10);
+      } else {
+        y = parseInt(parts[2], 10);
+        m = parseInt(parts[0], 10) - 1;
+        d = parseInt(parts[1], 10);
+      }
+      const parsed = new Date(y, m, d);
+      if (!isNaN(parsed.getTime())) return parsed;
+    }
+  }
+  
+  const parsed = new Date(dateStr);
+  if (!isNaN(parsed.getTime())) return parsed;
+  return null;
+};
+
+const formatDateStr = (dateObj) => {
+  if (!dateObj || isNaN(dateObj.getTime())) return '';
+  const yyyy = dateObj.getFullYear();
+  const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+  const dd = String(dateObj.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const calculateDates = (row, rateValue) => {
+  const r = parseFloat(rateValue) || 0;
+  const w = parseFloat(row.weight) || 0;
+  
+  // Calculate runDays
+  let runDays = '';
+  if (r > 0 && w > 0) {
+    runDays = Math.ceil((w * 2000) / r);
+  }
+
+  // Calculate startRunDate
+  let startRunDate = '';
+  if (row.actualRtsDate) {
+    startRunDate = row.actualRtsDate;
+  } else if (row.rtsDate) {
+    const parsedRts = parseDateSafe(row.rtsDate);
+    if (parsedRts) {
+      parsedRts.setDate(parsedRts.getDate() + 1);
+      startRunDate = formatDateStr(parsedRts);
+    }
+  }
+
+  // Calculate completeRunDate
+  let completeRunDate = '';
+  if (runDays && startRunDate) {
+    const parsedStart = parseDateSafe(startRunDate);
+    if (parsedStart) {
+      parsedStart.setDate(parsedStart.getDate() + parseInt(runDays, 10));
+      completeRunDate = formatDateStr(parsedStart);
+    }
+  }
+
+  return { runDays, startRunDate, completeRunDate };
+};
 
 const DEFAULT_RATES = {
   'Plasma': 4500,
@@ -133,15 +205,20 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                     next[r.process_type].rows = r.items.map(item => {
                       const weight = parseFloat(item.weight) || 0;
                       const rate = parseFloat(r.rate) || 0;
-                      return {
+                      const tempRow = {
                         job: item.job_number || '',
                         seq: item.sequence_number || '',
                         weight: item.weight || '',
                         lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                         rtsDate: item.rts_date || '',
-                        runDays: (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : (item.run_days || ''),
-                        startRunDate: item.actual_ofa || '',
-                        completeRunDate: item.complete_run_date || '',
+                        actualRtsDate: item.actual_rts_date || '',
+                      };
+                      const calc = calculateDates(tempRow, rate);
+                      return {
+                        ...tempRow,
+                        runDays: calc.runDays || item.run_days || '',
+                        startRunDate: calc.startRunDate || item.actual_ofa || '',
+                        completeRunDate: calc.completeRunDate || item.complete_run_date || '',
                         notes: item.notes || '',
                         _machine: ''
                       };
@@ -243,32 +320,40 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                 // Sync weight and rtsDate from project master; recalculate run days
                 const rate = parseFloat(next[matchedProc].rate) || 0;
                 const weight = parseFloat(item.tons) || 0;
-                const runDays = (rate > 0 && weight > 0)
-                  ? Math.ceil((weight * 2000) / rate)
-                  : next[matchedProc].rows[existingRowIdx].runDays;
-                next[matchedProc].rows[existingRowIdx] = {
+                const tempRow = {
                   ...next[matchedProc].rows[existingRowIdx],
                   weight: item.tons,            // sync latest weight
                   lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                   rtsDate: item.rts_date || '', // sync latest RTS date
-                  runDays,
+                  actualRtsDate: next[matchedProc].rows[existingRowIdx].actualRtsDate || item.actual_rts_date || '',
+                };
+                const calc = calculateDates(tempRow, rate);
+                next[matchedProc].rows[existingRowIdx] = {
+                  ...tempRow,
+                  runDays: calc.runDays,
+                  startRunDate: calc.startRunDate,
+                  completeRunDate: calc.completeRunDate,
                 };
               } else {
                 // New sequence added in project master — append it
                 const rate = parseFloat(next[matchedProc].rate) || 0;
                 const weight = parseFloat(item.tons) || 0;
-                const runDays = (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : '';
-                const isInitialEmpty = next[matchedProc].rows.length === 1 &&
-                  Object.values(next[matchedProc].rows[0]).every(v => v === '');
-                const newRow = {
+                const tempRow = {
                   job: proj.code,
                   seq: item.seq_no,
                   weight: item.tons,
                   lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                   rtsDate: item.rts_date || '',
-                  runDays,
-                  startRunDate: '',
-                  completeRunDate: '',
+                  actualRtsDate: item.actual_rts_date || '',
+                };
+                const calc = calculateDates(tempRow, rate);
+                const isInitialEmpty = next[matchedProc].rows.length === 1 &&
+                  Object.values(next[matchedProc].rows[0]).every(v => v === '');
+                const newRow = {
+                  ...tempRow,
+                  runDays: calc.runDays,
+                  startRunDate: calc.startRunDate,
+                  completeRunDate: calc.completeRunDate,
                   notes: '',
                   _machine: machineName
                 };
@@ -354,16 +439,20 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                 if (!exists) {
                   const rate = parseFloat(next[matchedProc].rate) || 0;
                   const weight = parseFloat(item.tons) || 0;
-                  const runDays = (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : '';
-                  const newRow = {
+                  const tempRow = {
                     job: proj.code,
                     seq: item.seq_no,
                     weight: item.tons,
                     lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                     rtsDate: item.rts_date || '',
-                    runDays,
-                    startRunDate: '',
-                    completeRunDate: '',
+                    actualRtsDate: item.actual_rts_date || '',
+                  };
+                  const calc = calculateDates(tempRow, rate);
+                  const newRow = {
+                    ...tempRow,
+                    runDays: calc.runDays,
+                    startRunDate: calc.startRunDate,
+                    completeRunDate: calc.completeRunDate,
                     notes: '',
                     _machine: machineName // internal tracking key
                   };
@@ -405,17 +494,10 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
         nextRows[ridx].lbs = isNaN(numVal) ? '' : (numVal * 2000).toFixed(2);
       }
       
-      const r = parseFloat(next[processName].rate);
-      const w = parseFloat(nextRows[ridx].weight);
-      if (r > 0 && w > 0) nextRows[ridx].runDays = Math.ceil((w * 2000) / r);
-      
-      if (nextRows[ridx].runDays && nextRows[ridx].startRunDate) {
-        const d = new Date(nextRows[ridx].startRunDate);
-        d.setDate(d.getDate() + parseInt(nextRows[ridx].runDays));
-        nextRows[ridx].completeRunDate = d.toISOString().split('T')[0];
-      } else {
-        nextRows[ridx].completeRunDate = '';
-      }
+      const calc = calculateDates(nextRows[ridx], next[processName].rate);
+      nextRows[ridx].runDays = calc.runDays;
+      nextRows[ridx].startRunDate = calc.startRunDate;
+      nextRows[ridx].completeRunDate = calc.completeRunDate;
       
       next[processName].rows = nextRows;
       return next;
@@ -426,17 +508,14 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
     setSectionData(prev => {
       const next = { ...prev };
       next[proc].rate = value;
-      const r = parseFloat(value);
       next[proc].rows = next[proc].rows.map(row => {
-        const w = parseFloat(row.weight);
-        const runDays = (r > 0 && w > 0) ? Math.ceil((w * 2000) / r) : row.runDays;
-        let completeDate = row.completeRunDate;
-        if (runDays && row.startRunDate) {
-          const d = new Date(row.startRunDate);
-          d.setDate(d.getDate() + parseInt(runDays));
-          completeDate = d.toISOString().split('T')[0];
-        }
-        return { ...row, runDays, completeRunDate: completeDate };
+        const calc = calculateDates(row, value);
+        return { 
+          ...row, 
+          runDays: calc.runDays, 
+          startRunDate: calc.startRunDate, 
+          completeRunDate: calc.completeRunDate 
+        };
       });
       return next;
     });
@@ -482,6 +561,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
               job_number: r.job || null,
               sequence_number: r.seq || null,
               weight: r.weight || null,
+              actual_rts_date: r.actualRtsDate || null,
               rts_date: r.rtsDate || null,
               run_days: r.runDays || null,
               actual_ofa: r.startRunDate || null,
@@ -692,7 +772,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                               <td key={col.key} className="p-0.5">
                                 {col.type === 'readonly' ? (
                                   <div className="w-full py-1 bg-white text-slate-800 text-center text-[9px] font-bold rounded-md border border-slate-200">
-                                    {col.key === 'completeRunDate' ? formatDate(row[col.key]) : (row[col.key] || '-')}
+                                    {col.key === 'completeRunDate' || col.key === 'startRunDate' || col.key === 'rtsDate' ? formatDate(row[col.key]) : (row[col.key] || '-')}
                                   </div>
                                 ) : col.type === 'date' ? (
                                   <div className="relative group/date">

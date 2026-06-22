@@ -11,9 +11,9 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
   const [fetchingSchedules, setFetchingSchedules] = useState(true);
   
   const [tabData, setTabData] = useState({
-    0: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
-    1: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
-    2: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] }
+    0: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', actualRtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
+    1: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', actualRtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
+    2: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', actualRtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] }
   });
 
   useEffect(() => {
@@ -46,6 +46,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                             weight: item.weight || '',
                             lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                             rtsDate: item.rts_date || '',
+                            actualRtsDate: item.actual_rts_date || '',
                             runDays: item.run_days || '',
                             startRun: item.start_run_date || '',
                             completeRunDate: item.complete_run_date || '',
@@ -54,7 +55,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                     })
                 };
                 if (newData[tabIndex].rows.length === 0) {
-                    newData[tabIndex].rows = [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }];
+                    newData[tabIndex].rows = [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', actualRtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }];
                 }
                 return newData;
             });
@@ -72,20 +73,77 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
     return `${m}-${d}-${y}`;
   };
 
-  const calculateRowValues = (row, rate) => {
-    let runDays = '';
-    let completeRunDate = row.completeRunDate;
-    if (row.weight && rate && parseFloat(rate) > 0) {
-      const lbs = parseFloat(row.weight) * 2000;
-      const days = lbs / parseFloat(rate);
-      runDays = days.toFixed(2);
-      if (row.startRun) {
-        const date = new Date(row.startRun);
-        date.setDate(date.getDate() + Math.ceil(days));
-        completeRunDate = date.toISOString().split('T')[0];
+  const parseDateSafe = (dateStr) => {
+    if (!dateStr) return null;
+    if (dateStr instanceof Date) return new Date(dateStr.getTime());
+    
+    const separator = dateStr.includes('-') ? '-' : (dateStr.includes('/') ? '/' : null);
+    if (separator) {
+      const parts = dateStr.split(separator);
+      if (parts.length === 3) {
+        let y, m, d;
+        if (parts[0].length === 4) {
+          y = parseInt(parts[0], 10);
+          m = parseInt(parts[1], 10) - 1;
+          d = parseInt(parts[2], 10);
+        } else {
+          y = parseInt(parts[2], 10);
+          m = parseInt(parts[0], 10) - 1;
+          d = parseInt(parts[1], 10);
+        }
+        const parsed = new Date(y, m, d);
+        if (!isNaN(parsed.getTime())) return parsed;
       }
     }
-    return { ...row, runDays, completeRunDate };
+    
+    const parsed = new Date(dateStr);
+    if (!isNaN(parsed.getTime())) return parsed;
+    return null;
+  };
+
+  const formatDateStr = (dateObj) => {
+    if (!dateObj || isNaN(dateObj.getTime())) return '';
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  };
+
+  const calculateRowValues = (row, rate) => {
+    const r = parseFloat(rate) || 0;
+    const w = parseFloat(row.weight) || 0;
+    
+    // Calculate runDays
+    let runDays = '';
+    let days = 0;
+    if (r > 0 && w > 0) {
+      days = (w * 2000) / r;
+      runDays = days.toFixed(2);
+    }
+
+    // Calculate startRun
+    let startRun = '';
+    if (row.actualRtsDate) {
+      startRun = row.actualRtsDate;
+    } else if (row.rtsDate) {
+      const parsedRts = parseDateSafe(row.rtsDate);
+      if (parsedRts) {
+        parsedRts.setDate(parsedRts.getDate() + 1);
+        startRun = formatDateStr(parsedRts);
+      }
+    }
+
+    // Calculate completeRunDate
+    let completeRunDate = '';
+    if (days > 0 && startRun) {
+      const parsedStart = parseDateSafe(startRun);
+      if (parsedStart) {
+        parsedStart.setDate(parsedStart.getDate() + Math.ceil(days));
+        completeRunDate = formatDateStr(parsedStart);
+      }
+    }
+
+    return { ...row, runDays, startRun, completeRunDate };
   };
 
   const updateRate = (value) => {
@@ -96,7 +154,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
   };
 
   const addRow = () => {
-    const newRow = { job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
+    const newRow = { job: '', seq: '', weight: '', lbs: '', rtsDate: '', actualRtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
     const newRows = [...tabData[activeTab].rows, newRow];
     setTabData({ ...tabData, [activeTab]: { ...tabData[activeTab], rows: newRows } });
   };
@@ -108,7 +166,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
       const numVal = parseFloat(value);
       newRows[index].lbs = isNaN(numVal) ? '' : (numVal * 2000).toFixed(2);
     }
-    if (field === 'weight' || field === 'startRun') {
+    if (field === 'weight' || field === 'startRun' || field === 'actualRtsDate') {
       newRows[index] = calculateRowValues(newRows[index], tabData[activeTab].rate);
     }
     setTabData({ ...tabData, [activeTab]: { ...tabData[activeTab], rows: newRows } });
@@ -152,6 +210,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
               job_number: r.job || null,
               sequence_number: r.seq || null,
               weight: r.weight || null,
+              actual_rts_date: r.actualRtsDate || null,
               rts_date: r.rtsDate || null,
               run_days: r.runDays || null,
               start_run_date: r.startRun || null,
@@ -256,14 +315,15 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                 <table className="w-full text-left border-collapse table-fixed">
                   <thead>
                     <tr className="bg-slate-50/80 border-b border-slate-200">
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%]">Job</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Seq</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Weight</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">in LBS</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">RTS Date</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Run Days</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">Start Run</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[15%]">Complete Date</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%]">Job</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[7%] text-center">Seq</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">Weight</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">in LBS</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">RTS Date</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Actual RTS Date</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Run Days</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Start Run</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Complete Date</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider">Notes</th>
                       <th className="px-2 py-4 w-10"></th>
                     </tr>
@@ -284,19 +344,19 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                           <input type="text" value={row.lbs} readOnly className="w-full px-2 py-2 rounded-lg border border-slate-100 bg-slate-50 text-xs text-center font-semibold text-slate-600 outline-none" placeholder="0" />
                         </td>
                         <td className="p-1.5">
+                          <div className="w-full py-2 bg-slate-50 text-slate-600 font-bold text-center text-xs rounded-lg">{formatDate(row.rtsDate)}</div>
+                        </td>
+                        <td className="p-1.5">
                           <div className="relative group">
-                            <input type="date" value={row.rtsDate} onChange={(e) => updateRow(index, 'rtsDate', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-100 focus:border-amber-400 outline-none bg-transparent text-[11px] text-slate-600 appearance-none opacity-0 absolute inset-0 z-10 cursor-pointer" />
-                            <div className="w-full px-2 py-2 rounded-lg border border-slate-100 bg-white text-[11px] text-slate-600 flex items-center justify-between">{formatDate(row.rtsDate)}<Calendar className="w-3 h-3 text-slate-400" /></div>
+                            <input type="date" value={row.actualRtsDate || ''} onChange={(e) => updateRow(index, 'actualRtsDate', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-100 focus:border-amber-400 outline-none bg-transparent text-[11px] text-slate-600 appearance-none opacity-0 absolute inset-0 z-10 cursor-pointer" />
+                            <div className="w-full px-2 py-2 rounded-lg border border-slate-100 bg-white text-[11px] text-slate-600 flex items-center justify-between">{formatDate(row.actualRtsDate)}<Calendar className="w-3 h-3 text-slate-400" /></div>
                           </div>
                         </td>
                         <td className="p-1.5">
                            <div className="w-full py-2 bg-amber-50/50 text-amber-700 font-bold text-center text-xs rounded-lg">{row.runDays || '-'}</div>
                         </td>
                         <td className="p-1.5">
-                          <div className="relative group">
-                            <input type="date" value={row.startRun} onChange={(e) => updateRow(index, 'startRun', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-100 focus:border-amber-400 outline-none bg-transparent text-[11px] text-slate-600 appearance-none opacity-0 absolute inset-0 z-10 cursor-pointer" />
-                            <div className="w-full px-2 py-2 rounded-lg border border-slate-100 bg-white text-[11px] text-slate-700 font-bold flex items-center justify-between">{formatDate(row.startRun)}<Calendar className="w-3 h-3 text-slate-400" /></div>
-                          </div>
+                           <div className="w-full py-2 bg-slate-50 text-slate-700 font-bold text-center text-xs rounded-lg">{formatDate(row.startRun)}</div>
                         </td>
                         <td className="p-1.5">
                            <div className="w-full py-2 bg-green-50 text-green-700 font-bold text-center text-xs rounded-lg">{formatDate(row.completeRunDate)}</div>
