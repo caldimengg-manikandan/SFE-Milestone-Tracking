@@ -372,6 +372,7 @@ export default function ProcessMaster() {
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Process / Job</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center w-16">Seq #</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">in LBS</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Start Run Date</th>
@@ -404,7 +405,7 @@ export default function ProcessMaster() {
                                           const liveData = weightLookup[`${item.job_number}__${item.sequence_number}`];
                                           const liveWeight = liveData ? parseFloat(liveData.tons) : (parseFloat(item.weight) || 0);
                                           const liveRtsDate = liveData?.rts_date || item.rts_date;
-                                          const runDays = (rate > 0 && liveWeight > 0) ? Math.ceil(liveWeight / rate) : '-';
+                                          const runDays = (rate > 0 && liveWeight > 0) ? Math.ceil((liveWeight * 2000) / rate) : '-';
                                           flatItems.push({
                                             prec,
                                             item,
@@ -464,6 +465,7 @@ export default function ProcessMaster() {
                                             </td>
                                             <td className="px-3 py-1.5 text-center font-bold text-slate-500">{item.sequence_number}</td>
                                             <td className="px-3 py-1.5 text-center font-black text-orange-600">{liveWeight > 0 ? liveWeight.toFixed(2) : '0.00'}</td>
+                                            <td className="px-3 py-1.5 text-center font-black text-orange-600">{liveWeight > 0 ? (liveWeight * 2000).toFixed(2) : '0.00'}</td>
                                             <td className="px-3 py-1.5 text-slate-500 font-medium">{formatDate(liveRtsDate)}</td>
                                             <td className="px-3 py-1.5 text-center font-bold text-slate-600">{runDays}</td>
                                             <td className="px-3 py-1.5 text-slate-900 font-bold">{formatDate(item.actual_ofa) || '-'}</td>

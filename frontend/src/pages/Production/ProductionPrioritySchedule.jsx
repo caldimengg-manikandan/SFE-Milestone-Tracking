@@ -511,6 +511,7 @@ export default function ProductionPrioritySchedule() {
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Job #</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Seq #</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">in LBS</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Quantity</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">RTS Date</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Status</th>
@@ -597,6 +598,7 @@ export default function ProductionPrioritySchedule() {
                                         <td className="px-4 py-3 font-bold text-slate-800">{item.job_number}</td>
                                         <td className="px-4 py-3 text-center text-slate-600 font-bold">{item.sequence_number}</td>
                                         <td className="px-4 py-3 text-center text-orange-600 font-black">{item.weight}</td>
+                                        <td className="px-4 py-3 text-center text-slate-700 font-bold">{(parseFloat(item.weight || 0) * 2000).toFixed(2)}</td>
                                         <td className="px-4 py-3 text-center text-slate-500 font-bold">{item.quantity}</td>
                                         <td className="px-4 py-3 text-slate-600 font-medium">{formatDate(planDates.rts_date)}</td>
                                         <td className="px-4 py-3">

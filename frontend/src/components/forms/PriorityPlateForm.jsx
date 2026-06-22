@@ -11,9 +11,9 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
   const [fetchingSchedules, setFetchingSchedules] = useState(true);
   
   const [tabData, setTabData] = useState({
-    0: { rate: '', rows: [{ job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
-    1: { rate: '', rows: [{ job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
-    2: { rate: '', rows: [{ job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] }
+    0: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
+    1: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] },
+    2: { rate: '', rows: [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }] }
   });
 
   useEffect(() => {
@@ -38,19 +38,23 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                 const newData = { ...prev };
                 newData[tabIndex] = {
                     rate: editRecord.rate,
-                    rows: editRecord.items.map(item => ({
-                        job: item.job_number || '',
-                        seq: item.sequence_number || '',
-                        weight: item.weight || '',
-                        rtsDate: item.rts_date || '',
-                        runDays: item.run_days || '',
-                        startRun: item.start_run_date || '',
-                        completeRunDate: item.complete_run_date || '',
-                        notes: item.notes || ''
-                    }))
+                    rows: editRecord.items.map(item => {
+                        const weight = parseFloat(item.weight) || 0;
+                        return {
+                            job: item.job_number || '',
+                            seq: item.sequence_number || '',
+                            weight: item.weight || '',
+                            lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
+                            rtsDate: item.rts_date || '',
+                            runDays: item.run_days || '',
+                            startRun: item.start_run_date || '',
+                            completeRunDate: item.complete_run_date || '',
+                            notes: item.notes || ''
+                        };
+                    })
                 };
                 if (newData[tabIndex].rows.length === 0) {
-                    newData[tabIndex].rows = [{ job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }];
+                    newData[tabIndex].rows = [{ job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' }];
                 }
                 return newData;
             });
@@ -72,7 +76,8 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
     let runDays = '';
     let completeRunDate = row.completeRunDate;
     if (row.weight && rate && parseFloat(rate) > 0) {
-      const days = parseFloat(row.weight) / parseFloat(rate);
+      const lbs = parseFloat(row.weight) * 2000;
+      const days = lbs / parseFloat(rate);
       runDays = days.toFixed(2);
       if (row.startRun) {
         const date = new Date(row.startRun);
@@ -91,7 +96,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
   };
 
   const addRow = () => {
-    const newRow = { job: '', seq: '', weight: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
+    const newRow = { job: '', seq: '', weight: '', lbs: '', rtsDate: '', runDays: '', startRun: '', completeRunDate: '', notes: '' };
     const newRows = [...tabData[activeTab].rows, newRow];
     setTabData({ ...tabData, [activeTab]: { ...tabData[activeTab], rows: newRows } });
   };
@@ -99,6 +104,10 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
   const updateRow = (index, field, value) => {
     const newRows = [...tabData[activeTab].rows];
     newRows[index][field] = value;
+    if (field === 'weight') {
+      const numVal = parseFloat(value);
+      newRows[index].lbs = isNaN(numVal) ? '' : (numVal * 2000).toFixed(2);
+    }
     if (field === 'weight' || field === 'startRun') {
       newRows[index] = calculateRowValues(newRows[index], tabData[activeTab].rate);
     }
@@ -250,6 +259,7 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%]">Job</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Seq</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Weight</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">in LBS</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">RTS Date</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[10%] text-center">Run Days</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[14%]">Start Run</th>
@@ -269,6 +279,9 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                         </td>
                         <td className="p-1.5">
                           <input type="number" value={row.weight} onChange={(e) => updateRow(index, 'weight', e.target.value)} disabled={loading} className="w-full px-2 py-2 rounded-lg border border-slate-100 focus:border-amber-400 outline-none bg-transparent text-xs text-center" placeholder="0" />
+                        </td>
+                        <td className="p-1.5">
+                          <input type="text" value={row.lbs} readOnly className="w-full px-2 py-2 rounded-lg border border-slate-100 bg-slate-50 text-xs text-center font-semibold text-slate-600 outline-none" placeholder="0" />
                         </td>
                         <td className="p-1.5">
                           <div className="relative group">

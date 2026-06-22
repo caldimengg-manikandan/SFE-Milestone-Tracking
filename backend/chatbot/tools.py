@@ -124,5 +124,62 @@ AVAILABLE_TOOLS = [
                 "required": ["page_name"]
             }
         }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "create_customer",
+            "description": "Creates a new customer profile in the Customer Master database along with an optional primary contact.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The full name of the customer company or organization"
+                    },
+                    "code": {
+                        "type": "string",
+                        "description": "Short code identifying the customer (optional)"
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Customer category e.g. Domestic, International (defaults to Domestic)"
+                    },
+                    "country": {
+                        "type": "string",
+                        "description": "Country where the customer is located (defaults to India)"
+                    },
+                    "street": {
+                        "type": "string",
+                        "description": "Street address of the customer"
+                    },
+                    "state": {
+                        "type": "string",
+                        "description": "State address of the customer"
+                    },
+                    "address": {
+                        "type": "string",
+                        "description": "Full postal address description"
+                    },
+                    "designation": {
+                        "type": "string",
+                        "description": "Designation details (optional)"
+                    },
+                    "contact_person": {
+                        "type": "string",
+                        "description": "Name of the primary contact person (optional)"
+                    },
+                    "contact_email": {
+                        "type": "string",
+                        "description": "Email address of the contact person (optional)"
+                    },
+                    "contact_phone": {
+                        "type": "string",
+                        "description": "Phone number of the contact person (optional)"
+                    }
+                },
+                "required": ["name"]
+            }
+        }
     }
 ]

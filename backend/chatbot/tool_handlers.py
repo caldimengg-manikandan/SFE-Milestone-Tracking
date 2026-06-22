@@ -220,10 +220,103 @@ def handle_navigate_to_page(user, arguments):
         ]
     }
 
+def handle_create_customer(user, arguments):
+    """
+    Creates a new customer profile.
+    Enforces role authorization (admin only).
+    """
+    # 1. Authorize user role
+    role = getattr(user, 'role', '')
+    is_admin = role == 'admin' or user.is_staff or user.is_superuser
+    if not is_admin:
+        return {
+            "status": "error",
+            "message": "Permission Denied: Only administrators can add new customers."
+        }
+
+    # 2. Extract arguments
+    name = arguments.get("name")
+    code = arguments.get("code", "")
+    category = arguments.get("category", "Domestic")
+    country = arguments.get("country", "India")
+    street = arguments.get("street", "")
+    state = arguments.get("state", "")
+    address = arguments.get("address", "")
+    designation = arguments.get("designation", "")
+    
+    contact_person = arguments.get("contact_person", "")
+    contact_email = arguments.get("contact_email", "")
+    contact_phone = arguments.get("contact_phone", "")
+
+    if not name:
+        return {
+            "status": "error",
+            "message": "Missing required field: Customer Name."
+        }
+
+    from projects.models import Customer, CustomerContact
+
+    # Check for name duplication
+    if Customer.objects.filter(name__iexact=name).exists():
+        return {
+            "status": "error",
+            "message": f"A customer with the name '{name}' already exists."
+        }
+
+    # 3. Create Customer
+    try:
+        customer = Customer.objects.create(
+            name=name,
+            code=code,
+            category=category,
+            country=country,
+            street=street,
+            state=state,
+            address=address,
+            designation=designation
+        )
+
+        # 4. Create Contact if provided
+        contact_info = None
+        if contact_person or contact_email or contact_phone:
+            contact = CustomerContact.objects.create(
+                customer=customer,
+                person=contact_person,
+                email=contact_email,
+                phone=contact_phone
+            )
+            contact_info = {
+                "person": contact.person,
+                "email": contact.email,
+                "phone": contact.phone
+            }
+
+        return {
+            "status": "success",
+            "message": f"Successfully created customer '{customer.name}'.",
+            "customer": {
+                "id": customer.id,
+                "name": customer.name,
+                "code": customer.code,
+                "category": customer.category,
+                "contact": contact_info
+            },
+            "ui_actions": [
+                {"type": "REFRESH_DATA", "payload": "customers"},
+                {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Customer {customer.name} added!"}}
+            ]
+        }
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Failed to save customer: {str(e)}"
+        }
+
 # Mapping registry for the execution loops
 TOOL_HANDLERS = {
     "create_employee": handle_create_employee,
     "get_employee_details": handle_get_employee_details,
     "list_projects": handle_list_projects,
-    "navigate_to_page": handle_navigate_to_page
+    "navigate_to_page": handle_navigate_to_page,
+    "create_customer": handle_create_customer
 }

@@ -209,6 +209,7 @@ class ChatbotStatusView(APIView):
             "ollama_connected": ollama_online,
             "ollama_url": ollama_url,
             "model_configured": getattr(settings, 'OLLAMA_MODEL', 'llama3.2'),
+            "is_cloud": is_cloud,
             "active_document": {
                 "title": active_doc.title if active_doc else None,
                 "uploaded_at": active_doc.uploaded_at if active_doc else None,

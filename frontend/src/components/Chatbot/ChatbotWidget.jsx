@@ -170,6 +170,8 @@ export default function ChatbotWidget() {
             window.dispatchEvent(new CustomEvent('refresh-employees'));
           } else if (action.payload === 'projects') {
             window.dispatchEvent(new CustomEvent('refresh-projects'));
+          } else if (action.payload === 'customers') {
+            window.dispatchEvent(new CustomEvent('refresh-customers'));
           }
         }
       });
@@ -185,7 +187,7 @@ export default function ChatbotWidget() {
       setMessages(prev => [...prev, tempBotMsg]);
     } catch (e) {
       console.error('Query failure:', e);
-      setError(e.response?.data?.error || 'Failed to connect to offline chatbot.');
+      setError(e.response?.data?.error || 'Failed to connect to chatbot.');
     } finally {
       setIsLoading(false);
     }
@@ -257,7 +259,7 @@ export default function ChatbotWidget() {
                 <h3 className="text-sm font-bold tracking-wide">Steel Fab Assist</h3>
                 <p className="text-[10px] text-slate-400 flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${systemStatus?.ollama_connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                  Offline ({systemStatus?.model_configured || 'llama3.2'})
+                  {systemStatus?.is_cloud ? 'Cloud' : 'Offline'} ({systemStatus?.model_configured || 'llama3.2'})
                 </p>
               </div>
             </div>
@@ -424,9 +426,11 @@ export default function ChatbotWidget() {
                       <Sparkles className="w-8 h-8" />
                     </div>
                     <div>
-                      <h4 className="text-sm font-bold text-slate-700">Offline Workflow Assistant</h4>
+                      <h4 className="text-sm font-bold text-slate-700">
+                        {systemStatus?.is_cloud ? 'Cloud' : 'Offline'} Workflow Assistant
+                      </h4>
                       <p className="text-xs text-slate-400 mt-1 leading-normal">
-                        Ask questions about the Steel Fab workflow. Local models generate answers completely offline.
+                        Ask questions about the Steel Fab workflow. {systemStatus?.is_cloud ? 'Answers are generated using the configured cloud LLM.' : 'Local models generate answers completely offline.'}
                       </p>
                     </div>
 

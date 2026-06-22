@@ -117,6 +117,11 @@ def should_use_tools(query):
     if "project" in query_lower or "proj" in query_lower:
         if any(verb in query_lower for verb in ["list", "show", "get", "what", "active", "view"]):
             return True
+
+    # Customer creation keywords (e.g., "add customer", "create customer")
+    if "customer" in query_lower or "cust" in query_lower:
+        if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
+            return True
             
     return False
         
@@ -129,32 +134,38 @@ def parse_json_from_text(text):
     if not text:
         return None, None
         
-    clean_text = text.strip()
+    # Locate all opening braces
+    brace_indices = [i for i, char in enumerate(text) if char == '{']
     
-    # Locate the JSON boundary
-    start_idx = clean_text.find("{")
-    end_idx = clean_text.rfind("}")
-    
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        json_candidate = clean_text[start_idx:end_idx+1]
-        try:
-            parsed = json.loads(json_candidate)
-            
-            # Check 1: Check if there is an XML-style opening tag before the JSON block
-            # (e.g., <navigate_to_page>`{...}`)
-            tag_match = re.search(r'<(\w+)>', clean_text[:start_idx])
-            if tag_match:
-                tool_name = tag_match.group(1)
-                return tool_name, parsed
-                
-            # Check 2: Standard JSON tool call structure (name inside the JSON body)
-            name = parsed.get("name") or parsed.get("function")
-            args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
-            if name:
-                return name, args
-        except Exception:
-            pass
-            
+    # Check largest candidate blocks first
+    for start in brace_indices:
+        for end in range(len(text) - 1, start, -1):
+            if text[end] == '}':
+                candidate = text[start:end+1]
+                try:
+                    parsed = json.loads(candidate)
+                    
+                    # Check 1: Check if there is an XML-style opening tag before the JSON block
+                    # e.g. <navigate_to_page {"page_name": "dashboard"}></function>
+                    # or <call:navigate_to_page>{"page_name": "dashboard"}</call:navigate_to_page>
+                    tag_match = re.search(r'<([\w:]+)', text[:start])
+                    if tag_match:
+                        raw_tag = tag_match.group(1)
+                        # Extract the actual tool name (strip namespace if present)
+                        tool_name = raw_tag.split(':')[-1]
+                        
+                        # Extract the arguments from parsed payload
+                        args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or parsed
+                        return tool_name, args
+                        
+                    # Check 2: Standard JSON tool call structure (name inside the JSON body)
+                    name = parsed.get("name") or parsed.get("function")
+                    args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
+                    if name:
+                        return name, args
+                except Exception:
+                    continue  # Keep scanning if this block is invalid JSON
+                    
     return None, None
 
 def call_local_ollama(messages, tools=None):
@@ -297,8 +308,13 @@ def get_chatbot_response(chat_session, user_query, user=None):
         from .tools import AVAILABLE_TOOLS
         from .tool_handlers import TOOL_HANDLERS
 
-        # Call with tools if heuristic matches
-        tools_to_pass = AVAILABLE_TOOLS if should_use_tools(user_query) else None
+        # Check if using a Cloud API configuration
+        ollama_url = getattr(settings, 'OLLAMA_API_URL', 'http://localhost:11434')
+        api_key = getattr(settings, 'LLM_API_KEY', '')
+        is_cloud = "groq" in ollama_url or "together" in ollama_url or "openai" in ollama_url or api_key != ''
+
+        # Call with tools if heuristic matches or if using a cloud LLM
+        tools_to_pass = AVAILABLE_TOOLS if (is_cloud or should_use_tools(user_query)) else None
         ollama_res = call_local_ollama(ollama_messages, tools=tools_to_pass)
         tool_calls = ollama_res.get('tool_calls', [])
         bot_response = ollama_res.get('content', '')
@@ -339,8 +355,8 @@ def get_chatbot_response(chat_session, user_query, user=None):
                     if isinstance(result, dict) and "ui_actions" in result:
                         ui_actions.extend(result["ui_actions"])
                     
-                    if is_fallback_text_call:
-                        # Direct message response from tool handler for text fallbacks
+                    if is_fallback_text_call or func_name == "navigate_to_page":
+                        # Direct message response from tool handler for text fallbacks and navigation redirects
                         bot_response = result.get('message', 'Action executed successfully.')
                     else:
                         # Append execution output as a 'tool' role message
@@ -363,7 +379,9 @@ def get_chatbot_response(chat_session, user_query, user=None):
                             tool_msg["tool_call_id"] = tool_call.get('id')
                         ollama_messages.append(tool_msg)
 
-            if not is_fallback_text_call:
+            # Summarize only if it wasn't a direct text call or a navigation redirect
+            is_navigation = any(tc.get('function', {}).get('name') == 'navigate_to_page' for tc in tool_calls)
+            if not is_fallback_text_call and not is_navigation:
                 # Call Ollama again to summarize the execution results
                 final_res = call_local_ollama(ollama_messages)
                 bot_response = final_res.get('content', '')

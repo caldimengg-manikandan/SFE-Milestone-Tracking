@@ -4,8 +4,7 @@ import { authAPI } from '../../services/api';
 import { Building2, Eye, EyeOff, ArrowRight, Loader2 } from 'lucide-react';
 
 export default function Login() {
-  const [mode, setMode] = useState('login');
-  const [form, setForm] = useState({ email: '', password: '', confirmPassword: '', first_name: '', last_name: '' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
@@ -35,32 +34,17 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.email || !form.password || (mode === 'signup' && !form.confirmPassword)) {
+    if (!form.email || !form.password) {
       setError('Please fill all required fields');
-      return;
-    }
-    if (mode === 'signup' && form.password !== form.confirmPassword) {
-      setError('Passwords do not match');
       return;
     }
 
     setLoading(true);
     try {
-      if (mode === 'signup') {
-        await authAPI.register({
-          email: form.email,
-          password: form.password,
-          first_name: form.first_name,
-          last_name: form.last_name,
-        });
-        setMode('login');
-        setForm(prev => ({ ...prev, password: '', confirmPassword: '' }));
-      } else {
-        const res = await authAPI.login({ email: form.email, password: form.password });
-        // The token is set inside a secure HttpOnly cookie automatically
-        sessionStorage.setItem('user', JSON.stringify(res.data.user));
-        navigate('/dashboard', { replace: true });
-      }
+      const res = await authAPI.login({ email: form.email, password: form.password });
+      // The token is set inside a secure HttpOnly cookie automatically
+      sessionStorage.setItem('user', JSON.stringify(res.data.user));
+      navigate('/dashboard', { replace: true });
     } catch (err) {
       if (!err.response) {
         setError('Cannot reach server. Please check your internet connection.');
@@ -201,52 +185,15 @@ export default function Login() {
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 lg:mt-0 mt-6 border-t lg:border-t-0 border-slate-100 pt-6 lg:pt-0">
               <div>
                 <h2 className="text-xl font-bold text-slate-900">
-                  {mode === 'signup' ? 'Create your account' : 'Welcome back'}
+                  Welcome back
                 </h2>
                 <p className="text-slate-500 mt-1 text-xs">
-                  {mode === 'signup'
-                    ? 'Sign up to access the Milestone Management System'
-                    : 'Sign in to your account to continue'}
+                  Sign in to your account to continue
                 </p>
               </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setMode(mode === 'signup' ? 'login' : 'signup');
-                  setError('');
-                }}
-                className="text-amber-600 hover:text-amber-700 text-xs font-semibold transition-colors text-left"
-              >
-                {mode === 'signup' ? 'Already have an account? Sign in' : 'New user? Create account'}
-              </button>
             </div>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
-              {mode === 'signup' && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">First Name</label>
-                    <input
-                      type="text"
-                      value={form.first_name}
-                      onChange={(e) => setForm({ ...form, first_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                      placeholder="John"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-semibold text-slate-700 mb-1.5">Last Name</label>
-                    <input
-                      type="text"
-                      value={form.last_name}
-                      onChange={(e) => setForm({ ...form, last_name: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all"
-                      placeholder="Doe"
-                    />
-                  </div>
-                </div>
-              )}
-
               {/* Email */}
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email Address</label>
@@ -282,32 +229,15 @@ export default function Login() {
                 </div>
               </div>
 
-              {mode === 'signup' && (
-                <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Confirm Password</label>
-                  <div className="relative">
-                    <input
-                      type={showPw ? 'text' : 'password'}
-                      value={form.confirmPassword}
-                      onChange={(e) => setForm({ ...form, confirmPassword: e.target.value })}
-                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-sm text-slate-800 placeholder-slate-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-500/10 transition-all pr-11"
-                      placeholder="Re-enter your password"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {mode === 'login' && (
-                <div className="flex items-center justify-between text-sm">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
-                    <span className="text-slate-600">Remember me</span>
-                  </label>
-                  <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
-                    Forgot password?
-                  </Link>
-                </div>
-              )}
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" className="w-4 h-4 rounded border-slate-300 text-amber-500 focus:ring-amber-400/30" />
+                  <span className="text-slate-600">Remember me</span>
+                </label>
+                <Link to="/forgot-password" className="text-amber-600 hover:text-amber-700 font-semibold transition-colors">
+                  Forgot password?
+                </Link>
+              </div>
 
               {error && (
                 <div className="px-4 py-3 rounded-xl bg-red-50 border border-red-100 text-sm text-red-600 font-medium animate-fade-in">
@@ -322,9 +252,9 @@ export default function Login() {
                 className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-bold text-sm shadow-lg shadow-amber-500/25 hover:shadow-xl hover:shadow-amber-500/30 hover:from-amber-400 hover:to-orange-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-[1.01]"
               >
                 {loading ? (
-                  <><Loader2 className="w-4 h-4 animate-spin" /> {mode === 'signup' ? 'Creating account...' : 'Signing in...'}</>
+                  <><Loader2 className="w-4 h-4 animate-spin" /> Signing in...</>
                 ) : (
-                  <>{mode === 'signup' ? 'Sign Up' : 'Sign In'} <ArrowRight className="w-4 h-4" /></>
+                  <>Sign In <ArrowRight className="w-4 h-4" /></>
                 )}
               </button>
             </form>

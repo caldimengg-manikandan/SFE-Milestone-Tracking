@@ -7,6 +7,7 @@ const DEFAULT_COLUMNS = [
   { key: 'job', label: 'Job #', type: 'text', fixed: true },
   { key: 'seq', label: 'Seq #', type: 'text', fixed: true },
   { key: 'weight', label: 'Weight', type: 'number', fixed: true },
+  { key: 'lbs', label: 'in LBS', type: 'readonly', fixed: true },
   { key: 'rtsDate', label: 'RTS Date', type: 'date', fixed: true },
   { key: 'runDays', label: 'Run Days', type: 'readonly', fixed: true },
   { key: 'startRunDate', label: 'Start Run Date', type: 'date', fixed: true },
@@ -136,8 +137,9 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                         job: item.job_number || '',
                         seq: item.sequence_number || '',
                         weight: item.weight || '',
+                        lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                         rtsDate: item.rts_date || '',
-                        runDays: (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : (item.run_days || ''),
+                        runDays: (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : (item.run_days || ''),
                         startRunDate: item.actual_ofa || '',
                         completeRunDate: item.complete_run_date || '',
                         notes: item.notes || '',
@@ -242,11 +244,12 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                 const rate = parseFloat(next[matchedProc].rate) || 0;
                 const weight = parseFloat(item.tons) || 0;
                 const runDays = (rate > 0 && weight > 0)
-                  ? Math.ceil(weight / rate)
+                  ? Math.ceil((weight * 2000) / rate)
                   : next[matchedProc].rows[existingRowIdx].runDays;
                 next[matchedProc].rows[existingRowIdx] = {
                   ...next[matchedProc].rows[existingRowIdx],
                   weight: item.tons,            // sync latest weight
+                  lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                   rtsDate: item.rts_date || '', // sync latest RTS date
                   runDays,
                 };
@@ -254,13 +257,14 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                 // New sequence added in project master — append it
                 const rate = parseFloat(next[matchedProc].rate) || 0;
                 const weight = parseFloat(item.tons) || 0;
-                const runDays = (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : '';
+                const runDays = (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : '';
                 const isInitialEmpty = next[matchedProc].rows.length === 1 &&
                   Object.values(next[matchedProc].rows[0]).every(v => v === '');
                 const newRow = {
                   job: proj.code,
                   seq: item.seq_no,
                   weight: item.tons,
+                  lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                   rtsDate: item.rts_date || '',
                   runDays,
                   startRunDate: '',
@@ -350,11 +354,12 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                 if (!exists) {
                   const rate = parseFloat(next[matchedProc].rate) || 0;
                   const weight = parseFloat(item.tons) || 0;
-                  const runDays = (rate > 0 && weight > 0) ? Math.ceil(weight / rate) : '';
+                  const runDays = (rate > 0 && weight > 0) ? Math.ceil((weight * 2000) / rate) : '';
                   const newRow = {
                     job: proj.code,
                     seq: item.seq_no,
                     weight: item.tons,
+                    lbs: weight > 0 ? (weight * 2000).toFixed(2) : '',
                     rtsDate: item.rts_date || '',
                     runDays,
                     startRunDate: '',
@@ -395,9 +400,14 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
       const nextRows = [...next[processName].rows];
       nextRows[ridx] = { ...nextRows[ridx], [field]: value };
       
+      if (field === 'weight') {
+        const numVal = parseFloat(value);
+        nextRows[ridx].lbs = isNaN(numVal) ? '' : (numVal * 2000).toFixed(2);
+      }
+      
       const r = parseFloat(next[processName].rate);
       const w = parseFloat(nextRows[ridx].weight);
-      if (r > 0 && w > 0) nextRows[ridx].runDays = Math.ceil(w / r);
+      if (r > 0 && w > 0) nextRows[ridx].runDays = Math.ceil((w * 2000) / r);
       
       if (nextRows[ridx].runDays && nextRows[ridx].startRunDate) {
         const d = new Date(nextRows[ridx].startRunDate);
@@ -419,7 +429,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
       const r = parseFloat(value);
       next[proc].rows = next[proc].rows.map(row => {
         const w = parseFloat(row.weight);
-        const runDays = (r > 0 && w > 0) ? Math.ceil(w / r) : row.runDays;
+        const runDays = (r > 0 && w > 0) ? Math.ceil((w * 2000) / r) : row.runDays;
         let completeDate = row.completeRunDate;
         if (runDays && row.startRunDate) {
           const d = new Date(row.startRunDate);
@@ -473,6 +483,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
               sequence_number: r.seq || null,
               weight: r.weight || null,
               rts_date: r.rtsDate || null,
+              run_days: r.runDays || null,
               actual_ofa: r.startRunDate || null,
               complete_run_date: r.completeRunDate || null,
               notes: r.notes || null,
