@@ -3,8 +3,9 @@ import {
   Users, Shield, Search, AlertCircle, RefreshCw, 
   Eye, Edit2, Trash2, Plus, X, Download, Filter, Key, Check, Info, Mail, User, ShieldAlert
 } from 'lucide-react';
-import { authAPI } from '../services/api';
+import { authAPI, employeeAPI } from '../services/api';
 import toast from 'react-hot-toast';
+
 
 // Module mapping config to align exact path/id with name, icon and category
 const MODULE_CONFIG = [
@@ -57,6 +58,8 @@ export default function UserAccess() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [updatingUserId, setUpdatingUserId] = useState(null);
+  const [employees, setEmployees] = useState([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -85,7 +88,21 @@ export default function UserAccess() {
 
   useEffect(() => {
     fetchUsers();
+    fetchEmployees();
   }, []);
+
+  const fetchEmployees = async () => {
+    try {
+      setLoadingEmployees(true);
+      const res = await employeeAPI.getAll();
+      setEmployees(res.data.results || res.data || []);
+    } catch (err) {
+      toast.error('Failed to load employee list.');
+      console.error(err);
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
 
   const fetchUsers = async () => {
     try {
@@ -133,6 +150,40 @@ export default function UserAccess() {
     setFormData(prev => ({ ...prev, [name]: value }));
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const handleEmployeeSelect = (e) => {
+    const empId = e.target.value;
+    if (!empId) return;
+
+    const emp = employees.find(em => String(em.id) === String(empId));
+    if (emp) {
+      const nameVal = emp.name || '';
+      const parts = nameVal.trim().split(/\s+/);
+      const first_name = parts[0] || '';
+      const last_name = parts.slice(1).join(' ') || '';
+      
+      const initials = parts.map(p => p[0] || '').join('').toUpperCase().slice(0, 5);
+
+      setFormData(prev => ({
+        ...prev,
+        first_name,
+        last_name,
+        email: emp.email || '',
+        initials,
+        department: emp.department || '',
+        phone: emp.phone || ''
+      }));
+
+      // Clear errors for auto-filled fields
+      setFormErrors(prev => ({
+        ...prev,
+        first_name: null,
+        last_name: null,
+        email: null,
+        initials: null
+      }));
     }
   };
 
@@ -644,10 +695,27 @@ export default function UserAccess() {
             {/* Form */}
             <form onSubmit={handleAddUserSubmit} className="p-6 space-y-4">
               
+              {/* Select Employee from Employee Master */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Select from Employee Master</label>
+                <select
+                  onChange={handleEmployeeSelect}
+                  defaultValue=""
+                  className="w-full text-xs font-bold text-slate-700 bg-slate-50/50 border border-slate-200 focus:border-slate-400 focus:bg-white rounded-xl px-3 py-2.5 outline-none transition-all cursor-pointer"
+                >
+                  <option value="">-- Choose Employee to Autofill --</option>
+                  {employees.map(emp => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.name} ({emp.email || 'No Email'})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div className="grid grid-cols-2 gap-4">
                 {/* First Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">First Name</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">First Name</label>
                   <input
                     type="text"
                     name="first_name"
@@ -661,7 +729,7 @@ export default function UserAccess() {
 
                 {/* Last Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Name</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Last Name</label>
                   <input
                     type="text"
                     name="last_name"
@@ -677,7 +745,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Email */}
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Email Address</label>
                   <input
                     type="email"
                     name="email"
@@ -691,7 +759,7 @@ export default function UserAccess() {
 
                 {/* Initials */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initials</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Initials</label>
                   <input
                     type="text"
                     name="initials"
@@ -708,7 +776,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Role */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Role</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">System Role</label>
                   <select
                     name="role"
                     value={formData.role}
@@ -723,7 +791,7 @@ export default function UserAccess() {
 
                 {/* Department */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Department</label>
                   <input
                     type="text"
                     name="department"
@@ -736,7 +804,7 @@ export default function UserAccess() {
 
                 {/* Phone */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Phone</label>
                   <input
                     type="text"
                     name="phone"
@@ -751,7 +819,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-2 gap-4">
                 {/* Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Password</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Password</label>
                   <input
                     type="password"
                     name="password"
@@ -765,7 +833,7 @@ export default function UserAccess() {
 
                 {/* Confirm Password */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Confirm Password</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Confirm Password</label>
                   <input
                     type="password"
                     name="confirmPassword"
@@ -826,7 +894,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-2 gap-4">
                 {/* First Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">First Name</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">First Name</label>
                   <input
                     type="text"
                     name="first_name"
@@ -839,7 +907,7 @@ export default function UserAccess() {
 
                 {/* Last Name */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last Name</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Last Name</label>
                   <input
                     type="text"
                     name="last_name"
@@ -854,7 +922,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Email */}
                 <div className="col-span-2 space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Email Address</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Email Address</label>
                   <input
                     type="email"
                     name="email"
@@ -867,7 +935,7 @@ export default function UserAccess() {
 
                 {/* Initials */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Initials</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Initials</label>
                   <input
                     type="text"
                     name="initials"
@@ -883,7 +951,7 @@ export default function UserAccess() {
               <div className="grid grid-cols-3 gap-4">
                 {/* Role */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">System Role</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">System Role</label>
                   <select
                     name="role"
                     value={formData.role}
@@ -898,7 +966,7 @@ export default function UserAccess() {
 
                 {/* Department */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Department</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Department</label>
                   <input
                     type="text"
                     name="department"
@@ -910,7 +978,7 @@ export default function UserAccess() {
 
                 {/* Phone */}
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Phone</label>
+                  <label className="text-[10px] font-black text-slate-700 uppercase tracking-widest">Phone</label>
                   <input
                     type="text"
                     name="phone"
