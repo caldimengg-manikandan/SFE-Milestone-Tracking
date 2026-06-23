@@ -48,8 +48,7 @@ const ROLE_OPTIONS = [
   { value: 'manager', label: 'Manager' },
   { value: 'employee', label: 'Employee' },
   { value: 'estimator', label: 'Estimator' },
-  { value: 'detailing', label: 'Detailing / JF' },
-  { value: 'readonly', label: 'Read-Only' }
+  { value: 'detailing', label: 'Detailing / JF' }
 ];
 
 export default function UserAccess() {
@@ -397,6 +396,7 @@ export default function UserAccess() {
   };
 
   const getRoleLabel = (role) => {
+    if (role === 'readonly') return 'Read-Only';
     const opt = ROLE_OPTIONS.find(o => o.value === role);
     return opt ? opt.label : role;
   };

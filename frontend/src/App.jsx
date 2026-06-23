@@ -6,7 +6,7 @@ import ProtectedRoute from './components/Layout/ProtectedRoute';
 import Login from './features/auth/Login';
 import ForgotPassword from './features/auth/ForgotPassword';
 import ResetPassword from './features/auth/ResetPassword';
-import Dashboard from './features/dashboard/VPDashboard';
+import Dashboard from './features/dashboard/Dashboard';
 import EmployeeMaster from './pages/EmployeeMaster';
 import ProjectMaster from './pages/ProjectMaster';
 import SteelBudgetInput from './pages/SteelBudgetInput';
