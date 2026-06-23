@@ -9,6 +9,7 @@ import {
   ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, Legend, ReferenceLine, LabelList
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import { dashboardAPI, projectAPI, scheduleAPI, rfqAPI, manpowerAPI, capacityAPI } from '../../services/api';
 
 /* ─────────────────────────────────────────────────────────
@@ -220,6 +221,7 @@ const ToggleGroup = ({ options, value, onChange }) => (
    MAIN COMPONENT
 ───────────────────────────────────────────────────────── */
 export default function VPDashboard() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [projects, setProjects] = useState([]);
   const [schedules, setSchedules] = useState([]);
@@ -580,7 +582,7 @@ export default function VPDashboard() {
           <div className="overflow-hidden flex-1 border-l border-slate-300">
             <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
               {[...latestQuotes, ...latestQuotes].map((b, i) => (
-                <span key={i} className="inline-flex items-center gap-2 mx-8">
+                <span key={i} onClick={() => navigate(`/rfq/data-entry?search=${encodeURIComponent(b.quote_no || b.project_name)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
                   <Target className="w-3 h-3 text-sky-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
                   {b.bid_amount > 0 && <span className="text-[10px] font-black text-sky-600">· {fmtMoney(b.bid_amount)}</span>}
@@ -603,7 +605,7 @@ export default function VPDashboard() {
           <div className="overflow-hidden flex-1 border-l border-slate-300">
             <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
               {[...latestWins, ...latestWins].map((b, i) => (
-                <span key={i} className="inline-flex items-center gap-2 mx-8">
+                <span key={i} onClick={() => navigate(`/rfq/data-entry?search=${encodeURIComponent(b.quote_no || b.project_name)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
                   <Trophy className="w-3 h-3 text-emerald-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
                   {(b.awarded_amount > 0 || b.bid_amount > 0) && (
@@ -623,8 +625,9 @@ export default function VPDashboard() {
 
 
 
-      {/* ══ SECTION 2 — DAILY ACTIVITY FEED ═══════════════ */}
-      <Panel>
+      {/* ══ SECTION 2 — DAILY ACTIVITY FEED & EXECUTIVE ADVISOR ═══════════════ */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-stretch">
+      <Panel className="h-full flex flex-col">
         <PanelHeader
           title="Daily Activity Feed"
           sub={`${feedFilter.charAt(0).toUpperCase() + feedFilter.slice(1)} · ${activeDate.toLocaleDateString('en-US', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}`}>
@@ -639,7 +642,7 @@ export default function VPDashboard() {
           />
         </PanelHeader>
 
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 flex-1 flex flex-col">
           {/* Day events list */}
           {dayEvents.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3 border border-dashed border-slate-200 bg-slate-50/50 rounded-xl">
@@ -732,6 +735,78 @@ export default function VPDashboard() {
           </div>
         </div>
       </Panel>
+
+      {/* ══ SECTION 3 — EXECUTIVE ADVISOR ════════════════ */}
+      <Panel className="h-full flex flex-col">
+            <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
+              <Lightbulb className="w-4 h-4 text-amber-500" />
+            </PanelHeader>
+            <div className="p-6 space-y-5 flex-1 flex flex-col justify-center">
+              {aiInsight ? (
+                <>
+                  {/* Metric row */}
+                  <div className="grid grid-cols-3 gap-3">
+                    {[
+                      { label: 'Available', value: aiInsight.available.toLocaleString(), unit: 'hrs', color: 'text-emerald-600' },
+                      { label: 'Required', value: aiInsight.required.toLocaleString(), unit: 'hrs', color: 'text-amber-600' },
+                      { label: aiInsight.balance >= 0 ? 'Surplus' : 'Deficit', value: Math.abs(aiInsight.balance).toLocaleString(), unit: 'hrs', color: aiInsight.balance >= 0 ? 'text-blue-600' : 'text-red-600' },
+                    ].map((m, i) => (
+                      <div key={i} className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
+                        <p className={`text-base font-black leading-none ${m.color}`}>{m.value}</p>
+                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{m.unit}</p>
+                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{m.label}</p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Utilisation bar */}
+                  <div>
+                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-slate-500">
+                      <span>Load Utilisation</span>
+                      <span className={aiInsight.pct > 100 ? 'text-red-600' : aiInsight.pct > 85 ? 'text-amber-600' : 'text-emerald-600'}>
+                        {aiInsight.pct}%
+                      </span>
+                    </div>
+                    <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
+                      <div className={`h-full rounded-full transition-all duration-500
+                        ${aiInsight.pct > 100 ? 'bg-red-500' : aiInsight.pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                        style={{ width: `${Math.min(100, aiInsight.pct)}%` }} />
+                    </div>
+                  </div>
+
+                  {/* Swift Actions */}
+                  <div>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
+                      <Zap className="w-3 h-3" /> Swift Actions
+                    </p>
+                    <div className="space-y-2">
+                      {aiInsight.actions.map((a, i) => {
+                        const cls = {
+                          critical: 'bg-red-50 border-red-100 text-red-700',
+                          warning: 'bg-amber-50 border-amber-100 text-amber-700',
+                          success: 'bg-emerald-50 border-emerald-100 text-emerald-700',
+                          info: 'bg-slate-50 border-slate-200 text-slate-600',
+                        }[a.sev];
+                        return (
+                          <div key={i} className={`border rounded px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${cls}`}>
+                            {a.text}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-40 gap-2">
+                  <Info className="w-7 h-7 text-slate-300" />
+                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
+                    No capacity data.<br />Add Workforce Master records.
+                  </p>
+                </div>
+              )}
+            </div>
+          </Panel>
+      </div>
 
       {/* ══ SECTION 3 — BID PERFORMANCE ══════════════════════ */}
       <Panel>
@@ -840,76 +915,7 @@ export default function VPDashboard() {
         </div>
       </Panel>
 
-{/* ══ SECTION 3 — EXECUTIVE ADVISOR ════════════════ */}
-      <Panel>
-            <PanelHeader title="Executive Advisor" sub={`Capacity outlook — ${MONTHS[capMonth]} ${capYear}`}>
-              <Lightbulb className="w-4 h-4 text-amber-500" />
-            </PanelHeader>
-            <div className="p-6 space-y-5">
-              {aiInsight ? (
-                <>
-                  {/* Metric row */}
-                  <div className="grid grid-cols-3 gap-3">
-                    {[
-                      { label: 'Available', value: aiInsight.available.toLocaleString(), unit: 'hrs', color: 'text-emerald-600' },
-                      { label: 'Required', value: aiInsight.required.toLocaleString(), unit: 'hrs', color: 'text-amber-600' },
-                      { label: aiInsight.balance >= 0 ? 'Surplus' : 'Deficit', value: Math.abs(aiInsight.balance).toLocaleString(), unit: 'hrs', color: aiInsight.balance >= 0 ? 'text-blue-600' : 'text-red-600' },
-                    ].map((m, i) => (
-                      <div key={i} className="bg-slate-50 border border-slate-200 rounded p-3 text-center">
-                        <p className={`text-base font-black leading-none ${m.color}`}>{m.value}</p>
-                        <p className="text-[8px] text-slate-400 font-bold uppercase tracking-widest mt-1">{m.unit}</p>
-                        <p className="text-[8px] text-slate-500 font-bold uppercase tracking-widest">{m.label}</p>
-                      </div>
-                    ))}
-                  </div>
 
-                  {/* Utilisation bar */}
-                  <div>
-                    <div className="flex justify-between text-[9px] font-black uppercase tracking-widest mb-1.5 text-slate-500">
-                      <span>Load Utilisation</span>
-                      <span className={aiInsight.pct > 100 ? 'text-red-600' : aiInsight.pct > 85 ? 'text-amber-600' : 'text-emerald-600'}>
-                        {aiInsight.pct}%
-                      </span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-100 border border-slate-200 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full transition-all duration-500
-                        ${aiInsight.pct > 100 ? 'bg-red-500' : aiInsight.pct > 85 ? 'bg-amber-500' : 'bg-emerald-500'}`}
-                        style={{ width: `${Math.min(100, aiInsight.pct)}%` }} />
-                    </div>
-                  </div>
-
-                  {/* Swift Actions */}
-                  <div>
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em] mb-3 flex items-center gap-1.5">
-                      <Zap className="w-3 h-3" /> Swift Actions
-                    </p>
-                    <div className="space-y-2">
-                      {aiInsight.actions.map((a, i) => {
-                        const cls = {
-                          critical: 'bg-red-50 border-red-100 text-red-700',
-                          warning: 'bg-amber-50 border-amber-100 text-amber-700',
-                          success: 'bg-emerald-50 border-emerald-100 text-emerald-700',
-                          info: 'bg-slate-50 border-slate-200 text-slate-600',
-                        }[a.sev];
-                        return (
-                          <div key={i} className={`border rounded px-3 py-2.5 text-[10px] font-semibold leading-relaxed ${cls}`}>
-                            {a.text}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center h-40 gap-2">
-                  <Info className="w-7 h-7 text-slate-300" />
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest text-center">
-                    No capacity data.<br />Add Workforce Master records.
-                  </p>
-                </div>
-              )}
-            </div>
-          </Panel>
 
 
     </div>

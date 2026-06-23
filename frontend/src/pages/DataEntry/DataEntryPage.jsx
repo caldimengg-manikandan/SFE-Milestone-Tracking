@@ -1,4 +1,5 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
@@ -596,12 +597,23 @@ export default function DataEntryPage() {
   const canEdit  = useAuthStore((s) => s.canEdit())
   const isManager = useAuthStore((s) => s.isManager())
 
+  const [searchParams] = useSearchParams()
+  const initialSearch = searchParams.get('search') || ''
+
   const [showModal,       setShowModal]       = useState(false)
   const [jobNoTarget,     setJobNoTarget]      = useState(null)   // rfq record for Set Job #
   const [showExcelUpload, setShowExcelUpload]  = useState(false)
-  const [searchText,      setSearchText]       = useState('')
-  const [appliedSearchText, setAppliedSearchText] = useState('')
+  const [searchText,      setSearchText]       = useState(initialSearch)
+  const [appliedSearchText, setAppliedSearchText] = useState(initialSearch)
   const [wonLostFilter,   setWonLostFilter]    = useState('all')
+
+  useEffect(() => {
+    const s = searchParams.get('search')
+    if (s) {
+      setSearchText(s)
+      setAppliedSearchText(s)
+    }
+  }, [searchParams])
   const [emailTarget,     setEmailTarget]      = useState(null)
   const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
 
