@@ -51,6 +51,7 @@ const pageTitles = {
   '/rfq/job-analytics': 'Job Analytics',
   '/rfq/sales-cycle': 'Sales Cycle',
   '/rfq/capacity': 'Future Capacity',
+  '/user-access': 'User Access',
 };
 
 export default function Header({ onMenuClick }) {

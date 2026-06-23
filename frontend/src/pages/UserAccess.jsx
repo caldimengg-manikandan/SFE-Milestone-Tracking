@@ -498,7 +498,7 @@ export default function UserAccess() {
           {/* Add User */}
           <button
             onClick={openAddModal}
-            className="flex items-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-850 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95"
+            className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-white rounded-xl font-bold text-xs shadow-md shadow-amber-500/10 transition-all active:scale-95"
           >
             <Plus className="w-4 h-4" />
             Add User
@@ -523,13 +523,13 @@ export default function UserAccess() {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-900 border-b border-slate-800">
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest">Name</th>
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest w-24">Initials</th>
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest">Email</th>
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest w-40">Role</th>
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest">Last Login</th>
-                  <th className="px-6 py-4 text-xs font-black text-white uppercase tracking-widest text-right w-44">Actions</th>
+                <tr className="bg-gradient-to-r from-amber-500 to-orange-500 text-white uppercase text-[10px] font-black tracking-wider select-none">
+                  <th className="px-6 py-4">Name</th>
+                  <th className="px-6 py-4 w-24">Initials</th>
+                  <th className="px-6 py-4">Email</th>
+                  <th className="px-6 py-4 w-40">Role</th>
+                  <th className="px-6 py-4">Last Login</th>
+                  <th className="px-6 py-4 text-right w-44">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
@@ -538,11 +538,11 @@ export default function UserAccess() {
                   const isSelf = user.id === loggedInUser.id;
                   
                   return (
-                    <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+                     <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                       {/* Name with initials profile thumbnail */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-black text-xs shadow-inner shrink-0">
+                          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-500 text-white flex items-center justify-center font-black text-xs shadow-inner shrink-0">
                             {user.profile_picture ? (
                               <img 
                                 src={user.profile_picture.startsWith('http') ? user.profile_picture : `${window.location.origin}${user.profile_picture}`} 
