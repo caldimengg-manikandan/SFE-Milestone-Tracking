@@ -27,6 +27,7 @@ class User(AbstractUser):
     profile_picture = models.ImageField(upload_to='profiles/', null=True, blank=True)
     otp = models.CharField(max_length=6, blank=True, null=True)
     otp_expiry = models.DateTimeField(blank=True, null=True)
+    failed_login_attempts = models.IntegerField(default=0, null=True, blank=True)
 
     # Soft-lock: set when someone is actively editing a project
     editing_project_id = models.IntegerField(null=True, blank=True)

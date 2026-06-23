@@ -190,15 +190,12 @@ export default function Sidebar({
 
             {/* Brand Text */}
             <div
-              className={`flex flex-col min-w-0 transition-all duration-300 ${
+              className={`flex flex-col min-w-0 transition-all duration-300 justify-center ${
                 isCollapsed ? 'lg:opacity-0 lg:w-0' : 'opacity-100'
               }`}
             >
-              <span className="text-[15px] font-bold text-white tracking-wide truncate leading-tight">
-                Steel Fab
-              </span>
-              <span className="text-[10px] font-semibold text-amber-400/80 tracking-[0.2em] uppercase truncate">
-                Enterprises
+              <span className="text-[13px] font-bold text-white tracking-wide leading-tight whitespace-normal break-words pr-2">
+                Fabrication Project Management
               </span>
             </div>
           </div>
