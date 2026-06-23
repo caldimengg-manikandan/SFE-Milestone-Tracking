@@ -408,29 +408,8 @@ export default function UserAccess() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 animate-fade-in p-4 sm:p-6">
+    <div className="space-y-6 animate-fade-in">
       
-      {/* Header Banner */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b border-slate-200">
-        <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            <Shield className="w-8 h-8 text-slate-800" />
-            User Access Management
-          </h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">
-            Manage administrative user records, edit roles/initials, and toggle module-level access permissions.
-          </p>
-        </div>
-        <button
-          onClick={fetchUsers}
-          disabled={loading}
-          className="flex items-center justify-center gap-2 px-4 py-2 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-slate-800' : 'text-slate-500'}`} />
-          Refresh Users
-        </button>
-      </div>
-
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
         {/* Search & Filter Trigger */}
@@ -447,6 +426,16 @@ export default function UserAccess() {
 
         {/* Action Controls */}
         <div className="flex items-center justify-end gap-3 w-full sm:w-auto">
+          {/* Refresh Users */}
+          <button
+            onClick={fetchUsers}
+            disabled={loading}
+            className="flex items-center justify-center gap-2 px-4 py-2.5 border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 rounded-xl font-bold text-xs shadow-sm transition-all active:scale-95 disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin text-slate-800' : 'text-slate-500'}`} />
+            Refresh
+          </button>
+
           {/* Quick Filters */}
           <div className="relative">
             <button
