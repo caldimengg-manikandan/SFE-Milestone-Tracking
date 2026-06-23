@@ -6,8 +6,8 @@ import FormattedDateInput from './FormattedDateInput';
 const DEFAULT_COLUMNS = [
   { key: 'job', label: 'Job #', type: 'text', fixed: true },
   { key: 'seq', label: 'Seq #', type: 'text', fixed: true },
-  { key: 'weight', label: 'Weight', type: 'number', fixed: true },
-  { key: 'lbs', label: 'in LBS', type: 'readonly', fixed: true },
+  { key: 'weight', label: 'Weight (in Tons)', type: 'number', fixed: true },
+  { key: 'lbs', label: 'Weight (in LBS)', type: 'readonly', fixed: true },
   { key: 'rtsDate', label: 'RTS Date', type: 'readonly', fixed: true },
   { key: 'actualRtsDate', label: 'Actual RTS Date', type: 'date', fixed: true },
   { key: 'runDays', label: 'Run Days', type: 'readonly', fixed: true },
@@ -589,71 +589,70 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
   const selectedProject = schedules.find(s => s.id == selectedSchedule);
   const selectedSchedNum = selectedProject?.schedule_number || (fetchingSchedules ? "Loading..." : "---");
   const selectedProjName = selectedProject?.project_name || (fetchingSchedules ? "Loading projects..." : "Select a project to begin");
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 bg-black/60 backdrop-blur-sm animate-fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[96vw] lg:max-w-7xl flex flex-col overflow-hidden max-h-[92vh] border border-slate-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/65 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-[96vw] lg:max-w-7xl flex flex-col overflow-hidden min-h-[450px] max-h-[92vh] border border-slate-200">
         
         {/* Tab-style Navigation */}
-        <div className="flex items-center px-3 pt-1.5 gap-0.5 bg-white border-b border-slate-200">
+        <div className="flex items-center px-6 pt-3 gap-2 bg-white border-b border-slate-200">
           {STEPS.map((step, idx) => (
             <button
               key={step.id}
               onClick={() => setActiveStep(idx)}
-              className={`px-4 py-1.5 rounded-t-lg text-[9px] font-black uppercase tracking-widest transition-all
+              className={`px-6 py-3.5 rounded-t-xl text-xs font-black uppercase tracking-widest transition-all
                 ${activeStep === idx 
-                  ? 'bg-white text-amber-600 shadow-[0_-3px_8px_rgba(0,0,0,0.04)] border-t-2 border-t-amber-500' 
-                  : 'text-slate-400 hover:text-slate-600 hover:bg-slate-50'}`}
+                  ? 'bg-white text-amber-600 border-t-2 border-t-amber-500 shadow-[0_-3px_8px_rgba(0,0,0,0.04)]' 
+                  : 'text-slate-450 hover:text-slate-700 hover:bg-slate-50'}`}
             >
               {step.label}
             </button>
           ))}
           <div className="ml-auto pr-1">
-             <button onClick={onClose} className="p-1 rounded-lg text-slate-300 hover:text-slate-600 transition-all"><X className="w-3.5 h-3.5" /></button>
+             <button onClick={onClose} className="p-2 rounded-lg text-slate-400 hover:text-slate-700 transition-all"><X className="w-5 h-5" /></button>
           </div>
         </div>
 
         {/* Form Content */}
-        <div className="flex-1 overflow-y-auto p-3 bg-white">
+        <div className="flex-1 overflow-y-auto p-6 bg-white">
           {activeStep === 0 ? (
-            <div className="space-y-3 animate-fade-in max-w-5xl mx-auto">
+            <div className="space-y-6 py-10 max-w-5xl mx-auto">
                 {/* 4-Column Header Box */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-2.5 p-3 rounded-xl bg-white border border-slate-200 shadow-sm relative overflow-visible">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 p-6 rounded-2xl bg-white border border-slate-200 shadow-sm relative overflow-visible">
                   <div className="relative">
-                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">Schedule Number</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-0.5">Schedule Number</label>
                     <div className="relative">
                       <select
                         value={selectedSchedule}
                         onChange={(e) => setSelectedSchedule(e.target.value)}
-                        className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-black outline-none focus:border-amber-400 transition-all cursor-pointer appearance-none pr-8"
+                        className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-xs sm:text-sm font-black outline-none focus:border-amber-400 transition-all cursor-pointer appearance-none pr-8 shadow-sm"
                       >
                         <option value="">Select Schedule</option>
                         {schedules.map(s => <option key={s.id} value={s.id}>{s.schedule_number}</option>)}
                       </select>
-                      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                      <ChevronDown className="absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                     </div>
                   </div>
                   <div>
-                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">Start Date</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-0.5">Start Date</label>
                     <FormattedDateInput
                       value={header.startDate}
                       readOnly
-                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs sm:text-sm font-bold text-slate-700 outline-none"
                     />
                   </div>
                   <div>
-                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">End Date</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-0.5">End Date</label>
                     <FormattedDateInput
                       value={header.endDate}
                       readOnly
-                      className="w-full px-2.5 py-1.5 rounded-md border border-slate-200 bg-white text-[11px] font-bold text-slate-600 outline-none"
+                      className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50/50 text-xs sm:text-sm font-bold text-slate-700 outline-none"
                     />
                   </div>
                   <div className="relative">
-                    <label className="block text-[9px] font-black text-slate-400 uppercase tracking-widest mb-0.5 ml-0.5">Select Projects</label>
+                    <label className="block text-[10px] sm:text-xs font-bold text-slate-700 uppercase tracking-wider mb-2 ml-0.5">Select Projects</label>
                     <div 
                       onClick={() => setShowProjectDropdown(!showProjectDropdown)}
-                      className={`w-full px-2.5 py-1 rounded-md border bg-white text-[9px] font-bold flex flex-wrap gap-1 cursor-pointer transition-all min-h-[32px] items-center pr-8 ${showProjectDropdown ? 'border-amber-400 ring-2 ring-amber-500/5' : 'border-slate-200 hover:border-slate-300'}`}
+                      className={`w-full px-4 py-2.5 rounded-xl border bg-white text-xs sm:text-sm font-bold flex flex-wrap gap-1 cursor-pointer transition-all min-h-[44px] items-center pr-8 shadow-sm ${showProjectDropdown ? 'border-amber-400 ring-4 ring-amber-500/5' : 'border-slate-200 hover:border-slate-300'}`}
                     >
                       {selectedProjectIds.length === 0 ? (
                         <span className="text-slate-400">Choose projects...</span>
@@ -661,13 +660,13 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                         selectedProjectIds.map(id => {
                           const p = projects.find(proj => proj.id === id);
                           return p ? (
-                            <span key={id} className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200">
+                            <span key={id} className="inline-flex items-center gap-1 py-1 px-2.5 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 font-extrabold text-[10px]">
                               {p.code}
                             </span>
                           ) : null;
                         })
                       )}
-                      <ChevronDown className={`absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${showProjectDropdown ? 'rotate-180' : ''}`} />
+                      <ChevronDown className={`absolute right-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 transition-transform duration-200 ${showProjectDropdown ? 'rotate-180' : ''}`} />
                     </div>
 
                     {showProjectDropdown && (
@@ -753,7 +752,7 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
                       <thead>
                         <tr className="bg-white border-b border-slate-100">
                           {DEFAULT_COLUMNS.map(col => (
-                            <th key={col.key} className="px-1.5 py-1 text-[8px] font-black text-slate-400 uppercase tracking-widest text-center">{col.label}</th>
+                            <th key={col.key} className="px-1.5 py-1 text-[8px] font-black text-slate-700 uppercase tracking-widest text-center">{col.label}</th>
                           ))}
                           <th className="w-10"></th>
                         </tr>
@@ -813,24 +812,24 @@ export default function ProcessMasterForm({ onClose, onSuccess, editRecord, pres
         </div>
 
         {/* Footer Actions */}
-        <div className="px-4 py-2 border-t border-slate-200 bg-white flex items-center justify-between">
+        <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-between">
            <button 
              onClick={() => setActiveStep(prev => Math.max(0, prev - 1))}
              disabled={activeStep === 0}
-             className={`px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest transition-all
+             className={`px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest transition-all
                ${activeStep === 0 ? 'opacity-0 pointer-events-none' : 'text-slate-400 hover:text-slate-900 hover:bg-slate-50'}`}
            >
              Previous Step
            </button>
            
            <div className="flex items-center gap-2">
-              <button onClick={onClose} className="px-3 py-1.5 rounded-lg text-[8px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600">Cancel</button>
+              <button onClick={onClose} className="px-6 py-3 rounded-lg text-xs sm:text-sm font-black uppercase tracking-widest text-slate-450 hover:text-slate-650">Cancel</button>
               <button 
                 onClick={handleSaveStep}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl bg-amber-500 text-white text-[9px] font-black uppercase tracking-widest hover:bg-amber-600 shadow-md shadow-amber-500/10 transition-all active:scale-95"
+                className="flex items-center gap-2 px-8 py-3 rounded-2xl bg-amber-500 text-white text-xs sm:text-sm font-black uppercase tracking-widest hover:bg-amber-600 shadow-md shadow-amber-500/10 transition-all active:scale-95"
               >
                 {activeStep === 0 ? 'Start Entry Wizard' : (activeStep < STEPS.length - 1 ? 'Save & Next' : 'Finalize & Save')}
-                <ChevronRight className="w-3.5 h-3.5" />
+                <ChevronRight className="w-4 h-4" />
               </button>
            </div>
         </div>

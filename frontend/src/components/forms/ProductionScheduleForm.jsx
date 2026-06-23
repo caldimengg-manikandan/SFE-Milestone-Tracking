@@ -626,7 +626,8 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                     <tr className="bg-slate-50/80 border-b border-slate-300">
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-36">Job (Project)</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-16 text-center">Seq #</th>
-                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Weight</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Weight (in Tons)</th>
+                      <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-28 text-center">Weight (in LBS)</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-24 text-center">Quantity</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-40 text-center">RTS Date</th>
                       <th className="px-4 py-3 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-32 text-center">Status</th>
@@ -690,9 +691,18 @@ export default function ProductionScheduleForm({ onClose, onSuccess, editSchedul
                               type="number"
                               value={row.weight}
                               onChange={(e) => updateRow(index, 'weight', e.target.value)}
-                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all"
+                              className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:border-amber-400 outline-none bg-transparent text-sm transition-all text-right font-semibold"
                               placeholder="0.00"
                               disabled={loading}
+                            />
+                          </td>
+                          <td className="p-2">
+                            <input
+                              type="text"
+                              value={row.weight ? (parseFloat(row.weight) * 2000).toFixed(2) : ''}
+                              readOnly
+                              className="w-full px-3 py-2 rounded-lg border border-slate-200 bg-slate-50 text-slate-500 outline-none text-sm text-center font-bold"
+                              placeholder="0.00"
                             />
                           </td>
                           <td className="p-2">

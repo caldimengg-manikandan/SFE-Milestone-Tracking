@@ -510,8 +510,8 @@ export default function ProductionPrioritySchedule() {
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider w-20 text-center">Serial No.</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Job #</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Seq #</th>
-                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight</th>
-                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">in LBS</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight (in Tons)</th>
+                                  <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Weight (in LBS)</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider text-center">Quantity</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">RTS Date</th>
                                   <th className="px-4 py-3 text-[9px] font-black uppercase tracking-wider">Status</th>

@@ -317,8 +317,8 @@ export default function PriorityPlateForm({ onClose, onSuccess, editRecord }) {
                     <tr className="bg-slate-50/80 border-b border-slate-200">
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%]">Job</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[7%] text-center">Seq</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">Weight</th>
-                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">in LBS</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">Weight (in Tons)</th>
+                      <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[9%] text-center">Weight (in LBS)</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">RTS Date</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[12%]">Actual RTS Date</th>
                       <th className="px-3 py-4 text-[10px] font-bold text-slate-500 uppercase tracking-wider w-[8%] text-center">Run Days</th>

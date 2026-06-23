@@ -371,8 +371,8 @@ export default function ProcessMaster() {
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center w-12">Serial</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Process / Job</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center w-16">Seq #</th>
-                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight</th>
-                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">in LBS</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight (in Tons)</th>
+                                      <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Weight (in LBS)</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">RTS Date</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest">Actual RTS Date</th>
                                       <th className="px-3 py-1.5 text-[8px] font-black text-slate-500 uppercase tracking-widest text-center">Run Days</th>
