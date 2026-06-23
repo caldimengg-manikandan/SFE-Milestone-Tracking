@@ -134,6 +134,9 @@ def parse_json_from_text(text):
     if not text:
         return None, None
         
+    from .tool_handlers import TOOL_HANDLERS
+    valid_tools = list(TOOL_HANDLERS.keys())
+        
     # Locate all opening braces
     brace_indices = [i for i, char in enumerate(text) if char == '{']
     
@@ -153,15 +156,24 @@ def parse_json_from_text(text):
                         raw_tag = tag_match.group(1)
                         # Extract the actual tool name (strip namespace if present)
                         tool_name = raw_tag.split(':')[-1]
-                        
-                        # Extract the arguments from parsed payload
+                        if tool_name in valid_tools:
+                            # Extract the arguments from parsed payload
+                            args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or parsed
+                            return tool_name, args
+                            
+                    # Check 2: Check if a valid tool name is mentioned in the text before the JSON block
+                    # e.g., create_employee {"name": "thamizh", ...}
+                    tool_match = re.search(r'\b(' + '|'.join(valid_tools) + r')\b', text[:start])
+                    if tool_match:
+                        tool_name = tool_match.group(1)
                         args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or parsed
                         return tool_name, args
                         
-                    # Check 2: Standard JSON tool call structure (name inside the JSON body)
+                    # Check 3: Standard JSON tool call structure (name inside the JSON body)
+                    # We verify that the extracted name is in valid_tools to avoid false matches (e.g. name of employee)
                     name = parsed.get("name") or parsed.get("function")
-                    args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
-                    if name:
+                    if name and name in valid_tools:
+                        args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
                         return name, args
                 except Exception:
                     continue  # Keep scanning if this block is invalid JSON
