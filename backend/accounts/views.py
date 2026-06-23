@@ -8,6 +8,7 @@ from django.conf import settings
 from django.utils import timezone
 import random
 from datetime import timedelta
+from django.contrib.auth.models import update_last_login
 from .serializers import LoginSerializer, UserSerializer, RegisterSerializer, ChangePasswordSerializer
 from .models import User
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
@@ -21,6 +22,7 @@ def login_view(request):
     serializer = LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     user = serializer.validated_data['user']
+    update_last_login(None, user)
     refresh = RefreshToken.for_user(user)
     
     response = Response({
