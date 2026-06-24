@@ -597,8 +597,8 @@ export default function DataEntryPage() {
   const canEdit  = useAuthStore((s) => s.canEdit())
   const isManager = useAuthStore((s) => s.isManager())
 
-  const [searchParams] = useSearchParams()
-  const initialSearch = searchParams.get('search') || ''
+  const [searchParams, setSearchParams] = useSearchParams()
+  const initialSearch = searchParams.get('search') || searchParams.get('quote_no') || ''
 
   const [showModal,       setShowModal]       = useState(false)
   const [jobNoTarget,     setJobNoTarget]      = useState(null)   // rfq record for Set Job #
@@ -608,8 +608,12 @@ export default function DataEntryPage() {
   const [wonLostFilter,   setWonLostFilter]    = useState('all')
 
   useEffect(() => {
+    const q = searchParams.get('quote_no')
     const s = searchParams.get('search')
-    if (s) {
+    if (q) {
+      setSearchText(q)
+      setAppliedSearchText(q)
+    } else if (s) {
       setSearchText(s)
       setAppliedSearchText(s)
     }
@@ -737,11 +741,13 @@ export default function DataEntryPage() {
   // Quick search handlers
   const handleApplySearch = () => {
     setAppliedSearchText(searchText)
+    setSearchParams({ search: searchText })
   }
 
   const handleClearSearch = () => {
     setSearchText('')
     setAppliedSearchText('')
+    setSearchParams({})
   }
 
   const handleSearchInputChange = (e) => {
@@ -761,7 +767,14 @@ export default function DataEntryPage() {
     deleteMutation.mutate(data.id)
   }
 
-  const rowData = rfqData || []
+  const rawRowData = rfqData || []
+  const rowData = useMemo(() => {
+    const q = searchParams.get('quote_no')
+    if (q) {
+      return rawRowData.filter(r => String(r.quote_no) === String(q))
+    }
+    return rawRowData
+  }, [rawRowData, searchParams])
   const wonCount     = rowData.filter(r => r.won_lost === 'Won').length
   const lostCount    = rowData.filter(r => r.won_lost === 'Lost').length
   const pendingCount = rowData.filter(r => r.won_lost === 'Pending').length

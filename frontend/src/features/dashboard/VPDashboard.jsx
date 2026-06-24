@@ -582,7 +582,7 @@ export default function VPDashboard() {
           <div className="overflow-hidden flex-1 border-l border-slate-300">
             <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
               {[...latestQuotes, ...latestQuotes].map((b, i) => (
-                <span key={i} onClick={() => navigate(`/rfq/data-entry?search=${encodeURIComponent(b.quote_no || b.project_name)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
+                <span key={i} onClick={() => navigate(`/rfq/data-entry?quote_no=${encodeURIComponent(b.quote_no)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
                   <Target className="w-3 h-3 text-sky-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
                   {b.bid_amount > 0 && <span className="text-[10px] font-black text-sky-600">· {fmtMoney(b.bid_amount)}</span>}
@@ -605,7 +605,7 @@ export default function VPDashboard() {
           <div className="overflow-hidden flex-1 border-l border-slate-300">
             <div className="animate-marquee whitespace-nowrap" style={{ animationDirection: 'reverse' }}>
               {[...latestWins, ...latestWins].map((b, i) => (
-                <span key={i} onClick={() => navigate(`/rfq/data-entry?search=${encodeURIComponent(b.quote_no || b.project_name)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
+                <span key={i} onClick={() => navigate(`/rfq/data-entry?quote_no=${encodeURIComponent(b.quote_no)}`)} className="inline-flex items-center gap-2 mx-8 cursor-pointer hover:underline">
                   <Trophy className="w-3 h-3 text-emerald-500 shrink-0" />
                   <span className="text-[11px] font-bold text-slate-800">{b.project_name || b.quote_no}</span>
                   {(b.awarded_amount > 0 || b.bid_amount > 0) && (
