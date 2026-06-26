@@ -309,19 +309,8 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
 
       const avg = dur > 0 ? hrs / dur : hrs;
 
-      if (filterMonths.length === 0) {
-        const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        let activeCount = 0;
-        for (const m of months) {
-          if (isScheduleActiveInMonth(startMonthStr, dur, m)) {
-            activeCount++;
-          }
-        }
-        return avg * activeCount;
-      }
-
       let total = 0;
-      for (const m of filterMonths) {
+      for (const m of effectiveMonths) {
         if (isScheduleActiveInMonth(startMonthStr, dur, m)) {
           total += avg;
         }
@@ -752,8 +741,8 @@ function CapacityView({ data, machines, refresh, calculateWorkingDays, getDaysFa
                           });
                         }}
                         className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all border ${isSelected
-                            ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/10'
-                            : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
+                          ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/10'
+                          : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                           }`}
                       >
                         {m.substring(0, 3)}
