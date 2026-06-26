@@ -53,12 +53,12 @@ export default function CapacityMapping() {
       const date = new Date(year, monthIdx, d);
       const day = date.getDay(); // 0=Sun,6=Sat
       if (day === 0 || day === 6) continue; // skip weekends
-      
+
       const localYear = date.getFullYear();
       const localMonth = String(date.getMonth() + 1).padStart(2, '0');
       const localDay = String(date.getDate()).padStart(2, '0');
       const localIso = `${localYear}-${localMonth}-${localDay}`;
-      
+
       if (holidayDates.has(localIso)) continue; // skip holiday
       workDays++;
     }
@@ -173,10 +173,10 @@ export default function CapacityMapping() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <SummaryView 
-        capacities={capacities} 
-        machines={machines} 
-        manpower={manpower} 
+      <SummaryView
+        capacities={capacities}
+        machines={machines}
+        manpower={manpower}
         projects={projects}
         rfqs={rfqs}
         filterShop={filterShop}
@@ -190,10 +190,10 @@ export default function CapacityMapping() {
       {/* Content */}
       <div className="mt-6">
         {activeTab === 'capacity' && (
-          <CapacityView 
-            data={filteredCapacities} 
-            machines={machines} 
-            refresh={fetchData} 
+          <CapacityView
+            data={filteredCapacities}
+            machines={machines}
+            refresh={fetchData}
             calculateWorkingDays={calculateWorkingDays}
             getDaysFactor={getDaysFactor}
             getYearDays={getYearDays}
@@ -240,7 +240,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
   const uniqueShops = [...new Set(machines.filter(m => m.shop).map(m => m.shop))];
   const [showMonthDropdown, setShowMonthDropdown] = useState(false);
 
-// Filter capacities based on selected shop and months (multi-select)
+  // Filter capacities based on selected shop and months (multi-select)
   const filteredCapacities = capacities.filter(c => {
     if (filterShop !== 'All' && c.shop) {
       if (c.shop.toLowerCase() !== filterShop.toLowerCase()) return false;
@@ -255,7 +255,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
   const filteredMachines = filterShop === 'All' ? machines : machines.filter(m => {
     return m.shop && m.shop.toLowerCase() === filterShop.toLowerCase();
   });
-  
+
   const totalCapacity = filteredCapacities.reduce((sum, c) => {
     const dayVal = parseFloat(c.capacity_per_day || c.rate_per_day || 0);
     if (!dayVal) return sum;
@@ -306,9 +306,9 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
       const hrs = Number(hours || 0);
       const dur = Number(durationMonths || 0);
       if (hrs <= 0) return 0;
-      
+
       const avg = dur > 0 ? hrs / dur : hrs;
-      
+
       if (filterMonths.length === 0) {
         const months = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
         let activeCount = 0;
@@ -319,7 +319,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
         }
         return avg * activeCount;
       }
-      
+
       let total = 0;
       for (const m of filterMonths) {
         if (isScheduleActiveInMonth(startMonthStr, dur, m)) {
@@ -361,7 +361,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
           <div className="relative inline-block text-left">
             <button type="button" className="inline-flex justify-center w-full rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50" onClick={() => setShowMonthDropdown(prev => !prev)}>
               Filter by Month
-              <svg className="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.66a.75.75 0 01-1.08 0l-4.25-4.66a.75.75 0 01.02-1.06z" clipRule="evenodd"/></svg>
+              <svg className="-mr-1 ml-2 h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fillRule="evenodd" d="M5.23 7.21a.75.75 0 011.06.02L10 11.293l3.71-4.06a.75.75 0 111.08 1.04l-4.25 4.66a.75.75 0 01-1.08 0l-4.25-4.66a.75.75 0 01.02-1.06z" clipRule="evenodd" /></svg>
             </button>
             {showMonthDropdown && (
               <div className="origin-top-left absolute left-0 mt-2 w-56 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5">
@@ -369,14 +369,14 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
                   <label className="flex items-center px-4 py-2 bg-gray-50 border-b border-gray-100 cursor-pointer">
                     <input type="checkbox" checked={filterMonths.length === 12} onChange={e => {
                       if (e.target.checked) {
-                        setFilterMonths(['January','February','March','April','May','June','July','August','September','October','November','December']);
+                        setFilterMonths(['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']);
                       } else {
                         setFilterMonths([]);
                       }
                     }} className="form-checkbox h-4 w-4 text-amber-500 mr-2" />
                     <span className="text-sm font-semibold text-gray-800">All Months</span>
                   </label>
-                  {['January','February','March','April','May','June','July','August','September','October','November','December'].map(m => (
+                  {['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'].map(m => (
                     <label key={m} className="flex items-center px-4 py-2 cursor-pointer hover:bg-gray-50">
                       <input type="checkbox" value={m} checked={filterMonths.includes(m)} onChange={e => {
                         const checked = e.target.checked;
@@ -391,7 +391,7 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
           </div>
           <div className="flex items-center gap-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Filter by Shop:</label>
-            <select 
+            <select
               className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-700 outline-none focus:border-amber-400 transition-all shadow-sm cursor-pointer"
               value={filterShop}
               onChange={(e) => setFilterShop(e.target.value)}
@@ -403,16 +403,16 @@ function SummaryView({ capacities, machines, manpower, projects = [], rfqs = [],
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 animate-fade-in">
-      {stats.map((s, idx) => (
-        <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
-          <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4`}>
-            <s.icon className={`w-6 h-6 ${s.color}`} />
+        {stats.map((s, idx) => (
+          <div key={idx} className="bg-white p-6 rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all">
+            <div className={`w-12 h-12 rounded-2xl ${s.bg} flex items-center justify-center mb-4`}>
+              <s.icon className={`w-6 h-6 ${s.color}`} />
+            </div>
+            <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">{s.label}</p>
+            <h4 className="text-3xl font-black text-slate-900 mt-1">{s.value}</h4>
+            <p className="text-xs text-slate-400 mt-2 font-medium">{s.sub}</p>
           </div>
-          <p className="text-sm font-bold text-slate-500 uppercase tracking-wider">{s.label}</p>
-          <h4 className="text-3xl font-black text-slate-900 mt-1">{s.value}</h4>
-          <p className="text-xs text-slate-400 mt-2 font-medium">{s.sub}</p>
-        </div>
-      ))}
+        ))}
       </div>
     </div>
   );
@@ -603,7 +603,7 @@ function CapacityView({ data, machines, refresh, calculateWorkingDays, getDaysFa
                 const displayDay = item.capacity_per_day && parseFloat(item.capacity_per_day) > 0
                   ? parseFloat(item.capacity_per_day).toFixed(2)
                   : parseFloat(item.rate_per_day || 0).toFixed(2);
-                
+
                 let displayMonth;
                 if (item.displayMonthName) {
                   const days = calculateWorkingDays(item.displayMonthName, new Date().getFullYear());
@@ -623,7 +623,7 @@ function CapacityView({ data, machines, refresh, calculateWorkingDays, getDaysFa
                     <td className="px-6 py-4">
                       {item.isExpandable ? (
                         item.isFirstOfGroup ? (
-                          <div 
+                          <div
                             onClick={() => toggleExpandRecord(item.id)}
                             className="flex items-center gap-1.5 cursor-pointer hover:text-amber-600 transition-colors select-none"
                           >
@@ -751,11 +751,10 @@ function CapacityView({ data, machines, refresh, calculateWorkingDays, getDaysFa
                             };
                           });
                         }}
-                        className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all border ${
-                          isSelected
+                        className={`py-2 px-1 rounded-xl text-[11px] font-bold transition-all border ${isSelected
                             ? 'bg-amber-500 border-amber-500 text-white shadow-sm shadow-amber-500/10'
                             : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
-                        }`}
+                          }`}
                       >
                         {m.substring(0, 3)}
                       </button>
@@ -894,7 +893,7 @@ function MachineView({ data, allMachines = [], refresh }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    
+
     const newErrors = {};
     if (!form.name || !form.name.trim()) newErrors.name = true;
     if (!form.make || !form.make.trim()) newErrors.make = true;
@@ -925,11 +924,11 @@ function MachineView({ data, allMachines = [], refresh }) {
         finalShop = name ? `${num} - ${name}` : num;
       }
 
-      const payload = { 
-        ...form, 
-        shop: finalShop, 
+      const payload = {
+        ...form,
+        shop: finalShop,
         other_fields,
-        commissioned_date: form.commissioned_date || null 
+        commissioned_date: form.commissioned_date || null
       };
 
       if (editItem) await machineAPI.update(editItem.id, payload);
@@ -1218,8 +1217,8 @@ function ManpowerView({ data, refresh }) {
                 <td className="px-6 py-4 font-bold text-slate-900">{item.employee_name}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-1 rounded-md text-[10px] font-black uppercase tracking-widest ${item.skill_level === 'High' ? 'bg-emerald-50 text-emerald-600' :
-                      item.skill_level === 'Medium' ? 'bg-amber-50 text-amber-600' :
-                        'bg-slate-50 text-slate-500'
+                    item.skill_level === 'Medium' ? 'bg-amber-50 text-amber-600' :
+                      'bg-slate-50 text-slate-500'
                     }`}>
                     {item.skill_level}
                   </span>
