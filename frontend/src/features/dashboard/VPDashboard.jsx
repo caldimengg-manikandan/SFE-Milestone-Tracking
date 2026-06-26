@@ -545,9 +545,9 @@ export default function VPDashboard() {
 
   /* ── Event type style ── */
   const EVT = {
-    bid_due: { label: 'Bid Due Date', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border border-red-100' },
-    quote_date: { label: 'Quote Submitted Date', dot: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700 border border-rose-100' },
-    awarded_date: { label: 'Awarded Date', dot: 'bg-yellow-600', badge: 'bg-yellow-50 text-yellow-750 border border-yellow-200' },
+    bid_due: { label: 'Bid Due Date', short: 'Bids', dot: 'bg-red-500', badge: 'bg-red-50 text-red-700 border border-red-100' },
+    quote_date: { label: 'Quote Submitted Date', short: 'Quotes', dot: 'bg-rose-500', badge: 'bg-rose-50 text-rose-700 border border-rose-100' },
+    awarded_date: { label: 'Awarded Date', short: 'Awarded', dot: 'bg-yellow-600', badge: 'bg-yellow-50 text-yellow-750 border border-yellow-200' },
   };
 
   /* ── Loading ── */
@@ -681,11 +681,11 @@ export default function VPDashboard() {
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-[9px] font-black uppercase tracking-wider text-slate-400 font-mono whitespace-nowrap">
                           {ev.projectCode}
                         </span>
-                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wide border ${tc.badge}`}>
+                        <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-black uppercase tracking-wide border whitespace-nowrap ${tc.badge}`}>
                           {tc.label}
                         </span>
                       </div>
@@ -727,7 +727,7 @@ export default function VPDashboard() {
                 {Object.entries(EVT).map(([k, v]) => (
                   <span key={k} className="flex items-center gap-1">
                     <span className={`w-2 h-2 rounded-full ${v.dot}`} />
-                    <span className="whitespace-nowrap">{v.label.split(' ')[0]}s: {monthEventCounts[k] || 0}</span>
+                    <span className="whitespace-nowrap">{v.short}: {monthEventCounts[k] || 0}</span>
                   </span>
                 ))}
               </div>
