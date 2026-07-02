@@ -175,9 +175,23 @@ def handle_navigate_to_page(user, arguments):
         "structural_schedules": "/structural/plan-tracking",
         "production_schedules": "/production/priority-schedule",
         "rfq_entry": "/rfq/data-entry",
+        "rfq_master": "/rfq",
+        "rfq": "/rfq",
         "dollar_dashboard": "/rfq/dollar-dashboard",
         "erection_takeoff": "/estimation-erection/erection-takeoff",
-        "field_moment_connections": "/estimation-erection/fmc"
+        "field_moment_connections": "/estimation-erection/fmc",
+        "internal_bid_schedule": "/bids/schedule",
+        "holiday_calendar": "/bids/holidays",
+        "estimation_summary": "/estimation-summary",
+        "estimation": "/estimation-erection",
+        "steel_budget_result": "/steel-budget/result",
+        "plan_creation": "/structural/plan-creation",
+        "process_master_settings": "/production/master-settings",
+        "capacity_configuration": "/production/capacity-mapping/capacity",
+        "machine_master": "/production/capacity-mapping/machine",
+        "workforce_master": "/production/capacity-mapping/manpower",
+        "settings": "/settings",
+        "announcements": "/announcements"
     }
 
     route_path = page_routes.get(page_name)
@@ -197,9 +211,23 @@ def handle_navigate_to_page(user, arguments):
         "structural_schedules": "Structural Tracking Schedule",
         "production_schedules": "Production Priority Schedule",
         "rfq_entry": "RFQ Data Entry",
+        "rfq_master": "RFQ Master",
+        "rfq": "RFQ Master",
         "dollar_dashboard": "Dollar Dashboard",
         "erection_takeoff": "Erection Takeoff module",
-        "field_moment_connections": "Field Moment Connections (FMC) dashboard"
+        "field_moment_connections": "Field Moment Connections (FMC) dashboard",
+        "internal_bid_schedule": "Internal Bid Schedule",
+        "holiday_calendar": "Holiday Calendar",
+        "estimation_summary": "Estimation Summary",
+        "estimation": "Estimation",
+        "steel_budget_result": "Steel Budget Result",
+        "plan_creation": "Plan Creation",
+        "process_master_settings": "Process Master Settings",
+        "capacity_configuration": "Capacity Configuration",
+        "machine_master": "Machine Master",
+        "workforce_master": "Workforce Master",
+        "settings": "Settings",
+        "announcements": "Announcements"
     }
 
     return {

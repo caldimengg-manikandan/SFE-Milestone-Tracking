@@ -127,6 +127,14 @@ class ChatbotToolHandlersTestCase(TestCase):
         self.assertEqual(result["status"], "success")
         self.assertEqual(result["ui_actions"][0]["payload"], "/employees")
 
+        # Test rfq_master mapping
+        arguments_rfq = {
+            "page_name": "rfq_master"
+        }
+        result_rfq = handle_navigate_to_page(self.regular_user, arguments_rfq)
+        self.assertEqual(result_rfq["status"], "success")
+        self.assertEqual(result_rfq["ui_actions"][0]["payload"], "/rfq")
+
     def test_navigate_to_page_invalid(self):
         """Unknown pages should fail gracefully."""
         arguments = {
@@ -149,3 +157,23 @@ class ChatbotToolHandlersTestCase(TestCase):
         name2, args2 = parse_json_from_text(text2)
         self.assertEqual(name2, "navigate_to_page")
         self.assertEqual(args2, {"page_name": "dashboard"})
+
+    def test_should_use_tools(self):
+        """Should correctly identify when to pass tools to the LLM based on user queries."""
+        from chatbot.services import should_use_tools
+
+        # Informational queries should NOT trigger tools
+        self.assertFalse(should_use_tools("how to create a new RFQ in RFQ master"))
+        self.assertFalse(should_use_tools("how do I add a new employee?"))
+        self.assertFalse(should_use_tools("explain the structural schedule Gantt chart"))
+        self.assertFalse(should_use_tools("what is the holiday calendar?"))
+
+        # Navigation queries SHOULD trigger tools
+        self.assertTrue(should_use_tools("navigate to RFQ Master"))
+        self.assertTrue(should_use_tools("please go to dashboard"))
+        self.assertTrue(should_use_tools("open the employee master page"))
+
+        # Database action queries SHOULD trigger tools
+        self.assertTrue(should_use_tools("add a new employee named Ramesh"))
+        self.assertTrue(should_use_tools("find employee Suresh"))
+        self.assertTrue(should_use_tools("list active projects"))

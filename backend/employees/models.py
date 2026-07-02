@@ -60,6 +60,8 @@ def create_or_update_user_access(sender, instance, created, **kwargs):
     
     old_email = getattr(instance, '_old_email', None)
     
+    role_val = instance.designation.lower() if instance.designation else 'employee'
+    
     if created:
         # Create user if not exists
         if not User.objects.filter(email__iexact=email).exists():
@@ -68,7 +70,7 @@ def create_or_update_user_access(sender, instance, created, **kwargs):
                 email=email,
                 first_name=first_name,
                 last_name=last_name,
-                role='employee',
+                role=role_val,
                 phone=instance.phone or '',
                 department=instance.department or '',
                 initials=initials,
@@ -86,6 +88,7 @@ def create_or_update_user_access(sender, instance, created, **kwargs):
             user.phone = instance.phone or ''
             user.department = instance.department or ''
             user.initials = initials
+            user.role = role_val
             user.is_active = (instance.status == 'Active')
             user.save()
         except User.DoesNotExist:
@@ -95,7 +98,7 @@ def create_or_update_user_access(sender, instance, created, **kwargs):
                     email=email,
                     first_name=first_name,
                     last_name=last_name,
-                    role='employee',
+                    role=role_val,
                     phone=instance.phone or '',
                     department=instance.department or '',
                     initials=initials,

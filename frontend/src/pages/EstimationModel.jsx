@@ -225,13 +225,18 @@ export default function EstimationModel() {
     }
     const saved = localStorage.getItem('sfe_est_sections');
     if (saved) {
-      const parsed = JSON.parse(saved);
-      if (parsed.numTrucks === '') parsed.numTrucks = 0;
-      if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 0;
-      if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 0;
-      if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 0;
-      return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed.numTrucks === '') parsed.numTrucks = 0;
+        if (parsed.hoursPerTruck === '') parsed.hoursPerTruck = 0;
+        if (parsed.galvanizingTrucks === '') parsed.galvanizingTrucks = 0;
+        if (parsed.galvHoursPerTruck === '') parsed.galvHoursPerTruck = 0;
+        return { ...DEFAULT_ESTIMATION_SECTIONS, ...parsed };
+      } catch (e) {
+        console.error(e);
+      }
     }
+    return DEFAULT_ESTIMATION_SECTIONS;
   });
 
   const { saveState, lastSaved, triggerSave } = useAutoSave(1500);
@@ -1035,7 +1040,7 @@ export default function EstimationModel() {
             {/* 4. plant & Field Bolts */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">4</td>
-              <td className="py-4 px-4 font-bold text-slate-800">plant & Field Bolts</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Plant & Field Bolts</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
                   <span className="w-16"></span>
@@ -1269,7 +1274,7 @@ export default function EstimationModel() {
             {/* 1. plant Fabrication */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">1</td>
-              <td className="py-4 px-4 font-bold text-slate-800">plant Fabrication Hours</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Plant Fabrication Hours</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
                   <input
@@ -2586,7 +2591,7 @@ export default function EstimationModel() {
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>plant Labor</span>
+                  <span>Plant Labor</span>
                 </div>
                 <span className={`${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
@@ -2658,7 +2663,7 @@ export default function EstimationModel() {
               >
                 <div className="flex items-center gap-3">
                   <Calculator className={`w-5 h-5 ${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>miscellaneous</span>
+                  <span>Miscellaneous</span>
                 </div>
                 <span className={`${activeSection === 'miscellaneous' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>

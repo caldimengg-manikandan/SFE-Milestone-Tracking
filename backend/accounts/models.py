@@ -12,15 +12,7 @@ def get_default_modules():
 
 class User(AbstractUser):
     """Custom user model for SFE."""
-    ROLE_CHOICES = [
-        ('admin', 'Admin'),
-        ('manager', 'Manager'),
-        ('employee', 'Employee'),
-        ('estimator', 'Estimator'),
-        ('detailing', 'Detailing / JF'),
-        ('readonly', 'Read-Only'),
-    ]
-    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='employee')
+    role = models.CharField(max_length=100, default='employee')
     initials = models.CharField(max_length=10, blank=True, default='')
     phone = models.CharField(max_length=20, blank=True)
     department = models.CharField(max_length=100, blank=True)

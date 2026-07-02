@@ -209,6 +209,34 @@ def admin_users_list_create_view(request):
         return Response({'detail': 'Permission denied.'}, status=status.HTTP_403_FORBIDDEN)
         
     if request.method == 'GET':
+        try:
+            from django.db import transaction
+            from employees.models import Employee
+            
+            employees = Employee.objects.all()
+            for emp in employees:
+                if emp.email and not User.objects.filter(email__iexact=emp.email).exists():
+                    parts = (emp.name or '').split(' ', 1)
+                    first_name = parts[0]
+                    last_name = parts[1] if len(parts) > 1 else ''
+                    initials = ''.join([p[0] for p in parts if p]).upper()[:5]
+                    role_val = emp.designation.lower() if emp.designation else 'employee'
+                    
+                    with transaction.atomic():
+                        User.objects.create_user(
+                            username=emp.email,
+                            email=emp.email,
+                            first_name=first_name,
+                            last_name=last_name,
+                            role=role_val,
+                            phone=emp.phone or '',
+                            department=emp.department or '',
+                            initials=initials,
+                            is_active=(emp.status == 'Active')
+                        )
+        except Exception as sync_err:
+            print("Failed to sync missing employees on GET list:", sync_err)
+
         users = User.objects.all().order_by('-date_joined')
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data)

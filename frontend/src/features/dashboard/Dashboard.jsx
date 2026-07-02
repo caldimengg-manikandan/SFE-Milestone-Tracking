@@ -214,8 +214,8 @@ function MonthMultiSelect({ selectedValues, onChange, disabled }) {
 export default function Dashboard() {
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const isAdmin = user.role === 'admin';
-  const canSeeExecutive = ['admin', 'manager', 'estimator', 'detailing', 'readonly'].includes(user.role);
-  const canSeeOperations = ['admin', 'manager', 'employee', 'readonly'].includes(user.role);
+  const canSeeExecutive = ['admin', 'manager', 'estimator', 'detailing', 'readonly'].includes(user.role) || user.allowed_modules?.includes('/dashboard');
+  const canSeeOperations = ['admin', 'manager', 'employee', 'readonly'].includes(user.role) || user.allowed_modules?.includes('/dashboard');
   const showSwitcher = canSeeExecutive && canSeeOperations;
 
   const [dashboardMode, setDashboardMode] = useState(() => {

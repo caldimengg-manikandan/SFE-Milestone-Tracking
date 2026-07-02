@@ -114,9 +114,23 @@ AVAILABLE_TOOLS = [
                             "structural_schedules",
                             "production_schedules",
                             "rfq_entry",
+                            "rfq_master",
+                            "rfq",
                             "dollar_dashboard",
                             "erection_takeoff",
-                            "field_moment_connections"
+                            "field_moment_connections",
+                            "internal_bid_schedule",
+                            "holiday_calendar",
+                            "estimation_summary",
+                            "estimation",
+                            "steel_budget_result",
+                            "plan_creation",
+                            "process_master_settings",
+                            "capacity_configuration",
+                            "machine_master",
+                            "workforce_master",
+                            "settings",
+                            "announcements"
                         ],
                         "description": "The target page view to redirect the user to"
                     }

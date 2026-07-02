@@ -57,6 +57,19 @@ def ingest_pdf_document(document_id):
     KnowledgeChunk.objects.bulk_create(chunks_to_create)
     return len(chunks_to_create)
 
+STOP_WORDS = {
+    'a', 'about', 'above', 'after', 'again', 'against', 'all', 'am', 'an', 'and', 'any', 'are',
+    'as', 'at', 'be', 'because', 'been', 'before', 'being', 'below', 'between', 'both', 'but', 'by', 'can',
+    'did', 'do', 'does', 'doing', 'down', 'during', 'each', 'few', 'for', 'from', 'further', 'had', 'has',
+    'have', 'having', 'he', 'her', 'here', 'hers', 'herself', 'him', 'himself', 'his', 'how', 'i', 'if', 'in',
+    'into', 'is', 'it', 'its', 'itself', 'me', 'more', 'most', 'my', 'myself', 'no', 'nor', 'not', 'of', 'off',
+    'on', 'once', 'only', 'or', 'other', 'our', 'ours', 'ourselves', 'out', 'over', 'own', 'same', 'she', 'should',
+    'so', 'some', 'such', 'than', 'that', 'the', 'their', 'theirs', 'them', 'themselves', 'then', 'there',
+    'these', 'they', 'this', 'those', 'through', 'to', 'too', 'under', 'until', 'up', 'very', 'was', 'we',
+    'were', 'what', 'when', 'where', 'which', 'while', 'who', 'whom', 'why', 'with', 'would', 'you', 'your',
+    'yours', 'yourself', 'yourselves', 'show', 'shows', 'showed', 'showing'
+}
+
 def tokenize(text):
     """Tokenizes a string for BM25 matching."""
     return re.findall(r'\w+', text.lower())
@@ -74,6 +87,10 @@ def retrieve_relevant_context(query, limit=5):
     bm25 = BM25Okapi(corpus)
     
     query_tokens = tokenize(query)
+    filtered_tokens = [t for t in query_tokens if t not in STOP_WORDS]
+    if filtered_tokens:
+        query_tokens = filtered_tokens
+        
     scores = bm25.get_scores(query_tokens)
     
     # Sort and rank
@@ -325,8 +342,8 @@ def get_chatbot_response(chat_session, user_query, user=None):
         api_key = getattr(settings, 'LLM_API_KEY', '')
         is_cloud = "groq" in ollama_url or "together" in ollama_url or "openai" in ollama_url or api_key != ''
 
-        # Call with tools if heuristic matches or if using a cloud LLM
-        tools_to_pass = AVAILABLE_TOOLS if (is_cloud or should_use_tools(user_query)) else None
+        # Call with tools if heuristic matches (prevents unwanted tool calls/navigation on informational queries)
+        tools_to_pass = AVAILABLE_TOOLS if should_use_tools(user_query) else None
         ollama_res = call_local_ollama(ollama_messages, tools=tools_to_pass)
         tool_calls = ollama_res.get('tool_calls', [])
         bot_response = ollama_res.get('content', '')
