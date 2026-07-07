@@ -11,6 +11,7 @@ class HolidaySerializer(serializers.ModelSerializer):
 class BidEnquirySerializer(serializers.ModelSerializer):
     customer_name_str = serializers.CharField(source='customer_name.name', read_only=True)
     primary_estimator_name = serializers.CharField(source='primary_estimator.name', read_only=True)
+    scope_of_work = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     class Meta:  # type: ignore
         model = BidEnquiry

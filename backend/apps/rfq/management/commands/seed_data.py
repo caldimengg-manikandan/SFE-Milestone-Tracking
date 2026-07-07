@@ -2,9 +2,10 @@
 Management command: python manage.py seed_data
 Seeds all lookup tables with initial data and creates default admin user.
 """
+from django.core.management.base import BaseCommand
 from accounts.models import get_default_modules
 from django.contrib.auth import get_user_model
-from apps.rfq.models import Estimator, MonthlyBidGoal
+from apps.rfq.models import Estimator, MonthlyBidGoal, SystemSetting
 from projects.models import Customer
 
 User = get_user_model()
@@ -81,5 +82,29 @@ class Command(BaseCommand):
             user = User.objects.get(username='admin1')
             user.allowed_modules = get_default_modules()
             user.save()
+
+        self.stdout.write('Creating default SystemSettings...')
+        SystemSetting.objects.get_or_create(
+            key='rfq_detailing_emails',
+            defaults={
+                'value': 'namrutha@caldimengg.in',
+                'description': 'Default email recipients for Detailing scope projects (comma separated)'
+            }
+        )
+        SystemSetting.objects.get_or_create(
+            key='rfq_fabrication_emails',
+            defaults={
+                'value': 'divya@caldimengg.in',
+                'description': 'Default email recipients for Fabrication scope projects (comma separated)'
+            }
+        )
+        SystemSetting.objects.get_or_create(
+            key='rfq_erection_emails',
+            defaults={
+                'value': 'divya@caldimengg.in',
+                'description': 'Default email recipients for Erection scope projects (comma separated)'
+            }
+        )
+        self.stdout.write('  Seeded system settings: rfq_detailing_emails, rfq_fabrication_emails, rfq_erection_emails')
 
         self.stdout.write(self.style.SUCCESS('[SUCCESS] Seed data complete.'))

@@ -15,6 +15,7 @@ import {
   Upload
 } from 'lucide-react';
 import { authAPI } from '../services/api';
+import { systemSettingsAPI } from '../api/client';
 
 export default function Settings() {
   const [activeTab, setActiveTab] = useState('profile');
@@ -38,9 +39,93 @@ export default function Settings() {
     confirm_password: ''
   });
 
+  const [systemEmails, setSystemEmails] = useState({
+    detailing: [],
+    fabrication: [],
+    erection: []
+  });
+  const [newEmailInputs, setNewEmailInputs] = useState({
+    detailing: '',
+    fabrication: '',
+    erection: ''
+  });
+  const [settingsRecords, setSettingsRecords] = useState([]);
+
   useEffect(() => {
     fetchUserData();
+    fetchSystemSettings();
   }, []);
+
+  const fetchSystemSettings = async () => {
+    try {
+      const response = await systemSettingsAPI.list();
+      const records = response.data;
+      setSettingsRecords(records);
+      const detailingVal = records.find(r => r.key === 'rfq_detailing_emails')?.value || '';
+      const fabVal = records.find(r => r.key === 'rfq_fabrication_emails')?.value || '';
+      const erectionVal = records.find(r => r.key === 'rfq_erection_emails')?.value || '';
+      setSystemEmails({
+        detailing: detailingVal.split(',').map(s => s.trim()).filter(Boolean),
+        fabrication: fabVal.split(',').map(s => s.trim()).filter(Boolean),
+        erection: erectionVal.split(',').map(s => s.trim()).filter(Boolean)
+      });
+    } catch (err) {
+      console.error("Failed to fetch system settings", err);
+    }
+  };
+
+  const handleSystemSettingsSave = async () => {
+    setSaving(true);
+    setError('');
+    try {
+      const detailingRecord = settingsRecords.find(r => r.key === 'rfq_detailing_emails');
+      const fabRecord = settingsRecords.find(r => r.key === 'rfq_fabrication_emails');
+      const erectionRecord = settingsRecords.find(r => r.key === 'rfq_erection_emails');
+      
+      if (detailingRecord) {
+        await systemSettingsAPI.update(detailingRecord.id, { value: systemEmails.detailing.join(', ') });
+      }
+      if (fabRecord) {
+        await systemSettingsAPI.update(fabRecord.id, { value: systemEmails.fabrication.join(', ') });
+      }
+      if (erectionRecord) {
+        await systemSettingsAPI.update(erectionRecord.id, { value: systemEmails.erection.join(', ') });
+      }
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+      await fetchSystemSettings();
+    } catch (err) {
+      setError("Failed to update system settings.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const addEmail = (type) => {
+    const val = newEmailInputs[type].trim();
+    if (!val) return;
+    if (systemEmails[type].includes(val)) {
+      setError("Email already added to this list.");
+      return;
+    }
+    setSystemEmails(prev => ({
+      ...prev,
+      [type]: [...prev[type], val]
+    }));
+    setNewEmailInputs(prev => ({
+      ...prev,
+      [type]: ''
+    }));
+    setError('');
+  };
+
+  const removeEmail = (type, email) => {
+    setSystemEmails(prev => ({
+      ...prev,
+      [type]: prev[type].filter(e => e !== email)
+    }));
+  };
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -160,6 +245,7 @@ export default function Settings() {
   const tabs = [
     { id: 'profile', label: 'My Profile', icon: User },
     { id: 'security', label: 'Security', icon: Lock },
+    { id: 'system_emails', label: 'Email Configuration', icon: Mail },
     { id: 'appearance', label: 'Appearance', icon: Palette },
   ];
 
@@ -174,9 +260,9 @@ export default function Settings() {
           <p className="text-sm font-medium text-slate-500 mt-1">Manage your account preferences and system configuration</p>
         </div>
         
-        {activeTab === 'profile' && (
+        {(activeTab === 'profile' || activeTab === 'system_emails') && (
           <button 
-            onClick={handleProfileSave}
+            onClick={activeTab === 'profile' ? handleProfileSave : handleSystemSettingsSave}
             disabled={saving}
             className="flex items-center gap-2 px-6 py-2.5 bg-amber-600 text-white rounded-2xl font-bold text-sm shadow-lg shadow-amber-600/20 hover:bg-amber-700 transition-all disabled:opacity-50"
           >
@@ -339,6 +425,120 @@ export default function Settings() {
                 >
                   Delete Account
                 </button>
+              </div>
+            </div>
+          )}
+
+
+          {activeTab === 'system_emails' && (
+            <div className="p-8 space-y-6 animate-fade-in">
+              <div className="flex items-center gap-3">
+                <Mail className="w-6 h-6 text-slate-400" />
+                <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">
+                  Notification Emails
+                </h3>
+              </div>
+              
+              <p className="text-slate-600 text-sm max-w-2xl leading-relaxed">
+                Configure the email addresses that will receive project notifications when you click "Send Email" on the RFQ page based on the selected Scope of Work.
+              </p>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+                {/* Detailing Column */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-800">Detailing Team</h4>
+                  <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 space-y-3 min-h-[160px] flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {systemEmails.detailing.map(email => (
+                          <span key={email} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm max-w-full">
+                            <span className="truncate">{email}</span>
+                            <button type="button" onClick={() => removeEmail('detailing', email)} className="text-slate-400 hover:text-slate-600 font-bold focus:outline-none ml-1">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      <input 
+                        type="email" 
+                        value={newEmailInputs.detailing}
+                        onChange={(e) => setNewEmailInputs({...newEmailInputs, detailing: e.target.value})}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmail('detailing'); } }}
+                        placeholder="Add another email..."
+                        className="w-full bg-transparent text-xs font-semibold text-slate-600 placeholder-slate-400 outline-none border-b border-transparent focus:border-slate-300 py-1"
+                      />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => addEmail('detailing')}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-lg transition-all"
+                    >
+                      + Add Email
+                    </button>
+                  </div>
+                </div>
+
+                {/* Fabrication Column */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-800">Fabrication Team</h4>
+                  <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 space-y-3 min-h-[160px] flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {systemEmails.fabrication.map(email => (
+                          <span key={email} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm max-w-full">
+                            <span className="truncate">{email}</span>
+                            <button type="button" onClick={() => removeEmail('fabrication', email)} className="text-slate-400 hover:text-slate-600 font-bold focus:outline-none ml-1">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      <input 
+                        type="email" 
+                        value={newEmailInputs.fabrication}
+                        onChange={(e) => setNewEmailInputs({...newEmailInputs, fabrication: e.target.value})}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmail('fabrication'); } }}
+                        placeholder="Add another email..."
+                        className="w-full bg-transparent text-xs font-semibold text-slate-600 placeholder-slate-400 outline-none border-b border-transparent focus:border-slate-300 py-1"
+                      />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => addEmail('fabrication')}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-lg transition-all"
+                    >
+                      + Add Email
+                    </button>
+                  </div>
+                </div>
+
+                {/* Erection Column */}
+                <div className="space-y-3">
+                  <h4 className="text-sm font-bold text-slate-800">Erection Team</h4>
+                  <div className="bg-slate-50/50 border border-slate-200 rounded-xl p-4 space-y-3 min-h-[160px] flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <div className="flex flex-wrap gap-2">
+                        {systemEmails.erection.map(email => (
+                          <span key={email} className="inline-flex items-center gap-1.5 px-3 py-1 bg-white border border-slate-200 rounded-full text-xs font-semibold text-slate-700 shadow-sm max-w-full">
+                            <span className="truncate">{email}</span>
+                            <button type="button" onClick={() => removeEmail('erection', email)} className="text-slate-400 hover:text-slate-600 font-bold focus:outline-none ml-1">✕</button>
+                          </span>
+                        ))}
+                      </div>
+                      <input 
+                        type="email" 
+                        value={newEmailInputs.erection}
+                        onChange={(e) => setNewEmailInputs({...newEmailInputs, erection: e.target.value})}
+                        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); addEmail('erection'); } }}
+                        placeholder="Add another email..."
+                        className="w-full bg-transparent text-xs font-semibold text-slate-600 placeholder-slate-400 outline-none border-b border-transparent focus:border-slate-300 py-1"
+                      />
+                    </div>
+                    <button 
+                      type="button"
+                      onClick={() => addEmail('erection')}
+                      className="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs rounded-lg transition-all"
+                    >
+                      + Add Email
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           )}

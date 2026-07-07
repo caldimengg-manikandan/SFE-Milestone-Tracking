@@ -105,3 +105,8 @@ export const dashboardAPI = {
   bidEstimationSummary: () => api.get('/rfq-dashboard/bid-estimation-summary/'),
 }
 
+export const systemSettingsAPI = {
+  list: () => api.get('/rfq/settings/'),
+  update: (id, data) => api.patch(`/rfq/settings/${id}/`, data),
+}
+

@@ -2685,13 +2685,13 @@ export default function EstimationModel() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
                     {activeSection === 'material' && 'Material Section'}
-                    {activeSection === 'plantLabor' && 'plant Labor Section'}
+                    {activeSection === 'plantLabor' && 'Plant Labor Section'}
                     {activeSection === 'drafting' && 'Drafting & Direct Costs'}
                     {activeSection === 'profitDirect' && 'Profit on Direct Costs'}
                     {activeSection === 'buyouts' && 'Buyouts Section'}
                     {activeSection === 'profitBuyouts' && 'Profit on Buyouts'}
                     {activeSection === 'finalTotals' && 'Final Totals Section'}
-                    {activeSection === 'miscellaneous' && 'miscellaneous Section'}
+                    {activeSection === 'miscellaneous' && 'Miscellaneous Section'}
                     {activeSection === 'summary' && 'Estimation Summary'}
                   </h3>
                   <p className="text-[11px] text-slate-500">

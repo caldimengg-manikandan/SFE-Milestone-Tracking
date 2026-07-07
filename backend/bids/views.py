@@ -59,28 +59,58 @@ class BidEnquiryViewSet(viewsets.ModelViewSet):
         if not instance.scope_of_work:
             return False
             
-        scope = instance.scope_of_work.lower()
         subject = f"Bid Information: {instance.quote_no} - {instance.project_name}"
         message = f"Bid Enquiry Details:\n\nQuote No: {instance.quote_no}\nProject Name: {instance.project_name}\nScope of Work: {instance.scope_of_work}\n\nPlease check the system for more details."
-        recipient = None
+        
+        detailing_emails = 'namrutha@caldimengg.in'
+        fabrication_emails = 'divya@caldimengg.in'
+        erection_emails = 'divya@caldimengg.in'
+        try:
+            from apps.rfq.models import SystemSetting
+            detailing_emails = SystemSetting.objects.get(key='rfq_detailing_emails').value
+        except Exception:
+            pass
+        try:
+            from apps.rfq.models import SystemSetting
+            fabrication_emails = SystemSetting.objects.get(key='rfq_fabrication_emails').value
+        except Exception:
+            pass
+        try:
+            from apps.rfq.models import SystemSetting
+            erection_emails = SystemSetting.objects.get(key='rfq_erection_emails').value
+        except Exception:
+            pass
 
-        if scope == 'detailing':
-            recipient = 'namrutha@caldimengg.in'
-        elif scope in ['erection', 'fabrication']:
-            recipient = 'divya@caldimengg.in'
+        recipients = []
+        scopes = [s.strip().lower() for s in instance.scope_of_work.split(',') if s.strip()]
+        
+        def add_recipients(email_str):
+            for e in email_str.split(','):
+                e = e.strip()
+                if e:
+                    recipients.append(e)
 
-        if recipient:
+        if 'detailing' in scopes and detailing_emails:
+            add_recipients(detailing_emails)
+        if 'fabrication' in scopes and fabrication_emails:
+            add_recipients(fabrication_emails)
+        if 'erection' in scopes and erection_emails:
+            add_recipients(erection_emails)
+            
+        recipients = list(set(recipients))
+        
+        if recipients:
             try:
                 send_mail(
                     subject,
                     message,
                     settings.DEFAULT_FROM_EMAIL,
-                    [recipient],
+                    recipients,
                     fail_silently=False,
                 )
                 return True
             except Exception as e:
-                print(f"Failed to send email to {recipient}: {e}")
+                print(f"Failed to send email to {recipients}: {e}")
                 return False
         return False
 

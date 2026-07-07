@@ -180,7 +180,6 @@ class RFQMaster(models.Model):
 
     scope_of_work = models.CharField(
         max_length=50,
-        choices=ScopeOfWork.choices,
         blank=True,
         null=True,
     )
@@ -444,3 +443,15 @@ class RFQMaster(models.Model):
 
         if errors:
             raise ValidationError(errors)
+
+
+class SystemSetting(models.Model):
+    key = models.CharField(max_length=100, unique=True)
+    value = models.TextField()
+    description = models.TextField(blank=True, null=True)
+
+    class Meta:
+        db_table = 'rfq_systemsetting'
+
+    def __str__(self):
+        return f"{self.key}: {self.value}"

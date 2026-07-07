@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { bidEnquiryAPI, customerAPI, employeeAPI } from '../../services/api';
 import FormattedDateInput from '../../components/forms/FormattedDateInput';
+import MultiSelectDropdown from '../../components/MultiSelectDropdown';
 
 const MONTHS_LIST = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -1103,17 +1104,19 @@ export default function BidEnquiry() {
                       {/* Scope of Work */}
                       <div>
                         <label className="text-[11px] font-bold text-slate-500 block mb-1.5 uppercase tracking-wider ml-1">Scope of Work</label>
-                        <select
-                          name="scope_of_work"
+                        <MultiSelectDropdown
+                          options={[
+                            { id: '', label: 'None' },
+                            { id: 'Detailing', label: 'Detailing' },
+                            { id: 'Fabrication', label: 'Fabrication' },
+                            { id: 'Erection', label: 'Erection' }
+                          ]}
                           value={formData.scope_of_work}
-                          onChange={handleInputChange}
-                          className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-white text-sm outline-none focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold cursor-pointer"
-                        >
-                          <option value="">Select Scope</option>
-                          <option value="Detailing">Detailing</option>
-                          <option value="Fabrication">Fabrication</option>
-                          <option value="Erection">Erection</option>
-                        </select>
+                          onChange={(e) => {
+                            setFormData(prev => ({ ...prev, scope_of_work: e.target.value }));
+                          }}
+                          className="w-full px-4 py-2 border border-slate-200 focus:border-pink-400 focus:ring-4 focus:ring-pink-500/5 transition-all text-slate-600 font-semibold"
+                        />
                       </div>
 
                       {/* 11: Decision to Bid */}

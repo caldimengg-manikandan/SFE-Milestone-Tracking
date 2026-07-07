@@ -545,6 +545,19 @@ body.dark .rfq-scope,
   .ratio-low  { color: var(--danger);  }
   .ratio-none { color: var(--text-muted); }
 
+  .dash-table td.ratio-high {
+    color: var(--success);
+  }
+  .dash-table td.ratio-mid {
+    color: var(--warning);
+  }
+  .dash-table td.ratio-low {
+    color: var(--danger);
+  }
+  .dash-table td.ratio-none {
+    color: var(--text-muted);
+  }
+
   /* ── Progress Bar ────────────────────────────────────────────────────────── */
   .progress-bar {
     height: 3px;

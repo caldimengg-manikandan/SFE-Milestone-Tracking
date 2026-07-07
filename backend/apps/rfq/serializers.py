@@ -1,7 +1,13 @@
 from datetime import datetime, date
 from rest_framework import serializers
-from .models import RFQMaster, Estimator, MonthlyBidGoal
+from .models import RFQMaster, Estimator, MonthlyBidGoal, SystemSetting
 from projects.models import Customer
+
+
+class SystemSettingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SystemSetting
+        fields = ['id', 'key', 'value', 'description']
 
 
 class CustomerSerializer(serializers.ModelSerializer):
@@ -67,6 +73,7 @@ class RFQMasterSerializer(serializers.ModelSerializer):
     primary_estimator_initials = serializers.CharField(
         source='primary_estimator.initials', read_only=True
     )
+    scope_of_work = serializers.CharField(required=False, allow_null=True, allow_blank=True)
 
     # Flexible start month fields
     struct_fab_start_month = FlexibleDateField(required=False, allow_null=True)

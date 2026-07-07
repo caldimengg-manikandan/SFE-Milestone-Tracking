@@ -5,6 +5,7 @@ import { rfqAPI } from '../../api/client'
 import { X } from 'lucide-react'
 import FormattedDateInput from '../../components/forms/FormattedDateInput'
 import SearchableDropdown from '../../components/SearchableDropdown'
+import MultiSelectDropdown from '../../components/MultiSelectDropdown'
 
 export default function RFQFormModal({ customers, estimators, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -162,7 +163,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             </div>
             <div className="form-group">
               <label className="form-label">Scope of work</label>
-              <SearchableDropdown
+              <MultiSelectDropdown
                 options={[
                   { id: '', label: 'None' },
                   { id: 'Detailing', label: 'Detailing' },
@@ -180,7 +181,7 @@ export default function RFQFormModal({ customers, estimators, onClose, onSaved }
             <div className="form-group">
               <label className="form-label">Primary Estimator</label>
               <SearchableDropdown
-                options={estimators.map(e => ({ id: e.id, label: e.initials }))}
+                options={estimators.filter(e => e.initials !== 'ALL').map(e => ({ id: e.id, label: e.initials }))}
                 value={form.primary_estimator}
                 onChange={e => set('primary_estimator', e.target.value)}
                 placeholder="— Select Estimator —"

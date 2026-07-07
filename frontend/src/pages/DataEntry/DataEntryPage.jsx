@@ -1,12 +1,12 @@
-import { useCallback, useMemo, useRef, useState, useEffect } from 'react'
+import { useCallback, useMemo, useRef, useState, useEffect, forwardRef, useImperativeHandle } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { rfqAPI, customersAPI, estimatorsAPI } from '../../api/client'
+import { rfqAPI, customersAPI, estimatorsAPI, systemSettingsAPI } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
-import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase, Mail } from 'lucide-react'
+import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase, Mail, ChevronDown } from 'lucide-react'
 import RFQFormModal from './RFQFormModal'
 import ExcelUploadModal from './ExcelUploadModal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
@@ -250,6 +250,130 @@ function SetJobNoModal({ rfq, onClose, onSaved }) {
   )
 }
 
+function ScopeOfWorkRenderer(params) {
+  const val = params.value || 'None';
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
+      <span className="truncate">{val}</span>
+      <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginLeft: '6px', opacity: 0.7 }}>▼</span>
+    </div>
+  );
+}
+
+const MultiSelectCellEditor = forwardRef((params, ref) => {
+  const [value, setValue] = useState(params.value === 'None' ? '' : (params.value || ''));
+  const containerRef = useRef(null);
+
+  useEffect(() => {
+    if (containerRef.current) {
+      containerRef.current.focus();
+    }
+  }, []);
+
+  const selectedIds = value
+    ? value.split(',').map(s => s.trim()).filter(Boolean)
+    : [];
+
+  const handleToggle = (optId) => {
+    let nextIds;
+    if (optId === '' || optId === 'None') {
+      nextIds = [];
+    } else {
+      if (selectedIds.includes(optId)) {
+        nextIds = selectedIds.filter(id => id !== optId);
+      } else {
+        nextIds = [...selectedIds, optId];
+      }
+    }
+    const nextVal = nextIds.join(', ');
+    setValue(nextVal);
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      params.stopEditing();
+    } else if (e.key === 'Escape') {
+      params.stopEditing(true);
+    }
+  };
+
+  useImperativeHandle(ref, () => {
+    return {
+      getValue() {
+        return value || 'None';
+      },
+      isPopup() {
+        return true;
+      }
+    };
+  });
+
+  const options = ['None', 'Detailing', 'Fabrication', 'Erection'];
+  const displayLabel = selectedIds.length > 0 ? selectedIds.join(', ') : 'None';
+
+  return (
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      className="relative z-[9999] outline-none"
+      style={{
+        width: params.column.getActualWidth(),
+      }}
+    >
+      {/* Fake Dropdown Trigger Box (matching form select style) */}
+      <div
+        onClick={(e) => {
+          e.stopPropagation();
+          params.stopEditing();
+        }}
+        className="w-full flex items-center justify-between bg-white border border-orange-500 rounded px-3 py-1.5 text-left text-xs cursor-pointer shadow-sm"
+        style={{ height: 34 }}
+      >
+        <span className="block truncate text-gray-700 font-semibold">
+          {displayLabel}
+        </span>
+        <ChevronDown className="h-3.5 w-3.5 text-orange-500 ml-2 flex-shrink-0" />
+      </div>
+
+      {/* Checklist popup */}
+      <div
+        className="w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg py-1 text-sm text-gray-700"
+        style={{ minWidth: 150 }}
+      >
+        <ul>
+          {options.map((opt) => {
+            const isSelected = opt === 'None'
+              ? selectedIds.length === 0
+              : selectedIds.includes(opt);
+
+            return (
+              <li
+                key={opt}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleToggle(opt === 'None' ? '' : opt);
+                }}
+                className="flex items-center px-3 py-1.5 hover:bg-gray-100 cursor-pointer select-none text-gray-700 font-medium"
+              >
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  readOnly
+                  className="h-3.5 w-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 mr-2.5 pointer-events-none"
+                />
+                <span className={isSelected ? 'font-semibold text-gray-900' : 'text-gray-600'}>
+                  {opt}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
+});
+
 // ── Column Definitions ────────────────────────────────────────────────────────
 function buildColumnDefs(customers, estimators, canEdit) {
   const readonly = { editable: false, cellClass: 'readonly-cell' }
@@ -346,8 +470,8 @@ function buildColumnDefs(customers, estimators, canEdit) {
           field: 'scope_of_work',
           headerName: 'Scope of work',
           width: 130,
-          cellEditor: 'agSelectCellEditor',
-          cellEditorParams: { values: ['None', 'Detailing', 'Fabrication', 'Erection'] },
+          cellRenderer: ScopeOfWorkRenderer,
+          cellEditor: MultiSelectCellEditor,
           valueGetter: (params) => {
             return params.data?.scope_of_work || 'None'
           },
@@ -423,7 +547,7 @@ function buildColumnDefs(customers, estimators, canEdit) {
           field: 'primary_estimator_initials', headerName: 'Estimator', width: 100,
           editable: canEdit,
           cellEditor: 'agSelectCellEditor',
-          cellEditorParams: { values: estimators.map(e => e.initials) },
+          cellEditorParams: { values: estimators.filter(e => e.initials !== 'ALL').map(e => e.initials) },
           valueSetter: (params) => {
             const found = estimators.find(e => e.initials === params.newValue)
             if (found) {
@@ -620,6 +744,21 @@ export default function DataEntryPage() {
   }, [searchParams])
   const [emailTarget,     setEmailTarget]      = useState(null)
   const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
+  const [settings, setSettings] = useState({
+    detailing: 'namrutha@caldimengg.in',
+    fabrication: 'divya@caldimengg.in',
+    erection: 'divya@caldimengg.in'
+  })
+
+  useEffect(() => {
+    systemSettingsAPI.list().then(res => {
+      const records = res.data
+      const detailing = records.find(r => r.key === 'rfq_detailing_emails')?.value || 'namrutha@caldimengg.in'
+      const fab = records.find(r => r.key === 'rfq_fabrication_emails')?.value || 'divya@caldimengg.in'
+      const erection = records.find(r => r.key === 'rfq_erection_emails')?.value || 'divya@caldimengg.in'
+      setSettings({ detailing, fabrication: fab, erection })
+    }).catch(err => console.error("Error loading system settings", err))
+  }, [])
 
   // Fetch data
   const { data: rfqData, isLoading, refetch } = useQuery({
@@ -737,6 +876,15 @@ export default function DataEntryPage() {
 
     updateMutation.mutate({ id: data.id, data: { [colDef.field]: finalValue } })
   }, [updateMutation])
+
+  const onCellClicked = useCallback((params) => {
+    if (params.colDef.field === 'scope_of_work' && params.colDef.editable !== false) {
+      params.api.startEditingCell({
+        rowIndex: params.rowIndex,
+        colKey: params.column.getId()
+      });
+    }
+  }, [])
 
   // Quick search handlers
   const handleApplySearch = () => {
@@ -934,6 +1082,7 @@ export default function DataEntryPage() {
             rowSelection="single"
             suppressRowClickSelection
             onCellValueChanged={onCellValueChanged}
+            onCellClicked={onCellClicked}
             defaultColDef={{
               resizable: true,
               sortable: true,
@@ -1005,7 +1154,14 @@ export default function DataEntryPage() {
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: 20, lineHeight: 1.5 }}>
               Are you sure you want to send the project details email for <strong style={{ color: 'var(--text-primary)' }}>{emailTarget.quote_no} — {emailTarget.project_name}</strong> to the designated account?
               <br/><br/>
-              <strong>Recipient:</strong> {emailTarget.scope_of_work === 'Detailing' ? 'namrutha@caldimengg.in' : 'divya@caldimengg.in'} ({emailTarget.scope_of_work})
+              <strong>Recipient:</strong> {(() => {
+                const scopes = (emailTarget.scope_of_work || '').split(',').map(s => s.trim());
+                const recs = [];
+                if (scopes.includes('Detailing') && settings.detailing) recs.push(`${settings.detailing} (Detailing)`);
+                if (scopes.includes('Fabrication') && settings.fabrication) recs.push(`${settings.fabrication} (Fabrication)`);
+                if (scopes.includes('Erection') && settings.erection) recs.push(`${settings.erection} (Erection)`);
+                return recs.join(' & ') || 'None';
+              })()}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn btn-ghost" onClick={() => setEmailTarget(null)}>Cancel</button>

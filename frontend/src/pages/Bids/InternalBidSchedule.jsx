@@ -189,7 +189,7 @@ export default function InternalBidSchedule() {
         holidayAPI.getAll(),
       ]);
       setBids(bidsRes.data.results || bidsRes.data);
-      setEstimators(empRes.data.results || empRes.data);
+      setEstimators((empRes.data.results || empRes.data).filter(e => e.initials !== 'ALL'));
       // Build a date → description lookup map
       const holidayMap = {};
       (holidayRes.data || []).forEach(h => { holidayMap[h.date] = h.description; });

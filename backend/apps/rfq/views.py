@@ -12,11 +12,12 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
 from django_filters import rest_framework as df_filters
-from .models import RFQMaster, Estimator, MonthlyBidGoal
+from .models import RFQMaster, Estimator, MonthlyBidGoal, SystemSetting
 from projects.models import Customer
 from .serializers import (
     RFQMasterSerializer, RFQListSerializer, PrintSetupSerializer,
     CustomerSerializer, EstimatorSerializer, MonthlyBidGoalSerializer,
+    SystemSettingSerializer,
 )
 from .permissions import CanEditRFQ, IsManagerOrReadOnly
 import threading
@@ -58,19 +59,46 @@ def send_rfq_email_async(rfq_id):
         if not rfq.scope_of_work:
             return
             
-        recipient_name = None
-        recipient_email = None
+        recipient_names = []
+        recipient_emails = []
         
-        scope = rfq.scope_of_work
-        if scope == 'Detailing':
-            recipient_name = 'namrutha'
-            recipient_email = 'namrutha@caldimengg.in'
-        elif scope in ['Fabrication', 'Erection']:
-            recipient_name = 'divya'
-            recipient_email = 'divya@caldimengg.in'
+        detailing_emails = 'namrutha@caldimengg.in'
+        fabrication_emails = 'divya@caldimengg.in'
+        erection_emails = 'divya@caldimengg.in'
+        try:
+            detailing_emails = SystemSetting.objects.get(key='rfq_detailing_emails').value
+        except SystemSetting.DoesNotExist:
+            pass
+        try:
+            fabrication_emails = SystemSetting.objects.get(key='rfq_fabrication_emails').value
+        except SystemSetting.DoesNotExist:
+            pass
+        try:
+            erection_emails = SystemSetting.objects.get(key='rfq_erection_emails').value
+        except SystemSetting.DoesNotExist:
+            pass
+
+        scopes = [s.strip() for s in rfq.scope_of_work.split(',') if s.strip()]
+        
+        def add_recipients(email_str):
+            for e in email_str.split(','):
+                e = e.strip()
+                if e:
+                    recipient_emails.append(e)
+                    recipient_names.append(e.split('@')[0])
+
+        if 'Detailing' in scopes and detailing_emails:
+            add_recipients(detailing_emails)
+        if 'Fabrication' in scopes and fabrication_emails:
+            add_recipients(fabrication_emails)
+        if 'Erection' in scopes and erection_emails:
+            add_recipients(erection_emails)
             
-        if not recipient_email:
+        if not recipient_emails:
             return
+            
+        recipient_name = " and ".join(list(set(recipient_names)))
+        recipient_emails = list(set(recipient_emails))
             
         subject = f"Project Details: {rfq.quote_no} - {rfq.project_name}"
         
@@ -97,7 +125,7 @@ def send_rfq_email_async(rfq_id):
             subject=subject,
             message=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
-            recipient_list=[recipient_email],
+            recipient_list=recipient_emails,
             fail_silently=False
         )
         rfq.email_sent = True
@@ -711,3 +739,10 @@ class MonthlyBidGoalViewSet(viewsets.ModelViewSet):
             )
             goals.append(obj)
         return Response(MonthlyBidGoalSerializer(goals, many=True).data)
+
+
+class SystemSettingViewSet(viewsets.ModelViewSet):
+    queryset = SystemSetting.objects.all()
+    serializer_class = SystemSettingSerializer
+    permission_classes = [IsAuthenticated]
+    pagination_class = None

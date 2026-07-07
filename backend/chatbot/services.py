@@ -91,7 +91,34 @@ def retrieve_relevant_context(query, limit=5):
     if filtered_tokens:
         query_tokens = filtered_tokens
         
-    scores = bm25.get_scores(query_tokens)
+    # Query expansion (synonyms) to improve recall
+    expanded_tokens = list(query_tokens)
+    synonym_map = {
+        'add': ['create', 'new', 'insert', 'register', 'enquiry'],
+        'create': ['add', 'new', 'insert', 'register', 'enquiry'],
+        'delete': ['remove', 'destroy', 'clear', 'trash'],
+        'remove': ['delete', 'destroy', 'clear', 'trash'],
+        'find': ['search', 'lookup', 'view'],
+        'search': ['find', 'lookup', 'view'],
+        'rfq': ['quote', 'enquiry', 'enquiries'],
+        'quote': ['rfq', 'enquiry', 'enquiries'],
+        'enquiry': ['rfq', 'quote'],
+        'bids': ['enquiry', 'enquiries', 'bid'],
+        'bid': ['bids', 'enquiry', 'enquiries']
+    }
+    for token in query_tokens:
+        if token in synonym_map:
+            expanded_tokens.extend(synonym_map[token])
+            
+    # Deduplicate while preserving order
+    seen = set()
+    final_query_tokens = []
+    for token in expanded_tokens:
+        if token not in seen:
+            seen.add(token)
+            final_query_tokens.append(token)
+        
+    scores = bm25.get_scores(final_query_tokens)
     
     # Sort and rank
     scored_chunks = sorted(zip(scores, chunks), key=lambda x: x[0], reverse=True)
