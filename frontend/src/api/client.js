@@ -108,5 +108,6 @@ export const dashboardAPI = {
 export const systemSettingsAPI = {
   list: () => api.get('/rfq/settings/'),
   update: (id, data) => api.patch(`/rfq/settings/${id}/`, data),
+  create: (data) => api.post('/rfq/settings/', data),
 }
 

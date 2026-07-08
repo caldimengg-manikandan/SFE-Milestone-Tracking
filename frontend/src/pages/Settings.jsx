@@ -102,12 +102,32 @@ export default function Settings() {
       
       if (detailingRecord) {
         await systemSettingsAPI.update(detailingRecord.id, { value: detailingEmails.join(', ') });
+      } else {
+        await systemSettingsAPI.create({
+          key: 'rfq_detailing_emails',
+          value: detailingEmails.join(', '),
+          description: 'Default email recipients for Detailing scope projects (comma separated)'
+        });
       }
+
       if (fabRecord) {
         await systemSettingsAPI.update(fabRecord.id, { value: fabEmails.join(', ') });
+      } else {
+        await systemSettingsAPI.create({
+          key: 'rfq_fabrication_emails',
+          value: fabEmails.join(', '),
+          description: 'Default email recipients for Fabrication scope projects (comma separated)'
+        });
       }
+
       if (erectionRecord) {
         await systemSettingsAPI.update(erectionRecord.id, { value: erectionEmails.join(', ') });
+      } else {
+        await systemSettingsAPI.create({
+          key: 'rfq_erection_emails',
+          value: erectionEmails.join(', '),
+          description: 'Default email recipients for Erection scope projects (comma separated)'
+        });
       }
       
       setNewEmailInputs({ detailing: '', fabrication: '', erection: '' });
