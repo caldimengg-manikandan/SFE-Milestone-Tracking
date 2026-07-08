@@ -83,6 +83,10 @@ const DEFAULT_ESTIMATION_SECTIONS = {
   additionalSafetyCosts: '',
   ccipCosts: '',
   leedSubmissionCost: '',
+  otherCustom1Label: '',
+  otherCustom1Cost: '',
+  otherCustom2Label: '',
+  otherCustom2Cost: '',
   suppliedMaterialCost: '',
   useTaxPercent: 6.0,
   buyoutOverheadPercent: 12.0,
@@ -181,7 +185,7 @@ export default function EstimationModel() {
         startDate: selected.erection_date || '',
         location: resolvedLocation
       };
-      if (estData.bidEnquiry && estData.estimationSections) {
+      if (estData.projectInfo) {
         return {
           ...nextProjectInfo,
           ...estData.projectInfo,
@@ -271,7 +275,7 @@ export default function EstimationModel() {
       let nextBidEnquiry = DEFAULT_BID_ENQUIRY;
       let nextEstimationSections = DEFAULT_ESTIMATION_SECTIONS;
       
-      if (estData.bidEnquiry && estData.estimationSections) {
+      if (estData.projectInfo) {
         nextProjectInfoFull = {
           ...nextProjectInfo,
           ...estData.projectInfo,
@@ -282,7 +286,11 @@ export default function EstimationModel() {
           startDate: selected.erection_date || '',
           location: resolvedLocation
         };
+      }
+      if (estData.bidEnquiry) {
         nextBidEnquiry = estData.bidEnquiry;
+      }
+      if (estData.estimationSections) {
         nextEstimationSections = estData.estimationSections;
       }
       
@@ -417,7 +425,8 @@ export default function EstimationModel() {
           let nextBidEnquiry = DEFAULT_BID_ENQUIRY;
           let nextEstimationSections = DEFAULT_ESTIMATION_SECTIONS;
           
-          if (estData.bidEnquiry && estData.estimationSections) {
+          let hasSavedData = false;
+          if (estData.projectInfo) {
             nextProjectInfoFull = {
               ...nextProjectInfo,
               ...estData.projectInfo,
@@ -428,8 +437,18 @@ export default function EstimationModel() {
               startDate: selected.erection_date || '',
               location: resolvedLocation
             };
+            hasSavedData = true;
+          }
+          if (estData.bidEnquiry) {
             nextBidEnquiry = estData.bidEnquiry;
+            hasSavedData = true;
+          }
+          if (estData.estimationSections) {
             nextEstimationSections = estData.estimationSections;
+            hasSavedData = true;
+          }
+          
+          if (hasSavedData) {
             toast.success(`Calculations loaded for ${selected.name}`);
           } else {
             toast.success(`Calculations reset for ${selected.name}`);
@@ -484,8 +503,13 @@ export default function EstimationModel() {
           const selected = res.data;
           if (selected && selected.estimation_data) {
             const estData = selected.estimation_data;
-            if (estData.bidEnquiry && estData.estimationSections) {
-              const nextProj = {
+            let nextProj = { ...projectInfo };
+            let nextBidEnquiry = { ...bidEnquiry };
+            let nextEstimationSections = { ...estimationSections };
+            let hasSavedData = false;
+
+            if (estData.projectInfo) {
+              nextProj = {
                 ...projectInfo,
                 ...estData.projectInfo,
                 projectId: selected.id,
@@ -494,14 +518,26 @@ export default function EstimationModel() {
                 salesman: selected.project_manager_name || '',
                 startDate: selected.erection_date || ''
               };
+              hasSavedData = true;
+            }
+            if (estData.bidEnquiry) {
+              nextBidEnquiry = estData.bidEnquiry;
+              hasSavedData = true;
+            }
+            if (estData.estimationSections) {
+              nextEstimationSections = estData.estimationSections;
+              hasSavedData = true;
+            }
+
+            if (hasSavedData) {
               setProjectInfo(nextProj);
-              setBidEnquiry(estData.bidEnquiry);
-              setEstimationSections(estData.estimationSections);
+              setBidEnquiry(nextBidEnquiry);
+              setEstimationSections(nextEstimationSections);
               
               loadedDataRef.current = JSON.stringify({
                 projectInfo: nextProj,
-                bidEnquiry: estData.bidEnquiry,
-                estimationSections: estData.estimationSections
+                bidEnquiry: nextBidEnquiry,
+                estimationSections: nextEstimationSections
               });
             }
           }
@@ -793,13 +829,15 @@ export default function EstimationModel() {
   const additionalSafetyCostsVal = Number(estimationSections.additionalSafetyCosts) || 0;
   const ccipCostsVal = Number(estimationSections.ccipCosts) || 0;
   const leedSubmissionCostVal = Number(estimationSections.leedSubmissionCost) || 0;
+  const otherCustom1CostVal = Number(estimationSections.otherCustom1Cost) || 0;
+  const otherCustom2CostVal = Number(estimationSections.otherCustom2Cost) || 0;
   const suppliedMaterialCostVal = Number(estimationSections.suppliedMaterialCost) || 0;
   const useTaxPercentVal = Number(estimationSections.useTaxPercent) || 0;
 
   const subletErectionCostPerTon = totalTons > 0 ? subletErectionCostVal / totalTons : 0;
   const oshaPostsCost = (oshaLinearFeetVal / 5) * 50;
   const safetyCost = additionalSafetyCostsVal + ccipCostsVal;
-  const totalDirectBuyoutCosts = steelJoistCostVal + deckCostVal + subletErectionCostVal + miscMetalCostVal + oshaPostsCost + safetyCost + leedSubmissionCostVal;
+  const totalDirectBuyoutCosts = steelJoistCostVal + deckCostVal + subletErectionCostVal + miscMetalCostVal + oshaPostsCost + safetyCost + leedSubmissionCostVal + otherCustom1CostVal + otherCustom2CostVal;
   const useTax = suppliedMaterialCostVal * (useTaxPercentVal / 100);
   const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
 
@@ -869,8 +907,11 @@ export default function EstimationModel() {
       };
       await projectAPI.patch(projectInfo.projectId, payload);
       loadedDataRef.current = currentDataStr;
+      if (outletContext?.refreshProject) {
+        await outletContext.refreshProject();
+      }
     });
-  }, [projectInfo, bidEnquiry, estimationSections, totalTons, totalLaborHours]);
+  }, [projectInfo, bidEnquiry, estimationSections, totalTons, totalLaborHours, outletContext]);
 
   // Clear Form handler
   const handleClear = () => {
@@ -1877,7 +1918,7 @@ export default function EstimationModel() {
               </td>
             </tr>
 
-            {/* LEED Data Submittal */}
+            {/* LEED LEED Data Submittal */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400"></td>
               <td className="py-4 px-4 pl-8 font-semibold text-slate-700">LEED LEED Data Submittal</td>
@@ -1895,6 +1936,70 @@ export default function EstimationModel() {
                       placeholder="0"
                       onChange={(e) => setEstimationSections({ ...estimationSections, leedSubmissionCost: e.target.value })}
                       className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            {/* Custom Other 1 */}
+            <tr className="hover:bg-slate-50/50 transition-colors">
+              <td className="py-4 px-4 font-bold text-slate-400"></td>
+              <td className="py-4 px-4 pl-8">
+                <input
+                  type="text"
+                  value={estimationSections.otherCustom1Label}
+                  placeholder="Other Custom Item 1"
+                  onChange={(e) => setEstimationSections({ ...estimationSections, otherCustom1Label: e.target.value })}
+                  className="w-full max-w-[280px] px-3 py-2 bg-white hover:bg-slate-50 focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-xs transition-all"
+                />
+              </td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.otherCustom1Cost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, otherCustom1Cost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-white hover:bg-slate-50 focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
+              </td>
+            </tr>
+
+            {/* Custom Other 2 */}
+            <tr className="hover:bg-slate-50/50 transition-colors">
+              <td className="py-4 px-4 font-bold text-slate-400"></td>
+              <td className="py-4 px-4 pl-8">
+                <input
+                  type="text"
+                  value={estimationSections.otherCustom2Label}
+                  placeholder="Other Custom Item 2"
+                  onChange={(e) => setEstimationSections({ ...estimationSections, otherCustom2Label: e.target.value })}
+                  className="w-full max-w-[280px] px-3 py-2 bg-white hover:bg-slate-50 focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-xs transition-all"
+                />
+              </td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4"></td>
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.otherCustom2Cost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, otherCustom2Cost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-white hover:bg-slate-50 focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                     />
                   </span>
                 </div>

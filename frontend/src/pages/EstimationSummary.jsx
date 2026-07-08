@@ -117,10 +117,12 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const activeCcipCostsVal = Number(activeEstimationSections.ccipCosts) || 0;
   const activeSafetyCost = activeAdditionalSafetyCostsVal + activeCcipCostsVal;
   const activeLeedSubmissionCostVal = Number(activeEstimationSections.leedSubmissionCost) || 0;
+  const activeOtherCustom1CostVal = Number(activeEstimationSections.otherCustom1Cost) || 0;
+  const activeOtherCustom2CostVal = Number(activeEstimationSections.otherCustom2Cost) || 0;
   const activeSuppliedMaterialCostVal = Number(activeEstimationSections.suppliedMaterialCost) || 0;
   const activeUseTaxPercentVal = Number(activeEstimationSections.useTaxPercent) !== undefined && activeEstimationSections.useTaxPercent !== '' ? Number(activeEstimationSections.useTaxPercent) : 6.0;
 
-  const activeTotalDirectBuyoutCosts = activeSteelJoistCostVal + activeDeckCostVal + activeSubletErectionCostVal + activeMiscMetalCostVal + activeOshaPostsCost + activeSafetyCost + activeLeedSubmissionCostVal;
+  const activeTotalDirectBuyoutCosts = activeSteelJoistCostVal + activeDeckCostVal + activeSubletErectionCostVal + activeMiscMetalCostVal + activeOshaPostsCost + activeSafetyCost + activeLeedSubmissionCostVal + activeOtherCustom1CostVal + activeOtherCustom2CostVal;
   const activeUseTax = activeSuppliedMaterialCostVal * (activeUseTaxPercentVal / 100);
   const activeTotalBuyoutCosts = activeTotalDirectBuyoutCosts + activeUseTax;
 
@@ -395,10 +397,12 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const ccipCosts = getNum(estimationSections.ccipCosts);
     const safetyCost = additionalSafetyCosts + ccipCosts;
     const leedSubmissionCost = getNum(estimationSections.leedSubmissionCost);
+    const otherCustom1Cost = getNum(estimationSections.otherCustom1Cost);
+    const otherCustom2Cost = getNum(estimationSections.otherCustom2Cost);
     const suppliedMaterialCost = getNum(estimationSections.suppliedMaterialCost);
     const useTaxPercent = getNum(estimationSections.useTaxPercent, 6.0);
 
-    const totalDirectBuyoutCosts = steelJoistCost + deckCost + subletErectionCost + miscMetalCost + oshaPostsCost + safetyCost + leedSubmissionCost;
+    const totalDirectBuyoutCosts = steelJoistCost + deckCost + subletErectionCost + miscMetalCost + oshaPostsCost + safetyCost + leedSubmissionCost + otherCustom1Cost + otherCustom2Cost;
     const useTax = suppliedMaterialCost * (useTaxPercent / 100);
     const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
 

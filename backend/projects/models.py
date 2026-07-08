@@ -334,7 +334,10 @@ def sync_bid_summary_from_estimation_data(sender, instance, **kwargs):
     ccip = to_dec(estimation_sections.get('ccipCosts'))
     bid_summary.safety_ccip = safety + ccip
     
-    bid_summary.leed_data = to_dec(estimation_sections.get('leedSubmissionCost'))
+    leed = to_dec(estimation_sections.get('leedSubmissionCost'))
+    custom1 = to_dec(estimation_sections.get('otherCustom1Cost'))
+    custom2 = to_dec(estimation_sections.get('otherCustom2Cost'))
+    bid_summary.leed_data = leed + custom1 + custom2
     bid_summary.misc_bid_amount = to_dec(estimation_sections.get('miscCharges'))
 
     bid_summary.save()
