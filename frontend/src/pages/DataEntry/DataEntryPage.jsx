@@ -250,130 +250,6 @@ function SetJobNoModal({ rfq, onClose, onSaved }) {
   )
 }
 
-function ScopeOfWorkRenderer(params) {
-  const val = params.value || 'None';
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-      <span className="truncate">{val}</span>
-      <span style={{ fontSize: '0.62rem', color: 'var(--text-muted)', marginLeft: '6px', opacity: 0.7 }}>▼</span>
-    </div>
-  );
-}
-
-const MultiSelectCellEditor = forwardRef((params, ref) => {
-  const [value, setValue] = useState(params.value === 'None' ? '' : (params.value || ''));
-  const containerRef = useRef(null);
-
-  useEffect(() => {
-    if (containerRef.current) {
-      containerRef.current.focus();
-    }
-  }, []);
-
-  const selectedIds = value
-    ? value.split(',').map(s => s.trim()).filter(Boolean)
-    : [];
-
-  const handleToggle = (optId) => {
-    let nextIds;
-    if (optId === '' || optId === 'None') {
-      nextIds = [];
-    } else {
-      if (selectedIds.includes(optId)) {
-        nextIds = selectedIds.filter(id => id !== optId);
-      } else {
-        nextIds = [...selectedIds, optId];
-      }
-    }
-    const nextVal = nextIds.join(', ');
-    setValue(nextVal);
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      params.stopEditing();
-    } else if (e.key === 'Escape') {
-      params.stopEditing(true);
-    }
-  };
-
-  useImperativeHandle(ref, () => {
-    return {
-      getValue() {
-        return value || 'None';
-      },
-      isPopup() {
-        return true;
-      }
-    };
-  });
-
-  const options = ['None', 'Detailing', 'Fabrication', 'Erection'];
-  const displayLabel = selectedIds.length > 0 ? selectedIds.join(', ') : 'None';
-
-  return (
-    <div
-      ref={containerRef}
-      tabIndex={0}
-      onKeyDown={handleKeyDown}
-      className="relative z-[9999] outline-none"
-      style={{
-        width: params.column.getActualWidth(),
-      }}
-    >
-      {/* Fake Dropdown Trigger Box (matching form select style) */}
-      <div
-        onClick={(e) => {
-          e.stopPropagation();
-          params.stopEditing();
-        }}
-        className="w-full flex items-center justify-between bg-white border border-orange-500 rounded px-3 py-1.5 text-left text-xs cursor-pointer shadow-sm"
-        style={{ height: 34 }}
-      >
-        <span className="block truncate text-gray-700 font-semibold">
-          {displayLabel}
-        </span>
-        <ChevronDown className="h-3.5 w-3.5 text-orange-500 ml-2 flex-shrink-0" />
-      </div>
-
-      {/* Checklist popup */}
-      <div
-        className="w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg py-1 text-sm text-gray-700"
-        style={{ minWidth: 150 }}
-      >
-        <ul>
-          {options.map((opt) => {
-            const isSelected = opt === 'None'
-              ? selectedIds.length === 0
-              : selectedIds.includes(opt);
-
-            return (
-              <li
-                key={opt}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleToggle(opt === 'None' ? '' : opt);
-                }}
-                className="flex items-center px-3 py-1.5 hover:bg-gray-100 cursor-pointer select-none text-gray-700 font-medium"
-              >
-                <input
-                  type="checkbox"
-                  checked={isSelected}
-                  readOnly
-                  className="h-3.5 w-3.5 rounded border-gray-300 text-orange-600 focus:ring-orange-500 mr-2.5 pointer-events-none"
-                />
-                <span className={isSelected ? 'font-semibold text-gray-900' : 'text-gray-600'}>
-                  {opt}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </div>
-    </div>
-  );
-});
-
 // ── Column Definitions ────────────────────────────────────────────────────────
 function buildColumnDefs(customers, estimators, canEdit) {
   const readonly = { editable: false, cellClass: 'readonly-cell' }
@@ -428,6 +304,7 @@ function buildColumnDefs(customers, estimators, canEdit) {
           field: 'quote_no', headerName: 'Quote No', width: 140, pinned: 'left',
           editable: canEdit,
           cellStyle: { fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600 },
+          sort: 'desc',
         },
         {
           field: 'bid_reference', headerName: 'Bid Reference', width: 140, pinned: 'left',
@@ -470,19 +347,7 @@ function buildColumnDefs(customers, estimators, canEdit) {
           field: 'scope_of_work',
           headerName: 'Scope of work',
           width: 130,
-          cellRenderer: ScopeOfWorkRenderer,
-          cellEditor: MultiSelectCellEditor,
-          valueGetter: (params) => {
-            return params.data?.scope_of_work || 'None'
-          },
-          valueSetter: (params) => {
-            if (params.data) {
-              const val = (params.newValue === 'None' || !params.newValue) ? null : params.newValue
-              params.data.scope_of_work = val
-              return true
-            }
-            return false
-          },
+          valueFormatter: (params) => params.value || 'None',
           ...editableIf,
         },
         {
@@ -878,12 +743,7 @@ export default function DataEntryPage() {
   }, [updateMutation])
 
   const onCellClicked = useCallback((params) => {
-    if (params.colDef.field === 'scope_of_work' && params.colDef.editable !== false) {
-      params.api.startEditingCell({
-        rowIndex: params.rowIndex,
-        colKey: params.column.getId()
-      });
-    }
+    // No special action on cell click
   }, [])
 
   // Quick search handlers

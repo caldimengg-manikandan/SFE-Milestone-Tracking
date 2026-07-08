@@ -125,6 +125,68 @@ export default function EstimateDataTab() {
     }
   };
 
+  const handleCostCodeChange = (code, value) => {
+    const keyMapping = {
+      "1.01": "shop_labor",
+      "1.02": "shop_subcontract",
+      "1.03": "steel_material",
+      "1.05": "grating_material",
+      "1.08": "other_material",
+      "1.09": "anodizing_finish",
+      "1.10": "galvanizing",
+      "2.01": "field_labor"
+    };
+    const fieldKey = keyMapping[code];
+    if (!fieldKey) return;
+
+    const parsedVal = value === '' ? 0 : parseFloat(value) || 0;
+    const updatedCostCodes = { ...costCodes };
+    updatedCostCodes[fieldKey] = parsedVal;
+
+    const codesList = [
+      { code: "4.01", val: costCodes.draft_labor },
+      { code: "4.02", val: costCodes.draft_subcontract },
+      { code: "1.01", val: fieldKey === "shop_labor" ? parsedVal : costCodes.shop_labor },
+      { code: "1.02", val: fieldKey === "shop_subcontract" ? parsedVal : costCodes.shop_subcontract },
+      { code: "1.03", val: fieldKey === "steel_material" ? parsedVal : costCodes.steel_material },
+      { code: "1.05", val: fieldKey === "grating_material" ? parsedVal : costCodes.grating_material },
+      { code: "1.06", val: costCodes.joist_material },
+      { code: "1.07", val: costCodes.deck_material },
+      { code: "1.08", val: fieldKey === "other_material" ? parsedVal : costCodes.other_material },
+      { code: "1.09", val: fieldKey === "anodizing_finish" ? parsedVal : costCodes.anodizing_finish },
+      { code: "1.10", val: fieldKey === "galvanizing" ? parsedVal : costCodes.galvanizing },
+      { code: "1.11", val: costCodes.paint_supply },
+      { code: "1.12", val: costCodes.bolts_supply },
+      { code: "2.01", val: fieldKey === "field_labor" ? parsedVal : costCodes.field_labor },
+    ];
+    updatedCostCodes.grand_total = codesList.reduce((sum, item) => sum + (parseFloat(item.val) || 0), 0);
+    setCostCodes(updatedCostCodes);
+
+    if (!isReadOnly) {
+      triggerSave(async () => {
+        const projRes = await api.get(`projects/${projectId}/`);
+        const existingEstData = projRes.data.estimation_data || {};
+        const existingOverrides = existingEstData.costCodeOverrides || {};
+
+        const nextOverrides = {
+          ...existingOverrides,
+          [code]: value === '' ? null : parsedVal
+        };
+
+        if (value === '') {
+          delete nextOverrides[code];
+        }
+
+        await api.patch(`projects/${projectId}/`, {
+          estimation_data: {
+            ...existingEstData,
+            costCodeOverrides: nextOverrides
+          }
+        });
+      });
+    }
+  };
+
   const handleFinalize = async (e) => {
     e.preventDefault();
     if (!confirmName) return;
@@ -170,28 +232,48 @@ export default function EstimateDataTab() {
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
               {[
-                { label: "4.01 Draft Labor", val: costCodes.draft_labor },
-                { label: "4.02 Draft Subcontract", val: costCodes.draft_subcontract },
-                { label: "1.01 Shop Labor", val: costCodes.shop_labor },
-                { label: "1.02 Shop Subcontract", val: costCodes.shop_subcontract },
-                { label: "1.03 Steel Material", val: costCodes.steel_material },
-                { label: "1.05 Grating Material", val: costCodes.grating_material },
-                { label: "1.06 Joist Material", val: costCodes.joist_material },
-                { label: "1.07 Deck Material", val: costCodes.deck_material },
-                { label: "1.08 Other Material", val: costCodes.other_material },
-                { label: "1.09 Anodizing Finish", val: costCodes.anodizing_finish },
-                { label: "1.10 Galvanizing", val: costCodes.galvanizing },
-                { label: "1.11 Paint Supply", val: costCodes.paint_supply },
-                { label: "1.12 Bolts Supply", val: costCodes.bolts_supply },
-                { label: "2.01 Field Labor", val: costCodes.field_labor },
-              ].map((item, idx) => (
-                <div key={idx} className="flex justify-between border-b border-slate-100 py-2 hover:bg-slate-50/50">
-                  <span className="text-slate-500 font-medium font-sans">{item.label}:</span>
-                  <span className="text-slate-800 font-bold font-mono">
-                    ${parseFloat(item.val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
-                  </span>
-                </div>
-              ))}
+                { code: "4.01", label: "4.01 Draft Labor", val: costCodes.draft_labor },
+                { code: "4.02", label: "4.02 Draft Subcontract", val: costCodes.draft_subcontract },
+                { code: "1.01", label: "1.01 Shop Labor", val: costCodes.shop_labor },
+                { code: "1.02", label: "1.02 Shop Subcontract", val: costCodes.shop_subcontract },
+                { code: "1.03", label: "1.03 Steel Material", val: costCodes.steel_material },
+                { code: "1.05", label: "1.05 Grating Material", val: costCodes.grating_material },
+                { code: "1.06", label: "1.06 Joist Material", val: costCodes.joist_material },
+                { code: "1.07", label: "1.07 Deck Material", val: costCodes.deck_material },
+                { code: "1.08", label: "1.08 Other Material", val: costCodes.other_material },
+                { code: "1.09", label: "1.09 Anodizing Finish", val: costCodes.anodizing_finish },
+                { code: "1.10", label: "1.10 Galvanizing", val: costCodes.galvanizing },
+                { code: "1.11", label: "1.11 Paint Supply", val: costCodes.paint_supply },
+                { code: "1.12", label: "1.12 Bolts Supply", val: costCodes.bolts_supply },
+                { code: "2.01", label: "2.01 Field Labor", val: costCodes.field_labor },
+              ].map((item, idx) => {
+                const isEditable = [
+                  "1.01", "1.02", "1.03", "1.05", "1.08", "1.09", "1.10", "2.01"
+                ].includes(item.code);
+                return (
+                  <div key={idx} className="flex justify-between items-center border-b border-slate-100 py-1.5 hover:bg-slate-50/50">
+                    <span className="text-slate-500 font-medium font-sans">{item.label}:</span>
+                    {isEditable ? (
+                      <div className="relative flex items-center w-36">
+                        <span className="absolute left-2 text-slate-400 font-bold">$</span>
+                        <input
+                          type="number"
+                          step="0.01"
+                          disabled={isReadOnly}
+                          value={item.val === 0 ? "" : item.val}
+                          placeholder="0.00"
+                          onChange={(e) => handleCostCodeChange(item.code, e.target.value)}
+                          className="w-full bg-white border border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800 rounded px-3 pl-6 py-1 text-xs outline-none transition-all font-mono text-right font-bold"
+                        />
+                      </div>
+                    ) : (
+                      <span className="text-slate-800 font-bold font-mono pr-2">
+                        ${parseFloat(item.val || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}
+                      </span>
+                    )}
+                  </div>
+                );
+              })}
             </div>
             
             <div className="flex justify-between items-center bg-slate-50 p-4 rounded-xl border border-slate-150 mt-4 shadow-sm font-semibold">

@@ -138,8 +138,8 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_class = RFQFilter
     search_fields = ['quote_no', 'project_name', 'bid_reference', 'customer__name']
-    ordering_fields = ['bid_due_date', 'quote_date', 'bid_amount', 'won_lost', 'project_name']
-    ordering = ['-bid_due_date']
+    ordering_fields = ['quote_no', 'bid_due_date', 'quote_date', 'bid_amount', 'won_lost', 'project_name', 'created_at']
+    ordering = ['-quote_no']
     pagination_class = None
 
     def get_queryset(self):

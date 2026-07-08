@@ -379,6 +379,74 @@ export default function ErectionTakeoffTab() {
                   onChange={handleConstantChange}
                 />
               </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  Freight Out Trucks
+                </label>
+                <input
+                  type="number"
+                  name="freight_out_trucks"
+                  disabled={isReadOnly || takeoff.erection_type !== 'outsourced'}
+                  placeholder={takeoff.erection_type === 'outsourced' ? "0" : ""}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono ${
+                    takeoff.erection_type !== 'outsourced'
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed font-semibold'
+                      : 'bg-white border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800'
+                  }`}
+                  value={
+                    takeoff.erection_type === 'outsourced'
+                      ? (takeoff.freight_out_trucks !== null && takeoff.freight_out_trucks !== undefined ? takeoff.freight_out_trucks : "")
+                      : (computed.freight_out_trucks || 0)
+                  }
+                  onChange={handleConstantChange}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  Steel Joist Tons
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  name="joist_deck_tons"
+                  disabled={isReadOnly || takeoff.erection_type !== 'outsourced'}
+                  placeholder={takeoff.erection_type === 'outsourced' ? "0.00" : ""}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono ${
+                    takeoff.erection_type !== 'outsourced'
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed font-semibold'
+                      : 'bg-white border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800'
+                  }`}
+                  value={
+                    takeoff.erection_type === 'outsourced'
+                      ? (takeoff.joist_deck_tons !== null && takeoff.joist_deck_tons !== undefined ? takeoff.joist_deck_tons : "")
+                      : (computed.joist_deck_tons || 0)
+                  }
+                  onChange={handleConstantChange}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
+                  Hours Per Truck (Travel)
+                </label>
+                <input
+                  type="number"
+                  step="0.1"
+                  name="travel_hours"
+                  disabled={isReadOnly || takeoff.erection_type !== 'outsourced'}
+                  placeholder={takeoff.erection_type === 'outsourced' ? "0.0" : ""}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm outline-none transition-all font-mono ${
+                    takeoff.erection_type !== 'outsourced'
+                      ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed font-semibold'
+                      : 'bg-white border-slate-200 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 text-slate-800'
+                  }`}
+                  value={
+                    takeoff.erection_type === 'outsourced'
+                      ? (takeoff.travel_hours !== null && takeoff.travel_hours !== undefined ? takeoff.travel_hours : "")
+                      : (computed.travel_hours || 0)
+                  }
+                  onChange={handleConstantChange}
+                />
+              </div>
             </div>
           </div>
 

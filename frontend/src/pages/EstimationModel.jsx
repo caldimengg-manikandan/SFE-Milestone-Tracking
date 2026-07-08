@@ -24,6 +24,7 @@ const DEFAULT_PROJECT_INFO = {
   location: '',
   materialDate: '',
   budgetPricing: 'N',
+  erectionType: 'inhouse',
   date: new Date().toISOString().split('T')[0],
   salesman: '',
   quoteNum: '',
@@ -59,6 +60,9 @@ const DEFAULT_ESTIMATION_SECTIONS = {
   miscLaborHours: '',
   miscLaborOtherHours: '',
   miscLaborOther2Hours: '',
+  miscLaborLabel: 'MISC:',
+  miscLaborOtherLabel: 'OTHER:',
+  miscLaborOther2Label: 'OTHER:',
   totalPieces: '',
   hourlyLaborRate: 60.0,
   numTrucks: 0,
@@ -1305,7 +1309,13 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <div className="flex flex-col gap-2">
                   <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">MISC:</span>
+                    <input
+                      type="text"
+                      value={estimationSections.miscLaborLabel !== undefined ? estimationSections.miscLaborLabel : 'MISC:'}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscLaborLabel: e.target.value })}
+                      className="w-20 px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 focus:border-amber-500 rounded-lg outline-none font-semibold text-slate-600 text-[10px] transition-all"
+                      placeholder="MISC:"
+                    />
                     <input
                       type="number"
                       min="0"
@@ -1317,7 +1327,13 @@ export default function EstimationModel() {
                     <span className="font-bold text-slate-400">Hrs</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">OTHER:</span>
+                    <input
+                      type="text"
+                      value={estimationSections.miscLaborOtherLabel !== undefined ? estimationSections.miscLaborOtherLabel : 'OTHER:'}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscLaborOtherLabel: e.target.value })}
+                      className="w-20 px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 focus:border-amber-500 rounded-lg outline-none font-semibold text-slate-600 text-[10px] transition-all"
+                      placeholder="OTHER:"
+                    />
                     <input
                       type="number"
                       min="0"
@@ -1329,7 +1345,13 @@ export default function EstimationModel() {
                     <span className="font-bold text-slate-400">Hrs</span>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="w-12 text-slate-400 font-semibold text-[10px]">OTHER:</span>
+                    <input
+                      type="text"
+                      value={estimationSections.miscLaborOther2Label !== undefined ? estimationSections.miscLaborOther2Label : 'OTHER:'}
+                      onChange={(e) => setEstimationSections({ ...estimationSections, miscLaborOther2Label: e.target.value })}
+                      className="w-20 px-2 py-1 bg-white border border-slate-200 hover:border-slate-300 focus:border-amber-500 rounded-lg outline-none font-semibold text-slate-600 text-[10px] transition-all"
+                      placeholder="OTHER:"
+                    />
                     <input
                       type="number"
                       min="0"
@@ -2501,6 +2523,34 @@ export default function EstimationModel() {
                         className="w-4 h-4 text-amber-500 border-slate-300 focus:ring-amber-500 cursor-pointer"
                       />
                       No
+                    </label>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ERECTION TYPE</label>
+                  <div className="flex gap-6 mt-1 ml-1">
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-700 select-none">
+                      <input
+                        type="radio"
+                        name="erectionType"
+                        value="inhouse"
+                        checked={(projectInfo.erectionType || 'inhouse') === 'inhouse'}
+                        onChange={(e) => setProjectInfo({ ...projectInfo, erectionType: e.target.value })}
+                        className="w-4 h-4 text-amber-500 border-slate-300 focus:ring-amber-500 cursor-pointer"
+                      />
+                      In-House
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-700 select-none">
+                      <input
+                        type="radio"
+                        name="erectionType"
+                        value="outsourced"
+                        checked={projectInfo.erectionType === 'outsourced'}
+                        onChange={(e) => setProjectInfo({ ...projectInfo, erectionType: e.target.value })}
+                        className="w-4 h-4 text-amber-500 border-slate-300 focus:ring-amber-500 cursor-pointer"
+                      />
+                      Outsourced
                     </label>
                   </div>
                 </div>

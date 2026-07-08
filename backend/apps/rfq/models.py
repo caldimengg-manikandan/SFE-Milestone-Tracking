@@ -286,7 +286,7 @@ class RFQMaster(models.Model):
 
     class Meta:
         db_table = 'rfq_master'
-        ordering = ['-bid_due_date', '-id']
+        ordering = ['-quote_no', '-id']
         indexes = [
             models.Index(fields=['quote_date'], name='idx_rfq_quote_date'),
             models.Index(fields=['awarded_job_date'], name='idx_rfq_awarded_date'),

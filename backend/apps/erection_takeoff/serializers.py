@@ -40,6 +40,7 @@ class ErectionMemberLineSerializer(serializers.ModelSerializer):
 class ErectionTakeoffSerializer(serializers.ModelSerializer):
     member_lines = ErectionMemberLineSerializer(many=True, read_only=True)
     computed = serializers.SerializerMethodField()
+    erection_type = serializers.SerializerMethodField()
 
     class Meta:
         model = ErectionTakeoff
@@ -68,8 +69,16 @@ class ErectionTakeoffSerializer(serializers.ModelSerializer):
             "member_lines",
             "computed",
             "updated_at",
+            "freight_out_trucks",
+            "joist_deck_tons",
+            "travel_hours",
+            "erection_type",
         ]
         read_only_fields = ["project", "updated_at"]
+
+    def get_erection_type(self, obj):
+        proj_info = obj.project.estimation_data.get("projectInfo", {}) if (obj.project and obj.project.estimation_data) else {}
+        return proj_info.get("erectionType", "inhouse")
 
     def get_computed(self, obj):
         try:

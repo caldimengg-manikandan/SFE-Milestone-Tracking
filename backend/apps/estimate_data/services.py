@@ -96,87 +96,96 @@ def compute_cost_codes(project):
 
     # --- Cost Code Calculations ---
     galv_rate = Decimal(str(rate_config.galv_unit_price))  # $0.40/lb
+    overrides = (project.estimation_data or {}).get("costCodeOverrides", {})
+
+    def get_amount(code, default_val):
+        if code in overrides and overrides[code] is not None:
+            try:
+                return round(float(overrides[code]), 2)
+            except (ValueError, TypeError):
+                pass
+        return round(float(default_val), 2)
 
     codes = [
         {
             "code": "4.01",
             "description": "Draft Labor",
-            "amount": round(float(total_structural_tons * labor_rate), 2),
+            "amount": get_amount("4.01", total_structural_tons * labor_rate),
         },
         {
             "code": "4.02",
             "description": "Draft Subcontract",
-            "amount": round(float(draft_sub), 2),
+            "amount": get_amount("4.02", draft_sub),
         },
         {
             "code": "1.01",
             "description": "Shop Labor",
-            "amount": round(float((misc_shop_hrs + total_shop_hrs) * labor_rate), 2),
+            "amount": get_amount("1.01", (misc_shop_hrs + total_shop_hrs) * labor_rate),
         },
         {
             "code": "1.02",
             "description": "Shop Subcontract",
-            "amount": round(float(misc_subcontract + shop_subcontract + misc_mesh_subcontract), 2),
+            "amount": get_amount("1.02", misc_subcontract + shop_subcontract + misc_mesh_subcontract),
         },
         {
             "code": "1.03",
             "description": "Steel Material",
-            "amount": round(float((misc_material_total + mill_total + whse_total) * Decimal("1.06")), 2),
+            "amount": get_amount("1.03", (misc_material_total + mill_total + whse_total) * Decimal("1.06")),
         },
         {
             "code": "1.05",
             "description": "Grating Material",
-            "amount": round(float(grating_value), 2),
+            "amount": get_amount("1.05", grating_value),
         },
         {
             "code": "1.06",
             "description": "Joist Material",
-            "amount": round(float(joist_total), 2),
+            "amount": get_amount("1.06", joist_total),
         },
         {
             "code": "1.07",
             "description": "Deck Material",
-            "amount": round(float(deck_total), 2),
+            "amount": get_amount("1.07", deck_total),
         },
         {
             "code": "1.08",
             "description": "Other Material",
-            "amount": round(float(other_value + misc_lines_total), 2),
+            "amount": get_amount("1.08", other_value + misc_lines_total),
         },
         {
             "code": "1.09",
             "description": "Anodizing Finish",
-            "amount": round(float(anodizing_value), 2),
+            "amount": get_amount("1.09", anodizing_value),
         },
         {
             "code": "1.10",
             "description": "Galvanizing",
-            "amount": round(float(galv_cost_misc + galv_cost_bid), 2),
+            "amount": get_amount("1.10", galv_cost_misc + galv_cost_bid),
         },
         {
             "code": "1.11",
             "description": "Paint Supply",
-            "amount": round(float(paint_total), 2),
+            "amount": get_amount("1.11", paint_total),
         },
         {
             "code": "1.12",
             "description": "Bolts Supply",
-            "amount": round(float(bolts_total), 2),
+            "amount": get_amount("1.12", bolts_total),
         },
         {
             "code": "1.13",
             "description": "Freight In & Out - Misc",
-            "amount": round(float(Decimal("0.00")), 2),
+            "amount": get_amount("1.13", Decimal("0.00")),
         },
         {
             "code": "2.01",
             "description": "Field Labor",
-            "amount": round(float((misc_field_hrs + total_iw_hours) * labor_rate), 2),
+            "amount": get_amount("2.01", (misc_field_hrs + total_iw_hours) * labor_rate),
         },
         {
             "code": "2.05",
             "description": "Equipment Rental",
-            "amount": round(float(equipment_rental), 2),
+            "amount": get_amount("2.05", equipment_rental),
         },
     ]
 
