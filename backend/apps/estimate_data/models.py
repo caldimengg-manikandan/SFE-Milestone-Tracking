@@ -45,7 +45,7 @@ class EstimateSnapshot(models.Model):
     project = models.ForeignKey(
         Project, on_delete=models.CASCADE, related_name="snapshots"
     )
-    version_number = models.PositiveIntegerField()
+    version_number: int = models.PositiveIntegerField()  # type: ignore
     preparer_name = models.CharField(max_length=200)
     prevailing_wage = models.BooleanField(default=False)   # EST-016
     out_of_town = models.BooleanField(default=False)        # EST-017

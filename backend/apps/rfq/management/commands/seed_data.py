@@ -73,15 +73,19 @@ class Command(BaseCommand):
             )
         else:
             self.stdout.write('  Admin user already exists.')
-            User.objects.create_user(
-                username='admin1',
-                email='admin1@steelfab.com',
-                password='defaultPassword123',
-                role='admin',
-            )
-            user = User.objects.get(username='admin1')
-            user.allowed_modules = get_default_modules()
-            user.save()
+            if not User.objects.filter(username='admin1').exists() and not User.objects.filter(email='admin1@steelfab.com').exists():
+                User.objects.create_user(
+                    username='admin1',
+                    email='admin1@steelfab.com',
+                    password='defaultPassword123',
+                    role='admin',
+                )
+                user = User.objects.get(username='admin1')
+                user.allowed_modules = get_default_modules()
+                user.save()
+                self.stdout.write('  Created default admin1 user.')
+            else:
+                self.stdout.write('  admin1 user already exists.')
 
         self.stdout.write('Creating default SystemSettings...')
         SystemSetting.objects.get_or_create(

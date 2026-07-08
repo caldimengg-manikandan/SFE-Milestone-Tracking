@@ -320,3 +320,91 @@ Auth header: None
 Status: 200
 Content: {"count":0,"next":null,"previous":null,"results":[]}
 
+=== REQUEST ===
+Path: /api/rfq/settings/
+Method: GET
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: [{"id":1,"key":"rfq_detailing_email","value":"namrutha@caldimengg.in","description":"Default email recipient for Detailing scope projects"},{"id":2,"key":"rfq_fabrication_erection_email","value":"divya@caldimengg.in","description":"Default email recipient for Fabrication & Erection scope projects"},{"id":4,"key":"rfq_fabrication_emails","value":"divya@caldimengg.in","description":"Default email recipients for Fabrication scope projects (comma separated)"},{"id":3,"key":"rfq_detailing_emails","value":"namrutha@caldimengg.in","description":"Default email recipients for Detailing scope projects (comma separated)"},{"id":5,"key":"rfq_erection_emails","value":"","description":"Default email recipients for Erection scope projects (comma separated)"}]
+
+=== REQUEST ===
+Path: /api/rfq/settings/3/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":3,"key":"rfq_detailing_emails","value":"namrutha@caldimengg.in","description":"Default email recipients for Detailing scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/4/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":4,"key":"rfq_fabrication_emails","value":"divya@caldimengg.in","description":"Default email recipients for Fabrication scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/5/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 400
+Content: {"value":["This field may not be blank."]}
+
+=== REQUEST ===
+Path: /api/rfq/settings/
+Method: GET
+Auth header: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNzgzNTc3MTcwLCJpYXQiOjE3ODM0OTA3NzAsImp0aSI6IjYyZDg4YWZiZDEyYzQ0NjQ4M2Y0MmM2NzBlZTkwMGMzIiwidXNlcl9pZCI6IjMifQ.07iO0KfphrJos3ipIp7RjE3mwhhDtxZ172CKZ-SUqh4
+=== RESPONSE ===
+Status: 200
+Content: [{"id":1,"key":"rfq_detailing_email","value":"namrutha@caldimengg.in","description":"Default email recipient for Detailing scope projects"},{"id":2,"key":"rfq_fabrication_erection_email","value":"divya@caldimengg.in","description":"Default email recipient for Fabrication & Erection scope projects"},{"id":3,"key":"rfq_detailing_emails","value":"namrutha@caldimengg.in","description":"Default email recipients for Detailing scope projects (comma separated)"},{"id":4,"key":"rfq_fabrication_emails","value":"divya@caldimengg.in","description":"Default email recipients for Fabrication scope projects (comma separated)"},{"id":5,"key":"rfq_erection_emails","value":"divya@caldimengg.in","description":"Default email recipients for Erection scope projects (comma separated)"}]
+
+=== REQUEST ===
+Path: /api/rfq/settings/3/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":3,"key":"rfq_detailing_emails","value":"namrutha@caldimengg.in","description":"Default email recipients for Detailing scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/4/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":4,"key":"rfq_fabrication_emails","value":"divya@caldimengg.in","description":"Default email recipients for Fabrication scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/5/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 400
+Content: {"value":["This field may not be blank."]}
+
+=== REQUEST ===
+Path: /api/rfq/settings/3/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":3,"key":"rfq_detailing_emails","value":"namrutha@caldimengg.in","description":"Default email recipients for Detailing scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/4/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":4,"key":"rfq_fabrication_emails","value":"divya@caldimengg.in","description":"Default email recipients for Fabrication scope projects (comma separated)"}
+
+=== REQUEST ===
+Path: /api/rfq/settings/5/
+Method: PATCH
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"id":5,"key":"rfq_erection_emails","value":"","description":"Default email recipients for Erection scope projects (comma separated)"}
+

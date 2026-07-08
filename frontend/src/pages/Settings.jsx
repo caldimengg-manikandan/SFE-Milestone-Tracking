@@ -81,17 +81,36 @@ export default function Settings() {
       const detailingRecord = settingsRecords.find(r => r.key === 'rfq_detailing_emails');
       const fabRecord = settingsRecords.find(r => r.key === 'rfq_fabrication_emails');
       const erectionRecord = settingsRecords.find(r => r.key === 'rfq_erection_emails');
+
+      const pendingDetailing = newEmailInputs.detailing.trim();
+      const detailingEmails = [...systemEmails.detailing];
+      if (pendingDetailing && !detailingEmails.includes(pendingDetailing)) {
+        detailingEmails.push(pendingDetailing);
+      }
+
+      const pendingFab = newEmailInputs.fabrication.trim();
+      const fabEmails = [...systemEmails.fabrication];
+      if (pendingFab && !fabEmails.includes(pendingFab)) {
+        fabEmails.push(pendingFab);
+      }
+
+      const pendingErection = newEmailInputs.erection.trim();
+      const erectionEmails = [...systemEmails.erection];
+      if (pendingErection && !erectionEmails.includes(pendingErection)) {
+        erectionEmails.push(pendingErection);
+      }
       
       if (detailingRecord) {
-        await systemSettingsAPI.update(detailingRecord.id, { value: systemEmails.detailing.join(', ') });
+        await systemSettingsAPI.update(detailingRecord.id, { value: detailingEmails.join(', ') });
       }
       if (fabRecord) {
-        await systemSettingsAPI.update(fabRecord.id, { value: systemEmails.fabrication.join(', ') });
+        await systemSettingsAPI.update(fabRecord.id, { value: fabEmails.join(', ') });
       }
       if (erectionRecord) {
-        await systemSettingsAPI.update(erectionRecord.id, { value: systemEmails.erection.join(', ') });
+        await systemSettingsAPI.update(erectionRecord.id, { value: erectionEmails.join(', ') });
       }
       
+      setNewEmailInputs({ detailing: '', fabrication: '', erection: '' });
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
       await fetchSystemSettings();

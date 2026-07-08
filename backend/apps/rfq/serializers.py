@@ -5,6 +5,8 @@ from projects.models import Customer
 
 
 class SystemSettingSerializer(serializers.ModelSerializer):
+    value = serializers.CharField(allow_blank=True, required=False)
+
     class Meta:
         model = SystemSetting
         fields = ['id', 'key', 'value', 'description']
