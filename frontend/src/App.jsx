@@ -33,8 +33,6 @@ import UserAccess from './pages/UserAccess';
 import EstimationErectionLayout from './pages/EstimationErection/EstimationErectionLayout';
 import ErectionTakeoffTab from './pages/EstimationErection/ErectionTakeoffTab';
 import FieldMomentConnTab from './pages/EstimationErection/FieldMomentConnTab';
-import MiscMetalsTab from './pages/EstimationErection/MiscMetalsTab';
-import BreakdownTab from './pages/EstimationErection/BreakdownTab';
 import EstimateDataTab from './pages/EstimationErection/EstimateDataTab';
 import CoreTab from './pages/EstimationErection/CoreTab';
 
@@ -131,8 +129,6 @@ export default function App() {
             <Route path="estimation" element={<EstimationModel />} />
             <Route path="erection-takeoff" element={<ErectionTakeoffTab />} />
             <Route path="fmc" element={<FieldMomentConnTab />} />
-            <Route path="misc-metals" element={<MiscMetalsTab />} />
-            <Route path="breakdown" element={<BreakdownTab />} />
             <Route path="estimate-data" element={<EstimateDataTab />} />
             <Route path="contacts" element={<CoreTab />} />
           </Route>

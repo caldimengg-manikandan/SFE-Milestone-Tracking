@@ -66,6 +66,11 @@ class ErectionTakeoff(models.Model):
     # Equipment Rental field (linked to cost code 2.05)
     equipment_rental = models.DecimalField(max_digits=12, decimal_places=2, default="0.00")
 
+    # Override fields for outsourced/delinked erection
+    freight_out_trucks = models.IntegerField(null=True, blank=True)
+    joist_deck_tons = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    travel_hours = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+
     # Editable rates for the self-perform costing sheet
     foreman_rate = models.DecimalField(max_digits=10, decimal_places=2, default=75.00)
     ironworker_rate = models.DecimalField(max_digits=10, decimal_places=2, default=65.00)
