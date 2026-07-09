@@ -1588,23 +1588,29 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-400">7</td>
               <td className="py-4 px-4 font-bold text-slate-800">Sublet Detailing Cost</td>
               <td className="py-4 px-4">
-                <span className="relative flex items-center max-w-[150px]">
-                  <span className="absolute left-3 font-bold text-slate-800">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={estimationSections.subletDetailingCost}
-                    placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, subletDetailingCost: e.target.value })}
-                    className="w-full pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
-                  />
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">{formatTons(totalTons)}</span>
+                  <span className="font-bold text-slate-400">Tons</span>
+                </div>
               </td>
               <td className="py-4 px-4 font-bold text-slate-500">
                 ${subletDetailingCostPerTon.toFixed(2)} /Ton
               </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${subletDetailingCostVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.subletDetailingCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, subletDetailingCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
               </td>
             </tr>
 
@@ -1613,23 +1619,29 @@ export default function EstimationModel() {
               <td className="py-4 px-4 font-bold text-slate-400">8</td>
               <td className="py-4 px-4 font-bold text-slate-800">PE Stamp Cost</td>
               <td className="py-4 px-4">
-                <span className="relative flex items-center max-w-[150px]">
-                  <span className="absolute left-3 font-bold text-slate-800">$</span>
-                  <input
-                    type="number"
-                    min="0"
-                    value={estimationSections.peStampCost}
-                    placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, peStampCost: e.target.value })}
-                    className="w-full pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
-                  />
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-slate-800">{formatTons(totalTons)}</span>
+                  <span className="font-bold text-slate-400">Tons</span>
+                </div>
               </td>
               <td className="py-4 px-4 font-bold text-slate-500">
                 ${peStampCostPerTon.toFixed(2)} /Ton
               </td>
-              <td className="py-4 px-4 text-right pr-6 font-bold text-slate-800">
-                =${peStampCostVal.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+              <td className="py-4 px-4 text-right pr-6">
+                <div className="flex items-center justify-end gap-1.5">
+                  <span className="font-bold text-slate-400">=</span>
+                  <span className="relative flex items-center">
+                    <span className="absolute left-3 font-bold text-slate-800">$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      value={estimationSections.peStampCost}
+                      placeholder="0"
+                      onChange={(e) => setEstimationSections({ ...estimationSections, peStampCost: e.target.value })}
+                      className="w-28 pl-6 pr-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
+                    />
+                  </span>
+                </div>
               </td>
             </tr>
 
