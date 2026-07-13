@@ -834,7 +834,9 @@ export default function EstimationModel() {
   const suppliedMaterialCostVal = Number(estimationSections.suppliedMaterialCost) || 0;
   const useTaxPercentVal = Number(estimationSections.useTaxPercent) || 0;
 
-  const subletErectionCostPerTon = totalTons > 0 ? subletErectionCostVal / totalTons : 0;
+  const steelJoistTonsVal = Number(estimationSections.steelJoistTons) || 0;
+  const denomErection = totalTons + steelJoistTonsVal;
+  const subletErectionCostPerTon = denomErection > 0 ? subletErectionCostVal / denomErection : 0;
   const oshaPostsCost = (oshaLinearFeetVal / 5) * 50;
   const safetyCost = additionalSafetyCostsVal + ccipCostsVal;
   const totalDirectBuyoutCosts = steelJoistCostVal + deckCostVal + subletErectionCostVal + miscMetalCostVal + oshaPostsCost + safetyCost + leedSubmissionCostVal + otherCustom1CostVal + otherCustom2CostVal;
