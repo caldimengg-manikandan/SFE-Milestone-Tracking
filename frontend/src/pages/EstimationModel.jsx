@@ -2645,8 +2645,19 @@ export default function EstimationModel() {
                     </label>
                   </div>
                 </div>
-
                 <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">START DATE</label>
+                  <FormattedDateInput
+                    value={projectInfo.startDate}
+                    onChange={(e) => setProjectInfo({ ...projectInfo, startDate: e.target.value })}
+                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Right Column Inputs */}
+              <div className="space-y-5">
+              <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">ERECTION TYPE</label>
                   <div className="flex gap-6 mt-1 ml-1">
                     <label className="flex items-center gap-2 cursor-pointer font-bold text-sm text-slate-700 select-none">
@@ -2673,10 +2684,6 @@ export default function EstimationModel() {
                     </label>
                   </div>
                 </div>
-              </div>
-
-              {/* Right Column Inputs */}
-              <div className="space-y-5">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">DATE</label>
                   <FormattedDateInput
@@ -2704,15 +2711,6 @@ export default function EstimationModel() {
                     value={projectInfo.quoteNum}
                     placeholder="e.g. SFE-2026-904"
                     onChange={(e) => setProjectInfo({ ...projectInfo, quoteNum: e.target.value })}
-                    className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">START DATE</label>
-                  <FormattedDateInput
-                    value={projectInfo.startDate}
-                    onChange={(e) => setProjectInfo({ ...projectInfo, startDate: e.target.value })}
                     className="w-full px-5 py-3.5 rounded-xl border border-slate-200 bg-slate-50/50 text-sm font-semibold text-slate-700 focus:bg-white focus:border-amber-400 focus:ring-4 focus:ring-amber-500/5 transition-all outline-none"
                   />
                 </div>
