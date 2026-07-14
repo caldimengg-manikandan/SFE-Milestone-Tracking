@@ -56,7 +56,7 @@ const DEFAULT_BID_ENQUIRY = {
 };
 
 const DEFAULT_ESTIMATION_SECTIONS = {
-  plantFabricationHours: '',
+  shopFabricationHours: '',
   miscLaborHours: '',
   miscLaborOtherHours: '',
   miscLaborOther2Hours: '',
@@ -736,7 +736,7 @@ export default function EstimationModel() {
   const scrapTons = millTons + warehouseTons;
   const scrapAmount = (millAmountVal + warehouseAmountVal) * scrapPercentVal / 100;
 
-  // 4. plant & Field Bolts
+  // 4. Shop & Field Bolts
   const boltQtyVal = Number(bidEnquiry.boltQty) || 0;
   const boltRateVal = Number(bidEnquiry.boltRate) || 0;
   const boltAmount = boltQtyVal * boltRateVal;
@@ -775,8 +775,8 @@ export default function EstimationModel() {
   // ── Grand Tonnage ──
   const totalTons = millTons + warehouseTons;
 
-  // ── Section 1: plant Labor Calculations ──
-  const plantFabricationHoursVal = Number(estimationSections.plantFabricationHours) || 0;
+  // ── Section 1: Shop Labor Calculations ──
+  const shopFabricationHoursVal = Number(estimationSections.shopFabricationHours || estimationSections.plantFabricationHours) || 0;
   const miscLaborHoursVal = Number(estimationSections.miscLaborHours) || 0;
   const miscLaborOtherHoursVal = Number(estimationSections.miscLaborOtherHours) || 0;
   const miscLaborOther2HoursVal = Number(estimationSections.miscLaborOther2Hours) || 0;
@@ -788,10 +788,10 @@ export default function EstimationModel() {
   const galvHoursPerTruckVal = Number(estimationSections.galvHoursPerTruck) || 0;
   const shippingRateVal = Number(estimationSections.shippingRate) || 0;
 
-  const totalLaborHours = plantFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
+  const totalLaborHours = shopFabricationHoursVal + miscLaborHoursVal + miscLaborOtherHoursVal + miscLaborOther2HoursVal;
   const manHoursPerTon = totalTons > 0 ? totalLaborHours / totalTons : 0;
   const piecesPerTon = totalTons > 0 ? totalPiecesVal / totalTons : 0;
-  const totalDirectplantCost = totalLaborHours * hourlyLaborRateVal;
+  const totalDirectShopCost = totalLaborHours * hourlyLaborRateVal;
 
   const freightOutCost = numTrucksVal * hoursPerTruckVal;
   const freightGalvanizingCost = galvanizingTrucksVal * galvHoursPerTruckVal;
@@ -808,7 +808,7 @@ export default function EstimationModel() {
   const totalDirectDraftingCost = subletDetailingCostVal + peStampCostVal;
 
   // Include material cost in direct costs
-  const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
+  const totalDirectCosts = totalMaterialCost + totalDirectShopCost + totalShippingCost + totalDirectDraftingCost + otherDirectCostsVal;
   const directCostPerTon = totalTons > 0 ? Math.round(totalDirectCosts) / totalTons : 0;
 
   // ── Section 3: Profit on Direct Costs ──
@@ -840,7 +840,8 @@ export default function EstimationModel() {
   const oshaPostsCost = (oshaLinearFeetVal / 5) * 50;
   const safetyCost = additionalSafetyCostsVal + ccipCostsVal;
   const totalDirectBuyoutCosts = steelJoistCostVal + deckCostVal + subletErectionCostVal + miscMetalCostVal + oshaPostsCost + safetyCost + leedSubmissionCostVal + otherCustom1CostVal + otherCustom2CostVal;
-  const useTax = suppliedMaterialCostVal * (useTaxPercentVal / 100);
+  const suppliedMaterialAutoFill = steelJoistCostVal + deckCostVal;
+  const useTax = suppliedMaterialAutoFill * (useTaxPercentVal / 100);
   const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
 
   // ── Section 5: Profit on Buyouts ──
@@ -1084,10 +1085,10 @@ export default function EstimationModel() {
               </td>
             </tr>
 
-            {/* 4. plant & Field Bolts */}
+            {/* 4. Shop & Field Bolts */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">4</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Plant & Field Bolts</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Shop & Field Bolts</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-3">
                   <span className="w-16"></span>
@@ -1304,7 +1305,7 @@ export default function EstimationModel() {
     );
   };
 
-  const renderplantLaborSection = () => {
+  const renderShopLaborSection = () => {
     return (
       <div className="overflow-x-auto border border-slate-200 rounded-[1.5rem]">
         <table className="w-full text-left border-collapse min-w-[700px] text-xs">
@@ -1318,18 +1319,18 @@ export default function EstimationModel() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-150">
-            {/* 1. plant Fabrication */}
+            {/* 1. Shop Fabrication */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">1</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Plant Fabrication Hours</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Shop Fabrication Hours</td>
               <td className="py-4 px-4">
                 <div className="flex items-center gap-2">
                   <input
                     type="number"
                     min="0"
-                    value={estimationSections.plantFabricationHours}
+                    value={estimationSections.shopFabricationHours !== undefined ? estimationSections.shopFabricationHours : (estimationSections.plantFabricationHours || '')}
                     placeholder="0"
-                    onChange={(e) => setEstimationSections({ ...estimationSections, plantFabricationHours: e.target.value })}
+                    onChange={(e) => setEstimationSections({ ...estimationSections, shopFabricationHours: e.target.value })}
                     className="w-24 px-3 py-2 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-4 focus:ring-amber-500/10 rounded-xl outline-none font-bold text-right transition-all"
                   />
                   <span className="font-bold text-slate-400">Hrs</span>
@@ -1428,10 +1429,10 @@ export default function EstimationModel() {
               </td>
             </tr>
 
-            {/* 3. Total Direct plant Cost */}
+            {/* 3. Total Direct Shop Cost */}
             <tr className="hover:bg-slate-50/50 transition-colors bg-slate-50/30">
               <td className="py-4 px-4 font-bold text-slate-400">3</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Total Direct plant Cost</td>
+              <td className="py-4 px-4 font-bold text-slate-800">Total Direct Shop Cost</td>
               <td className="py-4 px-4">
                 <span className="font-bold text-slate-500">{totalLaborHours} Total Hrs</span>
               </td>
@@ -1453,7 +1454,7 @@ export default function EstimationModel() {
               </td>
               <td className="py-4 px-4 text-right pr-6">
                 <span className="font-bold text-slate-800">
-                  =${totalDirectplantCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                  =${totalDirectShopCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
                 </span>
               </td>
             </tr>
@@ -1654,9 +1655,7 @@ export default function EstimationModel() {
               <td className="py-4 px-4">
                 <span className="font-semibold text-slate-400 italic">Subtotal</span>
               </td>
-              <td className="py-4 px-4 font-bold text-slate-500">
-                ${(totalDirectDraftingCost / (totalTons || 1)).toFixed(2)} /Ton
-              </td>
+              <td className="py-4 px-4"></td>
               <td className="py-4 px-4 text-right pr-6 font-bold text-slate-805">
                 =${totalDirectDraftingCost.toLocaleString(undefined, { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
               </td>
@@ -2037,22 +2036,22 @@ export default function EstimationModel() {
             {/* 27. Use Tax */}
             <tr className="hover:bg-slate-50/50 transition-colors">
               <td className="py-4 px-4 font-bold text-slate-400">27</td>
-              <td className="py-4 px-4 font-bold text-slate-800">Use Tax 6% x Cost of Supplied Material</td>
-              <td className="py-4 px-4">
-                <div className="flex items-center gap-2">
-                  <span className="relative flex items-center max-w-[120px]">
-                    <span className="absolute left-2 text-slate-500 font-bold">$</span>
-                    <input
-                      type="number"
-                      min="0"
-                      value={estimationSections.suppliedMaterialCost}
-                      placeholder="0"
-                      onChange={(e) => setEstimationSections({ ...estimationSections, suppliedMaterialCost: e.target.value })}
-                      className="w-full pl-5 pr-2 py-1.5 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-250 focus:border-amber-500 rounded-lg outline-none font-bold text-right text-xs"
-                    />
-                  </span>
+              <td className="py-4 px-4 font-bold text-slate-800">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span>Use Tax</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={estimationSections.useTaxPercent}
+                    placeholder="6.0"
+                    onChange={(e) => setEstimationSections({ ...estimationSections, useTaxPercent: e.target.value })}
+                    className="w-16 px-2 py-1 bg-[#fef9c3] hover:bg-[#fef08a] focus:bg-white text-slate-900 border border-amber-300 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10 rounded-lg outline-none font-bold text-center text-xs transition-all"
+                  />
+                  <span>% x Cost of Supplied Material</span>
                 </div>
               </td>
+              <td className="py-4 px-4"></td>
               <td className="py-4 px-4"></td>
               <td className="py-4 px-4 text-right pr-6">
                 <div className="flex items-center justify-end gap-1.5">
@@ -2753,16 +2752,16 @@ export default function EstimationModel() {
                 <span className={`${activeSection === 'material' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
-              {/* Button 2: plant Labor */}
+              {/* Button 2: Shop Labor */}
               <button
-                onClick={() => setActiveSection('plantLabor')}
-                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'plantLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
+                onClick={() => setActiveSection('shopLabor')}
+                className={`w-full flex items-center justify-between p-4 border rounded-xl font-bold text-sm transition-all shadow-sm group hover:scale-[1.01] ${activeSection === 'shopLabor' ? 'bg-amber-500 border-amber-600 text-white' : 'bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700'}`}
               >
                 <div className="flex items-center gap-3">
-                  <Calculator className={`w-5 h-5 ${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-500'}`} />
-                  <span>Plant Labor</span>
+                  <Calculator className={`w-5 h-5 ${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-500'}`} />
+                  <span>Shop Labor</span>
                 </div>
-                <span className={`${activeSection === 'plantLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
+                <span className={`${activeSection === 'shopLabor' ? 'text-white' : 'text-slate-400'} group-hover:translate-x-1 transition-transform`}>→</span>
               </button>
 
               {/* Button 3: Drafting */}
@@ -2854,7 +2853,7 @@ export default function EstimationModel() {
                 <div>
                   <h3 className="text-base font-bold text-slate-900">
                     {activeSection === 'material' && 'Material Section'}
-                    {activeSection === 'plantLabor' && 'Plant Labor Section'}
+                    {activeSection === 'shopLabor' && 'Shop Labor Section'}
                     {activeSection === 'drafting' && 'Drafting & Direct Costs'}
                     {activeSection === 'profitDirect' && 'Profit on Direct Costs'}
                     {activeSection === 'buyouts' && 'Buyouts Section'}
@@ -2865,7 +2864,7 @@ export default function EstimationModel() {
                   </h3>
                   <p className="text-[11px] text-slate-500">
                     {activeSection === 'material' && 'Perform calculations for mill, warehouse, and scrap materials.'}
-                    {activeSection === 'plantLabor' && 'Perform calculations for plant fabrication hours and shipping costs.'}
+                    {activeSection === 'shopLabor' && 'Perform calculations for shop fabrication hours and shipping costs.'}
                     {activeSection === 'drafting' && 'Perform calculations for sublet detailing, PE stamps, and total direct costs.'}
                     {activeSection === 'profitDirect' && 'Apply overhead percentage to total direct costs.'}
                     {activeSection === 'buyouts' && 'Calculate buyout material and erection expenses.'}
@@ -2903,7 +2902,7 @@ export default function EstimationModel() {
 
               {/* Render dynamic section */}
               {activeSection === 'material' && renderMaterialSection()}
-              {activeSection === 'plantLabor' && renderplantLaborSection()}
+              {activeSection === 'shopLabor' && renderShopLaborSection()}
               {activeSection === 'drafting' && renderDraftingSection()}
               {activeSection === 'profitDirect' && renderProfitDirectSection()}
               {activeSection === 'buyouts' && renderBuyoutsSection()}

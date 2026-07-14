@@ -309,9 +309,10 @@ def sync_bid_summary_from_estimation_data(sender, instance, **kwargs):
     bid_summary.freight_galv_trucks = to_dec(estimation_sections.get('galvanizingTrucks'), default=0)
     bid_summary.freight_galv_hours_each = to_dec(estimation_sections.get('galvHoursPerTruck'), default=0.0)
 
-    bid_summary.shop_fab_hrs = to_dec(estimation_sections.get('plantFabricationHours'))
+    plant_fab_hrs = estimation_sections.get('shopFabricationHours', estimation_sections.get('plantFabricationHours'))
+    bid_summary.shop_fab_hrs = to_dec(plant_fab_hrs)
     
-    bid_summary.draft_lbs = to_dec(estimation_sections.get('plantFabricationHours'))
+    bid_summary.draft_lbs = to_dec(plant_fab_hrs)
     bid_summary.draft_sub_amount = to_dec(estimation_sections.get('subletDetailingCost'))
     bid_summary.pe_stamp_cost = to_dec(estimation_sections.get('peStampCost'))
     bid_summary.shop_subcontract_total = to_dec(estimation_sections.get('otherDirectCosts'))

@@ -1,4 +1,5 @@
 import random
+from typing import Any
 from employees.models import Employee
 from projects.models import Project
 from employees.serializers import EmployeeSerializer
@@ -157,7 +158,7 @@ def handle_list_projects(user, arguments):
         "projects": results
     }
 
-def handle_navigate_to_page(user, arguments):
+def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, Any]:
     """
     Processes navigation requests.
     Translates enum page_name to frontend URL paths.

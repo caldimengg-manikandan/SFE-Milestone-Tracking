@@ -77,13 +77,13 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const activeMaterialUseTaxAmount = activeTotalMaterialDirectCosts * (activeTaxPercentVal / 100);
   const activeTotalMaterialCost = activeTotalMaterialDirectCosts + activeMaterialUseTaxAmount;
 
-  const activePlantFabricationHoursVal = Number(activeEstimationSections.plantFabricationHours) || 0;
+  const activeShopFabricationHoursVal = Number(activeEstimationSections.shopFabricationHours || activeEstimationSections.plantFabricationHours) || 0;
   const activeMiscLaborHoursVal = Number(activeEstimationSections.miscLaborHours) || 0;
   const activeMiscLaborOtherHoursVal = Number(activeEstimationSections.miscLaborOtherHours) || 0;
   const activeMiscLaborOther2HoursVal = Number(activeEstimationSections.miscLaborOther2Hours) || 0;
-  const activeTotalLaborHours = activePlantFabricationHoursVal + activeMiscLaborHoursVal + activeMiscLaborOtherHoursVal + activeMiscLaborOther2HoursVal;
+  const activeTotalLaborHours = activeShopFabricationHoursVal + activeMiscLaborHoursVal + activeMiscLaborOtherHoursVal + activeMiscLaborOther2HoursVal;
   const activeHourlyLaborRateVal = Number(activeEstimationSections.hourlyLaborRate) !== undefined && activeEstimationSections.hourlyLaborRate !== '' ? Number(activeEstimationSections.hourlyLaborRate) : 60.0;
-  const activeTotalDirectplantCost = activeTotalLaborHours * activeHourlyLaborRateVal;
+  const activeTotalDirectShopCost = activeTotalLaborHours * activeHourlyLaborRateVal;
 
   const activeNumTrucksVal = Number(activeEstimationSections.numTrucks) !== undefined && activeEstimationSections.numTrucks !== '' ? Number(activeEstimationSections.numTrucks) : 3;
   const activeHoursPerTruckVal = Number(activeEstimationSections.hoursPerTruck) !== undefined && activeEstimationSections.hoursPerTruck !== '' ? Number(activeEstimationSections.hoursPerTruck) : 3;
@@ -101,7 +101,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const activeOtherDirectCostsVal = Number(activeEstimationSections.otherDirectCosts) || 0;
   const activeTotalDirectDraftingCost = activeSubletDetailingCostVal + activePeStampCostVal;
 
-  const activeTotalDirectCosts = activeTotalMaterialCost + activeTotalDirectplantCost + activeTotalShippingCost + activeTotalDirectDraftingCost + activeOtherDirectCostsVal;
+  const activeTotalDirectCosts = activeTotalMaterialCost + activeTotalDirectShopCost + activeTotalShippingCost + activeTotalDirectDraftingCost + activeOtherDirectCostsVal;
 
   const activeOverheadPercentVal = Number(activeEstimationSections.overheadPercent) !== undefined && activeEstimationSections.overheadPercent !== '' ? Number(activeEstimationSections.overheadPercent) : 12.0;
   const activeDirectCostOverhead = Math.round(activeTotalDirectCosts * (activeOverheadPercentVal / 100) * 100) / 100;
@@ -123,7 +123,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
   const activeUseTaxPercentVal = Number(activeEstimationSections.useTaxPercent) !== undefined && activeEstimationSections.useTaxPercent !== '' ? Number(activeEstimationSections.useTaxPercent) : 6.0;
 
   const activeTotalDirectBuyoutCosts = activeSteelJoistCostVal + activeDeckCostVal + activeSubletErectionCostVal + activeMiscMetalCostVal + activeOshaPostsCost + activeSafetyCost + activeLeedSubmissionCostVal + activeOtherCustom1CostVal + activeOtherCustom2CostVal;
-  const activeUseTax = activeSuppliedMaterialCostVal * (activeUseTaxPercentVal / 100);
+  const activeSuppliedMaterialAutoFill = activeSteelJoistCostVal + activeDeckCostVal;
+  const activeUseTax = activeSuppliedMaterialAutoFill * (activeUseTaxPercentVal / 100);
   const activeTotalBuyoutCosts = activeTotalDirectBuyoutCosts + activeUseTax;
 
   const activeBuyoutOverheadPercentVal = Number(activeEstimationSections.buyoutOverheadPercent) !== undefined && activeEstimationSections.buyoutOverheadPercent !== '' ? Number(activeEstimationSections.buyoutOverheadPercent) : 12.0;
@@ -305,7 +306,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
         finalBidAmount: 0,
         miscellaneousFinalPrice: 0,
         totalMaterialCost: 0,
-        plantLaborAndShip: 0,
+        shopLaborAndShip: 0,
         draftingAndDirects: 0,
         directCostOverhead: 0,
         totalBuyoutCosts: 0,
@@ -354,14 +355,14 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const materialUseTaxAmount = totalMaterialDirectCosts * (taxPercent / 100);
     const totalMaterialCost = totalMaterialDirectCosts + materialUseTaxAmount;
 
-    // 2. plant Labor & Shipping Calculations
-    const plantFabricationHours = getNum(estimationSections.plantFabricationHours);
+    // 2. Shop Labor & Shipping Calculations
+    const shopFabricationHours = getNum(estimationSections.shopFabricationHours || estimationSections.plantFabricationHours);
     const miscLaborHours = getNum(estimationSections.miscLaborHours);
     const miscLaborOtherHours = getNum(estimationSections.miscLaborOtherHours);
     const miscLaborOther2Hours = getNum(estimationSections.miscLaborOther2Hours);
-    const totalLaborHours = plantFabricationHours + miscLaborHours + miscLaborOtherHours + miscLaborOther2Hours;
+    const totalLaborHours = shopFabricationHours + miscLaborHours + miscLaborOtherHours + miscLaborOther2Hours;
     const hourlyLaborRate = getNum(estimationSections.hourlyLaborRate, 60.0);
-    const totalDirectplantCost = totalLaborHours * hourlyLaborRate;
+    const totalDirectShopCost = totalLaborHours * hourlyLaborRate;
 
     const numTrucks = getNum(estimationSections.numTrucks, 3);
     const hoursPerTruck = getNum(estimationSections.hoursPerTruck, 3);
@@ -371,7 +372,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
 
     const totalShippingHours = (numTrucks * hoursPerTruck) + (galvanizingTrucks * galvHoursPerTruck);
     const totalShippingCost = totalShippingHours * shippingRate;
-    const plantLaborAndShip = totalDirectplantCost + totalShippingCost;
+    const shopLaborAndShip = totalDirectShopCost + totalShippingCost;
 
     // 3. Drafting & Directs Calculations
     const subletDetailingCost = getNum(estimationSections.subletDetailingCost);
@@ -381,7 +382,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const draftingAndDirects = totalDirectDraftingCost + otherDirectCosts;
 
     // 4. Overhead on Directs Calculations
-    const totalDirectCosts = totalMaterialCost + totalDirectplantCost + totalShippingCost + totalDirectDraftingCost + otherDirectCosts;
+    const totalDirectCosts = totalMaterialCost + totalDirectShopCost + totalShippingCost + totalDirectDraftingCost + otherDirectCosts;
     const overheadPercent = getNum(estimationSections.overheadPercent, 12.0);
     const directCostOverhead = Math.round(totalDirectCosts * (overheadPercent / 100) * 100) / 100;
     const bidAmountOnDirectCosts = Math.round(totalDirectCosts) + directCostOverhead;
@@ -403,7 +404,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     const useTaxPercent = getNum(estimationSections.useTaxPercent, 6.0);
 
     const totalDirectBuyoutCosts = steelJoistCost + deckCost + subletErectionCost + miscMetalCost + oshaPostsCost + safetyCost + leedSubmissionCost + otherCustom1Cost + otherCustom2Cost;
-    const useTax = suppliedMaterialCost * (useTaxPercent / 100);
+    const suppliedMaterialAutoFill = steelJoistCost + deckCost;
+    const useTax = suppliedMaterialAutoFill * (useTaxPercent / 100);
     const totalBuyoutCosts = totalDirectBuyoutCosts + useTax;
 
     // 6. Overhead on Buyouts Calculations
@@ -445,8 +447,8 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
     return {
       finalBidAmount,            // Standard Grand Total
       miscellaneousFinalPrice,   // Misc Summary Total
-      totalMaterialCost,         // 1. Material Section
-      plantLaborAndShip,         // 2. plant Labor & Ship
+      totalMaterialCost,         // 1. Material Cost
+      shopLaborAndShip,          // 2. Shop Labor & Ship
       draftingAndDirects,        // 3. Drafting & Directs
       directCostOverhead,        // 4. Overhead on Directs
       totalBuyoutCosts,          // 5. Buyouts Section
@@ -614,7 +616,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
       const code = rfq.sfe_job_no ? String(rfq.sfe_job_no) : rfq.quote_no;
       const matched = projects.find(p => p.code === code || p.name === rfq.project_name) || {};
       const vals = calculateEstimationValues(matched);
-      const totalDirect = (vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0);
+      const totalDirect = (vals.totalMaterialCost || 0) + (vals.shopLaborAndShip || 0);
       
       let estStatus = 'yet to start';
       if (matched && matched.estimation_data && Object.keys(matched.estimation_data).length > 0) {
@@ -848,7 +850,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           finalBidAmount: 0,
                           miscellaneousFinalPrice: 0,
                           totalMaterialCost: 0,
-                          plantLaborAndShip: 0,
+                          shopLaborAndShip: 0,
                           draftingAndDirects: 0,
                           directCostOverhead: 0,
                           totalBuyoutCosts: 0,
@@ -964,7 +966,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
                           {estStatus === 'yet to start' ? '—' : formatCurrency(vals.miscellaneousFinalPrice)}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
-                          {estStatus === 'yet to start' ? '—' : formatCurrency((vals.totalMaterialCost || 0) + (vals.plantLaborAndShip || 0))}
+                          {estStatus === 'yet to start' ? '—' : formatCurrency((vals.totalMaterialCost || 0) + (vals.shopLaborAndShip || 0))}
                         </td>
                         <td className="px-1.5 py-2.5 border-r border-slate-100 text-right text-slate-700 w-[100px] min-w-[100px] max-w-[100px]">
                           {estStatus === 'yet to start' ? '—' : formatCurrency(vals.draftingAndDirects)}
@@ -1247,18 +1249,18 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
             </div>
           </div>
 
-          {/* Card 2: plant Labor & Shipping */}
+          {/* Card 2: Shop Labor & Shipping */}
           <div className="bg-white rounded-[1.75rem] border border-slate-200 hover:border-green-400 p-5 flex flex-col justify-between shadow-sm hover:shadow-md transition-all group">
             <div className="flex justify-between items-start gap-3">
               <div className="space-y-1">
                 <span className="text-[9px] font-black text-green-600 uppercase tracking-wider bg-green-50 px-2.5 py-1 rounded-lg">
-                  2. plant Labor & Ship
+                  2. Shop Labor & Ship
                 </span>
                 <h4 className="text-xl font-extrabold text-slate-800 pt-2">
-                  {formatCurrency(activeTotalDirectplantCost + activeTotalShippingCost)}
+                  {formatCurrency(activeTotalDirectShopCost + activeTotalShippingCost)}
                 </h4>
                 <p className="text-[10.5px] font-semibold text-slate-400">
-                  {formatCurrency(activeHasTons ? ((activeTotalDirectplantCost + activeTotalShippingCost) / activeTotalTons) : 0)} /Ton
+                  {formatCurrency(activeHasTons ? ((activeTotalDirectShopCost + activeTotalShippingCost) / activeTotalTons) : 0)} /Ton
                 </p>
               </div>
               <div className="bg-green-50 p-2.5 rounded-xl text-green-600 group-hover:scale-105 transition-transform">
@@ -1268,7 +1270,7 @@ export default function EstimationSummary({ isEmbedded = false, onEditSection })
             <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px]">
               <span className="text-slate-400 italic">{activeTotalLaborHours} Hrs + Freight</span>
               <button
-                onClick={() => handleEditSection('plantLabor')}
+                onClick={() => handleEditSection('shopLabor')}
                 className="text-green-600 font-bold flex items-center gap-0.5 group-hover:translate-x-0.5 transition-transform cursor-pointer"
               >
                 Edit inputs

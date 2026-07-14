@@ -302,7 +302,7 @@ function buildColumnDefs(customers, estimators, canEdit) {
         },
         {
           field: 'quote_no', headerName: 'Quote No', width: 140, pinned: 'left',
-          editable: canEdit,
+          ...readonly,
           cellStyle: { fontFamily: 'var(--font-mono)', fontSize: '0.78rem', fontWeight: 600 },
           sort: 'desc',
         },
