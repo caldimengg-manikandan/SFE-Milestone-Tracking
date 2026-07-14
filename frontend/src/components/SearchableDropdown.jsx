@@ -16,6 +16,7 @@ export default function SearchableDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
+  const [userHasTyped, setUserHasTyped] = useState(false);
   const containerRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -39,11 +40,19 @@ export default function SearchableDropdown({
     } else {
       setSearchTerm('');
     }
+    setUserHasTyped(false);
   }, [value, selectedOption]);
 
-  const filteredOptions = normalizedOptions.filter((opt) =>
-    (opt.label || '').toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  useEffect(() => {
+    if (!isOpen) {
+      setUserHasTyped(false);
+    }
+  }, [isOpen]);
+
+  const filteredOptions = normalizedOptions.filter((opt) => {
+    if (!userHasTyped) return true;
+    return (opt.label || '').toLowerCase().includes(searchTerm.toLowerCase());
+  });
 
   // Reset highlighted index when options filter changes
   useEffect(() => {
@@ -66,6 +75,7 @@ export default function SearchableDropdown({
     onChange({ target: { value: '', name } });
     setSearchTerm('');
     setIsOpen(false);
+    setUserHasTyped(false);
     if (inputRef.current) {
       inputRef.current.focus();
     }
@@ -146,6 +156,7 @@ export default function SearchableDropdown({
           onChange={(e) => {
             setSearchTerm(e.target.value);
             setIsOpen(true);
+            setUserHasTyped(true);
             if (e.target.value === '') {
               onChange({ target: { value: '', name } });
             }

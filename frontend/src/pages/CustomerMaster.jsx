@@ -169,7 +169,7 @@ export default function CustomerMaster() {
         {/* Name Filter */}
         <div className="relative">
           <SearchableDropdown
-            options={['All', ...[...new Set(customers.map(c => c.name))].filter(Boolean)]}
+            options={['All Customers', ...[...new Set(customers.map(c => c.name))].filter(Boolean)]}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
             placeholder="All Customers"
@@ -180,7 +180,7 @@ export default function CustomerMaster() {
         {/* Code Filter */}
         <div className="relative">
           <SearchableDropdown
-            options={['All', ...[...new Set(customers.map(c => c.code))].filter(Boolean)]}
+            options={['All Codes', ...[...new Set(customers.map(c => c.code))].filter(Boolean)]}
             value={codeFilter}
             onChange={(e) => setCodeFilter(e.target.value)}
             placeholder="All Codes"
@@ -191,7 +191,7 @@ export default function CustomerMaster() {
         {/* Country Filter */}
         <div className="relative">
           <SearchableDropdown
-            options={['All', 'India', 'USA', 'UK', 'UAE', 'Other']}
+            options={['All Countries', 'India', 'USA', 'UK', 'UAE', 'Other']}
             value={countryFilter}
             onChange={(e) => setCountryFilter(e.target.value)}
             placeholder="All Countries"
