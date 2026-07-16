@@ -104,7 +104,11 @@ def retrieve_relevant_context(query, limit=5):
         'quote': ['rfq', 'enquiry', 'enquiries'],
         'enquiry': ['rfq', 'quote'],
         'bids': ['enquiry', 'enquiries', 'bid'],
-        'bid': ['bids', 'enquiry', 'enquiries']
+        'bid': ['bids', 'enquiry', 'enquiries'],
+        'customer': ['client', 'customers', 'clients', 'customer master', 'customer form', 'customer name', 'customer code'],
+        'client': ['customer', 'customers', 'clients', 'customer master'],
+        'form': ['fields', 'input', 'modal', 'screen', 'fields', 'customer form'],
+        'how': ['steps', 'process', 'workflow', 'guide']
     }
     for token in query_tokens:
         if token in synonym_map:
@@ -301,7 +305,7 @@ def get_chatbot_response(chat_session, user_query, user=None):
     6. Save messages & metadata to database.
     """
     # 1. Retrieve local context chunks
-    search_results = retrieve_relevant_context(user_query, limit=3)
+    search_results = retrieve_relevant_context(user_query, limit=5)
     
     # Build context string and track citations
     context_parts = []
@@ -321,11 +325,15 @@ def get_chatbot_response(chat_session, user_query, user=None):
     # 2. Define System Instructions
     system_instruction = (
         "You are an offline assistant for the SFE Milestone Tracking application.\n"
-        "Your task is to answer user queries using the provided application workflow context OR by triggering actions using available tools.\n"
-        "If the query involves actions like adding an employee, searching for info, or navigation, use the appropriate tool.\n"
-        "If the context does not contain relevant information and no tool applies, state that you cannot find it in the documentation.\n"
-        "Keep answers concise, accurate, and format them cleanly in Markdown.\n\n"
-        f"--- WORKFLOW DOCUMENT CONTEXT ---\n{context_str}\n---------------------------------"
+        "FIRST AND FOREMOST: Never mention documents, context, sources, or reference materials in your responses. Do not use phrases like 'from the document', 'according to', 'mentioned in', 'based on', 'refer to', or any similar wording. Provide direct answers as if you naturally know the information.\n\n"
+        "Your task is to answer user queries using the provided information OR by triggering actions using available tools.\n"
+        "For 'how-to' questions (e.g., 'how to add', 'how to create', 'how to delete'), ALWAYS prioritize answering from the provided information first. Only suggest a tool if the user explicitly asks to perform an action (e.g., 'add an employee now', 'create employee'), or if the provided information does not contain a sufficient explanation.\n"
+        "If the query is an explicit command to perform an action, use the appropriate tool.\n"
+        "If the provided information does not contain relevant information and no tool applies, state that you cannot find the answer.\n"
+        "When answering questions, you MUST provide ALL relevant information available. Do NOT provide minimal or partial answers. List all phases, steps, details, and information mentioned. If there are multiple phases or steps, list ALL of them completely. Do not summarize or truncate information unless explicitly asked.\n"
+        "Provide comprehensive and detailed answers. Even when users ask for 'briefly' or 'short', ensure you provide complete information with sufficient detail to be helpful. Aim for thorough explanations that cover all relevant aspects.\n"
+        "Format answers cleanly in Markdown with proper structure, using numbered lists for phases/steps and bullet points for details.\n\n"
+        f"--- PROVIDED INFORMATION ---\n{context_str}\n---------------------------------"
     )
     
     # 3. Build Conversation History
