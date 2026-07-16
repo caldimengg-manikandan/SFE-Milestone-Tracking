@@ -199,11 +199,11 @@ def parse_json_from_text(text):
                     # Check 1: Check if there is an XML-style opening tag before the JSON block
                     # e.g. <navigate_to_page {"page_name": "dashboard"}></function>
                     # or <call:navigate_to_page>{"page_name": "dashboard"}</call:navigate_to_page>
-                    tag_match = re.search(r'<([\w:]+)', text[:start])
+                    tag_match = re.search(r'<([\w:]+)', text[:start], re.IGNORECASE)
                     if tag_match:
                         raw_tag = tag_match.group(1)
                         # Extract the actual tool name (strip namespace if present)
-                        tool_name = raw_tag.split(':')[-1]
+                        tool_name = raw_tag.split(':')[-1].lower()
                         if tool_name in valid_tools:
                             # Extract the arguments from parsed payload
                             args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or parsed
@@ -211,18 +211,18 @@ def parse_json_from_text(text):
                             
                     # Check 2: Check if a valid tool name is mentioned in the text before the JSON block
                     # e.g., create_employee {"name": "thamizh", ...}
-                    tool_match = re.search(r'\b(' + '|'.join(valid_tools) + r')\b', text[:start])
+                    tool_match = re.search(r'\b(' + '|'.join(valid_tools) + r')\b', text[:start], re.IGNORECASE)
                     if tool_match:
-                        tool_name = tool_match.group(1)
+                        tool_name = tool_match.group(1).lower()
                         args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or parsed
                         return tool_name, args
                         
                     # Check 3: Standard JSON tool call structure (name inside the JSON body)
                     # We verify that the extracted name is in valid_tools to avoid false matches (e.g. name of employee)
                     name = parsed.get("name") or parsed.get("function")
-                    if name and name in valid_tools:
+                    if name and isinstance(name, str) and name.lower() in valid_tools:
                         args = parsed.get("parameters") or parsed.get("arguments") or parsed.get("args") or {}
-                        return name, args
+                        return name.lower(), args
                 except Exception:
                     continue  # Keep scanning if this block is invalid JSON
                     

@@ -130,7 +130,8 @@ AVAILABLE_TOOLS = [
                             "machine_master",
                             "workforce_master",
                             "settings",
-                            "announcements"
+                            "announcements",
+                            "user_access"
                         ],
                         "description": "The target page view to redirect the user to"
                     }

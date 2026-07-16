@@ -416,3 +416,11 @@ Auth header: None
 Status: 200
 Content: {"count":0,"next":null,"previous":null,"results":[]}
 
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+

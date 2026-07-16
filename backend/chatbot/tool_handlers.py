@@ -166,8 +166,8 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
     page_name = arguments.get("page_name")
     
     if isinstance(page_name, str):
-        # Normalize: strip leading/trailing slashes, convert hyphens/slashes to underscores
-        norm_name = page_name.strip().strip('/')
+        # Normalize: convert to lowercase, replace spaces and hyphens with underscores, strip slashes
+        norm_name = page_name.strip().lower().replace(' ', '_').replace('-', '_').strip('/')
         
         # Exact mapping for known variations
         name_map = {
@@ -179,63 +179,84 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
             "detailer": "detailer_master",
             "projects": "project_master",
             "project": "project_master",
-            "steel-budget/input": "steel_budget",
-            "steel-budget": "steel_budget",
-            "steel_budget_input": "steel_budget",
-            "steel-budget/result": "steel_budget_result",
-            "steel_budget_result": "steel_budget_result",
-            "estimation-result": "steel_budget_result",
+            "steel_budget/input": "steel_budget",
+            "steel_budget/result": "steel_budget_result",
             "estimation_result": "steel_budget_result",
-            "plan-tracking": "structural_schedules",
-            "plan_tracking": "structural_schedules",
-            "plan-creation": "plan_creation",
-            "plan_creation": "plan_creation",
-            "priority-schedule": "production_schedules",
-            "production-schedules": "production_schedules",
-            "production_schedule": "production_schedules",
-            "rfq/data-entry": "rfq_entry",
-            "rfq-entry": "rfq_entry",
+            "rfq/data_entry": "rfq_entry",
             "rfq_entry": "rfq_entry",
-            "rfq-master": "rfq_master",
             "rfq_master": "rfq_master",
             "rfq": "rfq",
-            "dollar-dashboard": "dollar_dashboard",
-            "dollar_dashboard": "dollar_dashboard",
-            "erection-takeoff": "erection_takeoff",
             "erection_takeoff": "erection_takeoff",
             "fmc": "field_moment_connections",
-            "field-moment-connections": "field_moment_connections",
-            "field_moment_connections": "field_moment_connections",
             "bids/schedule": "internal_bid_schedule",
-            "bids-schedule": "internal_bid_schedule",
-            "internal_bid_schedule": "internal_bid_schedule",
             "bids/holidays": "holiday_calendar",
-            "bids-holidays": "holiday_calendar",
-            "holiday-calendar": "holiday_calendar",
-            "holiday_calendar": "holiday_calendar",
-            "estimation-summary": "estimation_summary",
-            "estimation_summary": "estimation_summary",
-            "estimation-erection": "estimation",
             "estimation_erection": "estimation",
-            "estimation": "estimation",
-            "master-settings": "process_master_settings",
-            "process-master-settings": "process_master_settings",
-            "process_master_settings": "process_master_settings",
+            "master_settings": "process_master_settings",
             "capacity": "capacity_configuration",
-            "capacity-configuration": "capacity_configuration",
-            "capacity_configuration": "capacity_configuration",
             "machine": "machine_master",
-            "machine-master": "machine_master",
-            "machine_master": "machine_master",
             "manpower": "workforce_master",
-            "workforce-master": "workforce_master",
-            "workforce_master": "workforce_master",
             "settings": "settings",
             "announcements": "announcements"
         }
         
-        # Look up normalized name in map, or fallback to the cleaned version
-        page_name = name_map.get(norm_name, norm_name)
+        # Look up normalized name in map
+        page_name = name_map.get(norm_name)
+        if not page_name:
+            # Fallback to keyword-based substring matching for typos and variants
+            if "manpower" in norm_name or "workforce" in norm_name or "worforce" in norm_name or "worker" in norm_name:
+                page_name = "workforce_master"
+            elif "employ" in norm_name or "emp" in norm_name:
+                page_name = "employee_master"
+            elif "cust" in norm_name:
+                page_name = "customer_master"
+            elif "detail" in norm_name:
+                page_name = "detailer_master"
+            elif "proj" in norm_name:
+                page_name = "project_master"
+            elif "steel" in norm_name and "result" in norm_name:
+                page_name = "steel_budget_result"
+            elif "steel" in norm_name:
+                page_name = "steel_budget"
+            elif "plan" in norm_name and "track" in norm_name:
+                page_name = "structural_schedules"
+            elif "plan" in norm_name and "creat" in norm_name:
+                page_name = "plan_creation"
+            elif "production" in norm_name and "schedule" in norm_name:
+                page_name = "production_schedules"
+            elif "rfq" in norm_name and "entry" in norm_name:
+                page_name = "rfq_entry"
+            elif "rfq" in norm_name and "master" in norm_name:
+                page_name = "rfq_master"
+            elif "rfq" in norm_name:
+                page_name = "rfq"
+            elif "dollar" in norm_name:
+                page_name = "dollar_dashboard"
+            elif "erect" in norm_name and "take" in norm_name:
+                page_name = "erection_takeoff"
+            elif "fmc" in norm_name or ("moment" in norm_name and "connect" in norm_name):
+                page_name = "field_moment_connections"
+            elif "bid" in norm_name and "schedule" in norm_name:
+                page_name = "internal_bid_schedule"
+            elif "holiday" in norm_name or "calendar" in norm_name:
+                page_name = "holiday_calendar"
+            elif "estim" in norm_name and "sum" in norm_name:
+                page_name = "estimation_summary"
+            elif "estim" in norm_name:
+                page_name = "estimation"
+            elif "master" in norm_name and "settings" in norm_name:
+                page_name = "process_master_settings"
+            elif "cap" in norm_name:
+                page_name = "capacity_configuration"
+            elif "mach" in norm_name:
+                page_name = "machine_master"
+            elif "setting" in norm_name:
+                page_name = "settings"
+            elif "announc" in norm_name:
+                page_name = "announcements"
+            elif "user" in norm_name and "access" in norm_name:
+                page_name = "user_access"
+            else:
+                page_name = norm_name
     
     # Map backend enum to frontend router paths
     page_routes = {
@@ -264,7 +285,8 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
         "machine_master": "/production/capacity-mapping/machine",
         "workforce_master": "/production/capacity-mapping/manpower",
         "settings": "/settings",
-        "announcements": "/announcements"
+        "announcements": "/announcements",
+        "user_access": "/user-access"
     }
 
     route_path = page_routes.get(page_name)
@@ -300,7 +322,8 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
         "machine_master": "Machine Master",
         "workforce_master": "Workforce Master",
         "settings": "Settings",
-        "announcements": "Announcements"
+        "announcements": "Announcements",
+        "user_access": "User Access"
     }
 
     return {

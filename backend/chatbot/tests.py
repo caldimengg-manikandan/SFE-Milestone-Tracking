@@ -135,6 +135,45 @@ class ChatbotToolHandlersTestCase(TestCase):
         self.assertEqual(result_rfq["status"], "success")
         self.assertEqual(result_rfq["ui_actions"][0]["payload"], "/rfq")
 
+        # Test user_access mapping
+        arguments_user_access = {
+            "page_name": "user_access"
+        }
+        result_ua = handle_navigate_to_page(self.regular_user, arguments_user_access)
+        self.assertEqual(result_ua["status"], "success")
+        self.assertEqual(result_ua["ui_actions"][0]["payload"], "/user-access")
+
+        # Test case-insensitivity matching variations
+        # 1. Uppercase enum name
+        result_upper = handle_navigate_to_page(self.regular_user, {"page_name": "EMPLOYEE_MASTER"})
+        self.assertEqual(result_upper["status"], "success")
+        self.assertEqual(result_upper["ui_actions"][0]["payload"], "/employees")
+
+        # 2. Mixed case with space mapping variation
+        result_mixed = handle_navigate_to_page(self.regular_user, {"page_name": "User Access"})
+        self.assertEqual(result_mixed["status"], "success")
+        self.assertEqual(result_mixed["ui_actions"][0]["payload"], "/user-access")
+
+        # 3. Lowercase variation with space
+        result_space = handle_navigate_to_page(self.regular_user, {"page_name": "plan creation"})
+        self.assertEqual(result_space["status"], "success")
+        self.assertEqual(result_space["ui_actions"][0]["payload"], "/structural/plan-creation")
+
+        # 4. Typo matching variation
+        result_typo = handle_navigate_to_page(self.regular_user, {"page_name": "worforce master"})
+        self.assertEqual(result_typo["status"], "success")
+        self.assertEqual(result_typo["ui_actions"][0]["payload"], "/production/capacity-mapping/manpower")
+
+        # 5. Alternate synonym mapping
+        result_synonym = handle_navigate_to_page(self.regular_user, {"page_name": "manpower"})
+        self.assertEqual(result_synonym["status"], "success")
+        self.assertEqual(result_synonym["ui_actions"][0]["payload"], "/production/capacity-mapping/manpower")
+
+        # 6. Phrase matching variation
+        result_phrase = handle_navigate_to_page(self.regular_user, {"page_name": "moment connections"})
+        self.assertEqual(result_phrase["status"], "success")
+        self.assertEqual(result_phrase["ui_actions"][0]["payload"], "/estimation-erection/fmc")
+
     def test_navigate_to_page_invalid(self):
         """Unknown pages should fail gracefully."""
         arguments = {
@@ -157,6 +196,24 @@ class ChatbotToolHandlersTestCase(TestCase):
         name2, args2 = parse_json_from_text(text2)
         self.assertEqual(name2, "navigate_to_page")
         self.assertEqual(args2, {"page_name": "dashboard"})
+
+        # Test case-insensitivity XML tag style
+        text_xml = '<Navigate_to_page>{"page_name": "dashboard"}</function>'
+        name_xml, args_xml = parse_json_from_text(text_xml)
+        self.assertEqual(name_xml, "navigate_to_page")
+        self.assertEqual(args_xml, {"page_name": "dashboard"})
+
+        # Test case-insensitivity text prefix style
+        text_prefix = 'Navigate_to_page {"page_name": "plan_creation"}'
+        name_prefix, args_prefix = parse_json_from_text(text_prefix)
+        self.assertEqual(name_prefix, "navigate_to_page")
+        self.assertEqual(args_prefix, {"page_name": "plan_creation"})
+
+        # Test case-insensitivity JSON body name style
+        text_body = '{"name": "Navigate_to_page", "arguments": {"page_name": "dashboard"}}'
+        name_body, args_body = parse_json_from_text(text_body)
+        self.assertEqual(name_body, "navigate_to_page")
+        self.assertEqual(args_body, {"page_name": "dashboard"})
 
     def test_should_use_tools(self):
         """Should correctly identify when to pass tools to the LLM based on user queries."""
