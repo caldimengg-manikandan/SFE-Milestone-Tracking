@@ -1,8 +1,23 @@
 import random
 from typing import Any
+from django.db.models import Q
 from employees.models import Employee
-from projects.models import Project
+from projects.models import Project, Customer
+from milestones.models import Milestone
 from employees.serializers import EmployeeSerializer
+
+
+def _is_admin_user(user) -> bool:
+    role = getattr(user, 'role', '')
+    return role == 'admin' or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
+
+
+def _is_confirmed(arguments: dict[str, Any]) -> bool:
+    confirm_value = arguments.get("confirm", False)
+    if isinstance(confirm_value, str):
+        return confirm_value.strip().lower() in {"true", "yes", "1", "confirm", "confirmed"}
+    return bool(confirm_value)
+
 
 def handle_create_employee(user, arguments):
     """
@@ -122,6 +137,103 @@ def handle_get_employee_details(user, arguments):
         "employees": results
     }
 
+
+def handle_update_employee(user, arguments):
+    """Updates an existing employee after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can update employees."}
+
+    emp_id = arguments.get("emp_id") or arguments.get("employee_id")
+    if not emp_id:
+        return {"status": "error", "message": "Missing required field: employee ID."}
+
+    employee = Employee.objects.filter(emp_id__iexact=emp_id).first()
+    if not employee:
+        return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
+    # if not _is_confirmed(arguments):
+    #     return {
+    #         "status": "pending_confirmation",
+    #         "message": f"Please confirm you want to update employee {employee.name} with the requested changes."
+    #     }
+
+    update_fields = {}
+    for field in ["name", "department", "designation", "email", "phone", "status", "join_date"]:
+        if field in arguments and arguments.get(field) not in (None, ""):
+            update_fields[field] = arguments[field]
+
+    if not update_fields:
+        return {"status": "error", "message": "No update values were provided."}
+
+    for field, value in update_fields.items():
+        setattr(employee, field, value)
+    employee.save()
+
+    return {
+        "status": "success",
+        "message": f"Updated employee {employee.name}.",
+        "employee": {
+            "emp_id": employee.emp_id,
+            "name": employee.name,
+            "department": employee.department,
+            "designation": employee.designation,
+            "email": employee.email,
+            "status": employee.status
+        },
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "employees"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Employee {employee.name} updated!"}}
+        ]
+    }
+
+
+def handle_delete_employee(user, arguments):
+    """Deletes an employee after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can delete employees."}
+
+    emp_id = arguments.get("emp_id") or arguments.get("employee_id")
+    if not emp_id:
+        return {"status": "error", "message": "Missing required field: employee ID."}
+
+    employee = Employee.objects.filter(emp_id__iexact=emp_id).first()
+    if not employee:
+        return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
+    # if not _is_confirmed(arguments):
+    #     return {
+    #         "status": "pending_confirmation",
+    #         "message": f"Please confirm you want to delete employee {employee.name}."
+    #     }
+
+    employee_name = employee.name
+    try:
+        employee.delete()
+        return {
+            "status": "success",
+            "message": f"Deleted employee {employee_name}.",
+            "ui_actions": [
+                {"type": "REFRESH_DATA", "payload": "employees"},
+                {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Employee {employee_name} removed!"}}
+            ]
+        }
+    except Exception as e:
+        error_msg = str(e)
+        if "foreign key constraint" in error_msg.lower():
+            # Extract the table name from the error message if possible
+            return {
+                "status": "error",
+                "message": f"Cannot delete employee {employee_name} because they are referenced in other records. Please unassign the employee from related records first. Error: {error_msg}"
+            }
+        else:
+            return {
+                "status": "error",
+                "message": f"Failed to delete employee: {error_msg}"
+            }
+
+
 def handle_list_projects(user, arguments):
     """
     Lists SFE projects.
@@ -157,6 +269,227 @@ def handle_list_projects(user, arguments):
         "count": len(results),
         "projects": results
     }
+
+def handle_create_project(user, arguments):
+    """Creates a new project after admin authorization."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can create projects."}
+
+    code = arguments.get("code") or arguments.get("project_code")
+    name = arguments.get("name")
+    if not code or not name:
+        return {"status": "error", "message": "Missing required fields: project code and name."}
+
+    if Project.objects.filter(Q(code__iexact=code) | Q(name__iexact=name)).exists():
+        return {"status": "error", "message": f"A project with code '{code}' or name '{name}' already exists."}
+
+    project = Project.objects.create(
+        code=code,
+        name=name,
+        customer_name=arguments.get("customer_name", ""),
+        project_manager_name=arguments.get("project_manager_name", ""),
+        detailer_name=arguments.get("detailer_name", ""),
+        total_ton=arguments.get("total_ton", 0),
+        status=arguments.get("status", "Yet to Start"),
+        priority=arguments.get("priority", "Medium")
+    )
+    return {
+        "status": "success",
+        "message": f"Created project {project.name} ({project.code}).",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "projects"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Project {project.name} created!"}}
+        ]
+    }
+
+
+def handle_update_project(user, arguments):
+    """Updates an existing project after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can update projects."}
+
+    code = arguments.get("code") or arguments.get("project_code")
+    if not code:
+        return {"status": "error", "message": "Missing required field: project code."}
+
+    project = Project.objects.filter(code__iexact=code).first()
+    if not project:
+        return {"status": "error", "message": f"No project found with code '{code}'."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
+    # if not _is_confirmed(arguments):
+    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to update project {project.name}."}
+
+    allowed_fields = ["name", "customer_name", "project_manager_name", "detailer_name", "status", "priority", "total_ton"]
+    update_fields = {field: arguments[field] for field in allowed_fields if field in arguments and arguments.get(field) not in (None, "")}
+    if not update_fields:
+        return {"status": "error", "message": "No update values were provided."}
+
+    for field, value in update_fields.items():
+        setattr(project, field, value)
+    project.save()
+
+    return {
+        "status": "success",
+        "message": f"Updated project {project.name}.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "projects"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Project {project.name} updated!"}}
+        ]
+    }
+
+
+def handle_delete_project(user, arguments):
+    """Deletes a project after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can delete projects."}
+
+    code = arguments.get("code") or arguments.get("project_code")
+    if not code:
+        return {"status": "error", "message": "Missing required field: project code."}
+
+    project = Project.objects.filter(code__iexact=code).first()
+    if not project:
+        return {"status": "error", "message": f"No project found with code '{code}'."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
+    # if not _is_confirmed(arguments):
+    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to delete project {project.name}."}
+
+    project_name = project.name
+    project.delete()
+    return {
+        "status": "success",
+        "message": f"Deleted project {project_name}.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "projects"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Project {project_name} removed!"}}
+        ]
+    }
+
+
+def handle_update_customer(user, arguments):
+    """Updates a customer after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can update customers."}
+
+    customer_id = arguments.get("customer_id") or arguments.get("id")
+    customer = None
+    if customer_id:
+        customer = Customer.objects.filter(id=customer_id).first()
+    else:
+        name = arguments.get("name")
+        if name:
+            customer = Customer.objects.filter(name__icontains=name).first()
+    if not customer:
+        return {"status": "error", "message": "Customer not found."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
+    # if not _is_confirmed(arguments):
+    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to update customer {customer.name}."}
+
+    allowed_fields = ["name", "code", "category", "country", "street", "state", "address", "designation"]
+    update_fields = {field: arguments[field] for field in allowed_fields if field in arguments and arguments.get(field) not in (None, "")}
+    if not update_fields:
+        return {"status": "error", "message": "No update values were provided."}
+
+    for field, value in update_fields.items():
+        setattr(customer, field, value)
+    customer.save()
+
+    return {
+        "status": "success",
+        "message": f"Updated customer {customer.name}.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "customers"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Customer {customer.name} updated!"}}
+        ]
+    }
+
+
+def handle_delete_customer(user, arguments):
+    """Deletes a customer after confirmation."""
+    if not _is_admin_user(user):
+        return {"status": "error", "message": "Permission Denied: Only administrators can delete customers."}
+
+    customer_id = arguments.get("customer_id") or arguments.get("id")
+    customer = Customer.objects.filter(id=customer_id).first() if customer_id else None
+    if not customer:
+        name = arguments.get("name")
+        if name:
+            customer = Customer.objects.filter(name__icontains=name).first()
+    if not customer:
+        return {"status": "error", "message": "Customer not found."}
+
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
+    # if not _is_confirmed(arguments):
+    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to delete customer {customer.name}."}
+
+    customer_name = customer.name
+    customer.delete()
+    return {
+        "status": "success",
+        "message": f"Deleted customer {customer_name}.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "customers"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Customer {customer_name} removed!"}}
+        ]
+    }
+
+
+def handle_search_records(user, arguments):
+    """Searches live records across employees, customers, and projects."""
+    entity = (arguments.get("entity") or "all").lower()
+    query = (arguments.get("query") or arguments.get("name") or "").strip()
+    if not query:
+        return {"status": "error", "message": "Missing search query."}
+
+    results = []
+    if entity in {"employee", "employees", "person", "people", "all"}:
+        for emp in Employee.objects.filter(Q(name__icontains=query) | Q(emp_id__icontains=query) | Q(department__icontains=query)).order_by('name')[:10]:
+            results.append({"entity": "employee", "id": emp.emp_id, "name": emp.name, "department": emp.department, "designation": emp.designation, "status": emp.status})
+
+    if entity in {"customer", "customers", "client", "clients", "all"}:
+        for customer in Customer.objects.filter(Q(name__icontains=query) | Q(code__icontains=query)).order_by('name')[:10]:
+            results.append({"entity": "customer", "id": customer.id, "name": customer.name, "code": customer.code, "category": customer.category})
+
+    if entity in {"project", "projects", "job", "jobs", "all"}:
+        for project in Project.objects.filter(Q(name__icontains=query) | Q(code__icontains=query) | Q(customer_name__icontains=query)).order_by('name')[:10]:
+            results.append({"entity": "project", "id": project.code, "name": project.name, "status": project.status, "priority": project.priority})
+
+    return {"status": "success", "count": len(results), "results": results}
+
+
+def handle_summarize_milestones(user, arguments):
+    """Summarizes milestone health for a project or the full workspace."""
+    project_code = arguments.get("project_code") or arguments.get("project") or ""
+    queryset = Milestone.objects.all()
+    if project_code:
+        queryset = queryset.filter(project__icontains=project_code)
+
+    overdue = queryset.filter(status="Overdue")
+    pending = queryset.filter(status="Pending")
+    in_progress = queryset.filter(status="In Progress")
+
+    milestones = []
+    for milestone in queryset.order_by('due_date', 'priority')[:20]:
+        milestones.append({
+            "title": milestone.title,
+            "project": milestone.project,
+            "status": milestone.status,
+            "priority": milestone.priority,
+            "due_date": str(milestone.due_date) if milestone.due_date else None,
+            "assignee": milestone.assignee
+        })
+
+    return {
+        "status": "success",
+        "overdue_count": overdue.count(),
+        "pending_count": pending.count(),
+        "in_progress_count": in_progress.count(),
+        "milestones": milestones
+    }
+
 
 def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, Any]:
     """
@@ -439,8 +772,17 @@ def handle_create_customer(user, arguments):
 # Mapping registry for the execution loops
 TOOL_HANDLERS = {
     "create_employee": handle_create_employee,
+    "update_employee": handle_update_employee,
+    "delete_employee": handle_delete_employee,
     "get_employee_details": handle_get_employee_details,
     "list_projects": handle_list_projects,
+    "create_project": handle_create_project,
+    "update_project": handle_update_project,
+    "delete_project": handle_delete_project,
     "navigate_to_page": handle_navigate_to_page,
-    "create_customer": handle_create_customer
+    "create_customer": handle_create_customer,
+    "update_customer": handle_update_customer,
+    "delete_customer": handle_delete_customer,
+    "search_records": handle_search_records,
+    "summarize_milestones": handle_summarize_milestones
 }

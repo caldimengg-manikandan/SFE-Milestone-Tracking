@@ -134,7 +134,8 @@ export default function EstimateDataTab() {
       "1.08": "other_material",
       "1.09": "anodizing_finish",
       "1.10": "galvanizing",
-      "2.01": "field_labor"
+      "2.01": "field_labor",
+      "2.05": "equipment_rental"
     };
     const fieldKey = keyMapping[code];
     if (!fieldKey) return;
@@ -158,6 +159,7 @@ export default function EstimateDataTab() {
       { code: "1.11", val: costCodes.paint_supply },
       { code: "1.12", val: costCodes.bolts_supply },
       { code: "2.01", val: fieldKey === "field_labor" ? parsedVal : costCodes.field_labor },
+      { code: "2.05", val: fieldKey === "equipment_rental" ? parsedVal : costCodes.equipment_rental },
     ];
     updatedCostCodes.grand_total = codesList.reduce((sum, item) => sum + (parseFloat(item.val) || 0), 0);
     setCostCodes(updatedCostCodes);
@@ -206,7 +208,7 @@ export default function EstimateDataTab() {
 
   if (loading) return <div className="text-center font-mono py-8 text-slate-500">Loading Cost Codes & SOV...</div>;
 
-  // Compute grand total of all 14 Cost Codes
+  // Compute grand total of all Cost Codes
   const costCodesTotal = costCodes.grand_total || 0;
   const sovTotal = sovLines.reduce((acc, curr) => acc + (parseFloat(curr.amount) || 0), 0);
 
@@ -226,9 +228,9 @@ export default function EstimateDataTab() {
         {/* Cost Codes & SOV (Left Columns) */}
         <div className="lg:col-span-2 space-y-6">
           
-          {/* 14 Cost Codes */}
+          {/* ERP Cost Codes */}
           <div className="bg-white border border-slate-200 p-5 rounded-xl space-y-4 shadow-sm">
-            <h3 className="text-xs font-bold uppercase text-amber-600 tracking-wider border-b border-slate-100 pb-2">14 ERP Cost Codes</h3>
+            <h3 className="text-xs font-bold uppercase text-amber-600 tracking-wider border-b border-slate-100 pb-2">ERP Cost Codes</h3>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-xs">
               {[
@@ -246,9 +248,10 @@ export default function EstimateDataTab() {
                 { code: "1.11", label: "1.11 Paint Supply", val: costCodes.paint_supply },
                 { code: "1.12", label: "1.12 Bolts Supply", val: costCodes.bolts_supply },
                 { code: "2.01", label: "2.01 Field Labor", val: costCodes.field_labor },
+                { code: "2.05", label: "2.05 Equipment Rental", val: costCodes.equipment_rental },
               ].map((item, idx) => {
                 const isEditable = [
-                  "1.01", "1.02", "1.03", "1.05", "1.08", "1.09", "1.10", "2.01"
+                  "1.01", "1.02", "1.03", "1.05", "1.08", "1.09", "1.10", "2.01", "2.05"
                 ].includes(item.code);
                 return (
                   <div key={idx} className="flex justify-between items-center border-b border-slate-100 py-1.5 hover:bg-slate-50/50">

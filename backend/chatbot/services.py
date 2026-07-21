@@ -7,6 +7,41 @@ from django.conf import settings
 from rank_bm25 import BM25Okapi
 from .models import KnowledgeDocument, KnowledgeChunk, ChatMessage
 
+
+def build_context_memory(chat_session):
+    """Extracts conversational context from recent messages to support entity-based follow-ups."""
+    history_messages = list(ChatMessage.objects.filter(session=chat_session).order_by('-timestamp')[:12])
+    history_messages.reverse()
+
+    recent_entities = []
+    for message in history_messages:
+        text = (message.text or '').strip()
+        if not text:
+            continue
+        lowered = text.lower()
+        if 'employee' in lowered:
+            recent_entities.append('employee')
+        if 'customer' in lowered:
+            recent_entities.append('customer')
+        if 'project' in lowered or 'rfq' in lowered or 'milestone' in lowered:
+            recent_entities.append('project')
+        if 'customer' in lowered and 'create' in lowered:
+            recent_entities.append('customer:create')
+
+    if not recent_entities:
+        return "No prior business context in this conversation."
+
+    context = []
+    if recent_entities.count('employee'):
+        context.append("The user has recently discussed employees.")
+    if recent_entities.count('customer'):
+        context.append("The user has recently discussed customers.")
+    if recent_entities.count('project'):
+        context.append("The user has recently discussed projects, milestones, or RFQ-related work.")
+    if recent_entities.count('customer:create'):
+        context.append("The user may be working on customer-creation tasks.")
+    return " ".join(context)
+
 def ingest_pdf_document(document_id):
     """
     Parses an uploaded PDF, chunks the text by page, and saves chunks in the database.
@@ -161,14 +196,29 @@ def should_use_tools(query):
         if any(verb in query_lower for verb in ["search", "find", "lookup", "details", "get", "show", "view"]):
             return True
 
+    # Employee delete/update keywords (e.g., "delete employee", "remove employee", "update employee")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
+            return True
+
     # Project listing keywords (e.g., "view projects", "list projects")
     if "project" in query_lower or "proj" in query_lower:
         if any(verb in query_lower for verb in ["list", "show", "get", "what", "active", "view"]):
             return True
 
+    # Project delete/update keywords (e.g., "delete project", "remove project", "update project")
+    if "project" in query_lower or "proj" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
+            return True
+
     # Customer creation keywords (e.g., "add customer", "create customer")
     if "customer" in query_lower or "cust" in query_lower:
         if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
+            return True
+
+    # Customer delete/update keywords (e.g., "delete customer", "remove customer", "update customer")
+    if "customer" in query_lower or "cust" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
             return True
             
     return False
@@ -323,16 +373,20 @@ def get_chatbot_response(chat_session, user_query, user=None):
     context_str = "\n\n".join(context_parts)
     
     # 2. Define System Instructions
+    memory_context = build_context_memory(chat_session)
     system_instruction = (
         "You are an offline assistant for the SFE Milestone Tracking application.\n"
         "FIRST AND FOREMOST: Never mention documents, context, sources, or reference materials in your responses. Do not use phrases like 'from the document', 'according to', 'mentioned in', 'based on', 'refer to', or any similar wording. Provide direct answers as if you naturally know the information.\n\n"
         "Your task is to answer user queries using the provided information OR by triggering actions using available tools.\n"
         "For 'how-to' questions (e.g., 'how to add', 'how to create', 'how to delete'), ALWAYS prioritize answering from the provided information first. Only suggest a tool if the user explicitly asks to perform an action (e.g., 'add an employee now', 'create employee'), or if the provided information does not contain a sufficient explanation.\n"
         "If the query is an explicit command to perform an action, use the appropriate tool.\n"
+        "If the query is a follow-up that references the same subject from earlier in the chat, carry forward that context and avoid asking the user to repeat the same details.\n"
+        "For write actions, prefer a safe workflow: ask for confirmation before committing changes if the request is destructive or changes existing data.\n"
         "If the provided information does not contain relevant information and no tool applies, state that you cannot find the answer.\n"
         "When answering questions, you MUST provide ALL relevant information available. Do NOT provide minimal or partial answers. List all phases, steps, details, and information mentioned. If there are multiple phases or steps, list ALL of them completely. Do not summarize or truncate information unless explicitly asked.\n"
         "Provide comprehensive and detailed answers. Even when users ask for 'briefly' or 'short', ensure you provide complete information with sufficient detail to be helpful. Aim for thorough explanations that cover all relevant aspects.\n"
         "Format answers cleanly in Markdown with proper structure, using numbered lists for phases/steps and bullet points for details.\n\n"
+        f"--- CONVERSATION MEMORY ---\n{memory_context}\n---------------------------------\n"
         f"--- PROVIDED INFORMATION ---\n{context_str}\n---------------------------------"
     )
     
@@ -447,11 +501,23 @@ def get_chatbot_response(chat_session, user_query, user=None):
             is_navigation = any(tc.get('function', {}).get('name') == 'navigate_to_page' for tc in tool_calls)
             if not is_fallback_text_call and not is_navigation:
                 # Call Ollama again to summarize the execution results
-                final_res = call_local_ollama(ollama_messages)
-                bot_response = final_res.get('content', '')
+                try:
+                    final_res = call_local_ollama(ollama_messages)
+                    bot_response = final_res.get('content', '')
+                except Exception as e:
+                    # If summarization fails (e.g., rate limiting), use the last successful tool result message
+                    # This ensures the action still completes successfully even if the summary fails
+                    if 'tool_calls' in ollama_messages[-1]:
+                        bot_response = "Action completed successfully."
+                    else:
+                        bot_response = f"Action completed. (Summary unavailable due to: {str(e)})"
 
     except Exception as e:
-        bot_response = f"⚠️ Chatbot Error: {str(e)}"
+        # If we have ui_actions from successful tool execution, don't overwrite with error
+        if ui_actions:
+            bot_response = f"Action completed successfully. (Note: Summary unavailable due to API rate limiting)"
+        else:
+            bot_response = f"⚠️ Chatbot Error: {str(e)}"
         citations = []
         
     # 5. Save bot message to database

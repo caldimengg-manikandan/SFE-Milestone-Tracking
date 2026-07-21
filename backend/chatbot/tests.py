@@ -1,12 +1,17 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from employees.models import Employee
-from projects.models import Project
+from projects.models import Project, Customer
+from milestones.models import Milestone
 from chatbot.tool_handlers import (
     handle_create_employee,
     handle_get_employee_details,
     handle_list_projects,
-    handle_navigate_to_page
+    handle_navigate_to_page,
+    handle_update_employee,
+    handle_delete_employee,
+    handle_search_records,
+    handle_summarize_milestones
 )
 
 User = get_user_model()
@@ -49,6 +54,18 @@ class ChatbotToolHandlersTestCase(TestCase):
             total_ton=120.5,
             status="In Progress",
             priority="High"
+        )
+        self.customer = Customer.objects.create(
+            name="SFE Corp",
+            code="SFC-001",
+            category="Domestic"
+        )
+        self.milestone = Milestone.objects.create(
+            title="Design Freeze",
+            project="PRJ-101",
+            status="Overdue",
+            priority="High",
+            due_date="2026-07-10"
         )
 
     def test_create_employee_admin_success(self):
@@ -182,6 +199,39 @@ class ChatbotToolHandlersTestCase(TestCase):
         
         result = handle_navigate_to_page(self.regular_user, arguments)
         self.assertEqual(result["status"], "error")
+
+    def test_update_employee_requires_confirmation(self):
+        """Employee updates should require explicit confirmation before mutating data."""
+        result = handle_update_employee(self.admin_user, {"emp_id": "EMP-999", "department": "Quality"})
+        self.assertEqual(result["status"], "pending_confirmation")
+        self.assertIn("confirm", result["message"].lower())
+
+    def test_update_employee_success_with_confirmation(self):
+        """Confirmed updates should persist changes on the employee record."""
+        result = handle_update_employee(self.admin_user, {"emp_id": "EMP-999", "department": "Quality", "confirm": True})
+        self.assertEqual(result["status"], "success")
+        self.emp.refresh_from_db()
+        self.assertEqual(self.emp.department, "Quality")
+
+    def test_delete_employee_requires_confirmation(self):
+        """Deleting an employee should be blocked until confirmation is supplied."""
+        result = handle_delete_employee(self.admin_user, {"emp_id": "EMP-999"})
+        self.assertEqual(result["status"], "pending_confirmation")
+        self.assertTrue(Employee.objects.filter(emp_id="EMP-999").exists())
+
+    def test_search_records_returns_live_entities(self):
+        """Record search should surface matching employees, customers, and projects."""
+        result = handle_search_records(self.regular_user, {"entity": "customer", "query": "SFE"})
+        self.assertEqual(result["status"], "success")
+        self.assertGreaterEqual(result["count"], 1)
+        self.assertEqual(result["results"][0]["entity"], "customer")
+
+    def test_summarize_milestones_reports_overdue_items(self):
+        """Milestone summaries should group active and overdue work clearly."""
+        result = handle_summarize_milestones(self.regular_user, {"project_code": "PRJ-101"})
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["overdue_count"], 1)
+        self.assertEqual(result["pending_count"], 0)
 
     def test_parse_json_from_text(self):
         """Should parse JSON tool call from raw text code blocks."""
