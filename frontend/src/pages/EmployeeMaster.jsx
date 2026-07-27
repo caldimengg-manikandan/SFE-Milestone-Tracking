@@ -158,7 +158,7 @@ export default function EmployeeMaster() {
         {/* Name Filter */}
         <div className="relative">
           <SearchableDropdown
-            options={['All', ...[...new Set(employees.map(e => e.name))].filter(Boolean)]}
+            options={['All Employees', ...[...new Set(employees.map(e => e.name))].filter(Boolean)]}
             value={nameFilter}
             onChange={(e) => setNameFilter(e.target.value)}
             placeholder="All Employees"
@@ -169,7 +169,7 @@ export default function EmployeeMaster() {
         {/* Designation Filter */}
         <div className="relative">
           <SearchableDropdown
-            options={['All', ...[...new Set(employees.map(e => e.designation))].filter(Boolean)]}
+            options={['All Designations', ...[...new Set(employees.map(e => e.designation))].filter(Boolean)]}
             value={designationFilter}
             onChange={(e) => setDesignationFilter(e.target.value)}
             placeholder="All Designations"

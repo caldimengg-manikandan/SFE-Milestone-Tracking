@@ -236,7 +236,7 @@ export default function Sidebar({
                     <NavLink
                       key={item.path}
                       to={item.path}
-                      end={item.path !== '/rfq'}
+                      end={item.path !== '/rfq' && item.path !== '/estimation-erection'}
                       onClick={onCloseMobile}
                       className={({ isActive }) => `sidebar-nav-item group ${isActive ? 'active' : ''} ${isCollapsed ? 'lg:justify-center lg:px-0' : ''}`}
                     >

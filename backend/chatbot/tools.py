@@ -51,6 +51,43 @@ AVAILABLE_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "update_employee",
+            "description": "Updates an existing employee record. Requires confirmation from the user before the change is applied.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "emp_id": {"type": "string", "description": "Employee ID to update"},
+                    "name": {"type": "string"},
+                    "department": {"type": "string"},
+                    "designation": {"type": "string"},
+                    "email": {"type": "string"},
+                    "phone": {"type": "string"},
+                    "status": {"type": "string", "enum": ["Active", "On Leave", "Inactive"]},
+                    "join_date": {"type": "string", "format": "date"},
+                    "confirm": {"type": "boolean", "description": "Set to true only after the user explicitly confirms the update"}
+                },
+                "required": ["emp_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_employee",
+            "description": "Deletes an employee record. Requires explicit confirmation before the deletion is applied.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "emp_id": {"type": "string", "description": "Employee ID to delete"},
+                    "confirm": {"type": "boolean", "description": "Set to true only after the user explicitly confirms the deletion"}
+                },
+                "required": ["emp_id"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_employee_details",
             "description": "Retrieves employee records from the database using search parameters. Use this to lookup employees.",
             "parameters": {
@@ -97,6 +134,63 @@ AVAILABLE_TOOLS = [
     {
         "type": "function",
         "function": {
+            "name": "create_project",
+            "description": "Creates a new project record. Use this when the user explicitly asks to create or add a project.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string"},
+                    "name": {"type": "string"},
+                    "customer_name": {"type": "string"},
+                    "project_manager_name": {"type": "string"},
+                    "detailer_name": {"type": "string"},
+                    "total_ton": {"type": "number"},
+                    "status": {"type": "string", "enum": ["Yet to Start", "In Progress", "Planning", "Completed"]},
+                    "priority": {"type": "string", "enum": ["Low", "Medium", "High"]}
+                },
+                "required": ["code", "name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_project",
+            "description": "Updates an existing project record. Requires explicit confirmation before applying changes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Project code to update"},
+                    "name": {"type": "string"},
+                    "customer_name": {"type": "string"},
+                    "project_manager_name": {"type": "string"},
+                    "detailer_name": {"type": "string"},
+                    "status": {"type": "string", "enum": ["Yet to Start", "In Progress", "Planning", "Completed"]},
+                    "priority": {"type": "string", "enum": ["Low", "Medium", "High"]},
+                    "confirm": {"type": "boolean"}
+                },
+                "required": ["code"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_project",
+            "description": "Deletes a project record. Requires explicit confirmation before applying changes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "code": {"type": "string", "description": "Project code to delete"},
+                    "confirm": {"type": "boolean"}
+                },
+                "required": ["code"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "navigate_to_page",
             "description": "Directs the user's web browser view to a specific section or module of the application.",
             "parameters": {
@@ -130,7 +224,8 @@ AVAILABLE_TOOLS = [
                             "machine_master",
                             "workforce_master",
                             "settings",
-                            "announcements"
+                            "announcements",
+                            "user_access"
                         ],
                         "description": "The target page view to redirect the user to"
                     }
@@ -193,6 +288,72 @@ AVAILABLE_TOOLS = [
                     }
                 },
                 "required": ["name"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "update_customer",
+            "description": "Updates an existing customer record. Requires explicit confirmation before applying changes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "code": {"type": "string"},
+                    "category": {"type": "string"},
+                    "country": {"type": "string"},
+                    "street": {"type": "string"},
+                    "state": {"type": "string"},
+                    "address": {"type": "string"},
+                    "designation": {"type": "string"},
+                    "confirm": {"type": "boolean"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "delete_customer",
+            "description": "Deletes a customer record. Requires explicit confirmation before applying changes.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "customer_id": {"type": "integer"},
+                    "name": {"type": "string"},
+                    "confirm": {"type": "boolean"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "search_records",
+            "description": "Searches live business records across employees, customers, and projects.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "entity": {"type": "string", "enum": ["employee", "customer", "project", "all"]},
+                    "query": {"type": "string"}
+                },
+                "required": ["query"]
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "summarize_milestones",
+            "description": "Summarizes milestone health for a project or the full workspace, including overdue and pending counts.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "project_code": {"type": "string"},
+                    "project": {"type": "string"}
+                }
             }
         }
     }

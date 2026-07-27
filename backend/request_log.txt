@@ -408,3 +408,19 @@ Auth header: None
 Status: 200
 Content: {"id":5,"key":"rfq_erection_emails","value":"","description":"Default email recipients for Erection scope projects (comma separated)"}
 
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+
+=== REQUEST ===
+Path: /api/dashboard/announcements/
+Method: GET
+Auth header: None
+=== RESPONSE ===
+Status: 200
+Content: {"count":0,"next":null,"previous":null,"results":[]}
+

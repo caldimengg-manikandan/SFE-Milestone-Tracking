@@ -6,7 +6,7 @@ Computes all 14 cost codes from cross-module data.
 Traceability:
   EST-001: 4.01 Draft Labor = draft_lbs * $21
   EST-002: 4.02 Draft Subcontract = draft_sub_amount
-  EST-003: 1.01 Shop Labor = (MiscMet.shop_hrs + BidSum.shop_fab_hrs) * $21
+  EST-003: 1.01 Shop Labor = total_direct_shop_cost from estimation module shop lab section
   EST-004: 1.02 Shop Subcontract = MiscMet.subcontract_total
   EST-005: 1.03 Steel Material = (MiscMet.mat_lbs + Mill_lbs + Whse_lbs) * 1.06
   EST-006: 1.05 Grating Material = MiscMet.grating_value
@@ -98,6 +98,41 @@ def compute_cost_codes(project):
     galv_rate = Decimal(str(rate_config.galv_unit_price))  # $0.40/lb
     overrides = (project.estimation_data or {}).get("costCodeOverrides", {})
 
+    # --- Get Total Direct Shop Cost from Estimation Module ---
+    fallback_shop_labor = (misc_shop_hrs + total_shop_hrs) * labor_rate
+    fallback_shop_hours = misc_shop_hrs + total_shop_hrs
+
+    est_data = project.estimation_data or {}
+    est_sec = est_data.get("estimationSections", {})
+
+    if est_sec:
+        # Shop Fabrication Hours
+        shop_fab_val = est_sec.get("shopFabricationHours")
+        if shop_fab_val is None or str(shop_fab_val).strip() == "":
+            shop_fab_val = est_sec.get("plantFabricationHours")
+
+        def to_dec_or_zero(val, default=0):
+            if val is None or str(val).strip() == "":
+                return Decimal(str(default))
+            try:
+                return Decimal(str(val))
+            except (ValueError, TypeError):
+                return Decimal(str(default))
+
+        shop_fab_hrs_val = to_dec_or_zero(shop_fab_val, 0)
+        misc_labor_hrs_val = to_dec_or_zero(est_sec.get("miscLaborHours"), 0)
+        misc_labor_other_hrs_val = to_dec_or_zero(est_sec.get("miscLaborOtherHours"), 0)
+        misc_labor_other2_hrs_val = to_dec_or_zero(est_sec.get("miscLaborOther2Hours"), 0)
+
+        est_labor_hours = shop_fab_hrs_val + misc_labor_hrs_val + misc_labor_other_hrs_val + misc_labor_other2_hrs_val
+        est_labor_rate = to_dec_or_zero(est_sec.get("hourlyLaborRate"), 60)
+
+        total_direct_shop_cost = est_labor_hours * est_labor_rate
+        shop_labor_hours_val = est_labor_hours
+    else:
+        total_direct_shop_cost = fallback_shop_labor
+        shop_labor_hours_val = fallback_shop_hours
+
     def get_amount(code, default_val):
         if code in overrides and overrides[code] is not None:
             try:
@@ -120,7 +155,7 @@ def compute_cost_codes(project):
         {
             "code": "1.01",
             "description": "Shop Labor",
-            "amount": get_amount("1.01", (misc_shop_hrs + total_shop_hrs) * labor_rate),
+            "amount": get_amount("1.01", total_direct_shop_cost),
         },
         {
             "code": "1.02",
@@ -193,10 +228,10 @@ def compute_cost_codes(project):
     
     # Calculate Total Hours (row 36 in Excel): C6 + C10 + C24 + C29
     # C6 = total_structural_tons
-    # C10 = misc_shop_hrs + total_shop_hrs
+    # C10 = shop_labor_hours_val
     # C24 = 0.00
     # C29 = misc_field_hrs + total_iw_hours
-    total_hours = total_structural_tons + (misc_shop_hrs + total_shop_hrs) + (misc_field_hrs + total_iw_hours)
+    total_hours = total_structural_tons + shop_labor_hours_val + (misc_field_hrs + total_iw_hours)
 
     # Calculate Total Weight (row 37 in Excel): C13 + C21
     # C13 = misc_weight_lbs + mill_lbs + whse_lbs
@@ -227,6 +262,7 @@ def compute_cost_codes(project):
         "1.11": "paint_supply",
         "1.12": "bolts_supply",
         "2.01": "field_labor",
+        "2.05": "equipment_rental",
     }
     for code_item in codes:
         key = key_mapping.get(code_item["code"])
