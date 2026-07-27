@@ -59,8 +59,95 @@ class BidEnquiryViewSet(viewsets.ModelViewSet):
         if not instance.scope_of_work:
             return False
             
-        subject = f"Bid Information: {instance.quote_no} - {instance.project_name}"
-        message = f"Bid Enquiry Details:\n\nQuote No: {instance.quote_no}\nProject Name: {instance.project_name}\nScope of Work: {instance.scope_of_work}\n\nPlease check the system for more details."
+        import datetime
+        import re
+        
+        subject = f"Project Details: {instance.quote_no} - {instance.project_name}"
+        
+        # Determine estimator details
+        estimator_name = "Estimator"
+        estimator_phone = "717-464-0330"
+        estimator_email = "estimator@steelfabenterprises.com"
+        
+        if instance.primary_estimator:
+            emp = instance.primary_estimator
+            estimator_name = emp.name
+            estimator_phone = emp.phone or "717-464-0330"
+            estimator_email = emp.email or "estimator@steelfabenterprises.com"
+            
+            # Map Andy Smith if name matches
+            if 'andy' in emp.name.lower() or 'smith' in emp.name.lower():
+                estimator_name = 'Andy Smith'
+                estimator_phone = '717-464-0330 x223'
+                estimator_email = 'asmith@steelfabenterprises.com'
+                
+        # Determine bid type
+        is_rebid = False
+        quote_no_str = str(instance.quote_no) if instance.quote_no else ''
+        if re.search(r'\d{2}-\d{2}-\d+R', quote_no_str):
+            is_rebid = True
+
+        due_date_str = f"{instance.bid_due_date.strftime('%B')} {instance.bid_due_date.day}, {instance.bid_due_date.year}" if instance.bid_due_date else "N/A"
+        
+        # Calculate deadline: 3 days before bid due date, adjusting weekends to previous Friday
+        deadline_date = instance.bid_due_date - datetime.timedelta(days=3) if instance.bid_due_date else None
+        if deadline_date:
+            if deadline_date.weekday() == 5:    # Saturday
+                deadline_date -= datetime.timedelta(days=1)
+            elif deadline_date.weekday() == 6:  # Sunday
+                deadline_date -= datetime.timedelta(days=2)
+        deadline_str = f"{deadline_date.strftime('%B')} {deadline_date.day}, {deadline_date.year}" if deadline_date else "N/A"
+
+        from django.utils.html import escape
+        
+        esc_project_name = escape(instance.project_name)
+        esc_location = escape(instance.location or 'N/A')
+        esc_scope = escape(instance.scope_of_work or 'project')
+        esc_comments = escape(instance.project_comments.strip()) if instance.project_comments else ''
+
+        # 1. Plain text body
+        message = f"Good Morning –\n\n"
+        message += f"Please see the link below for the {instance.project_name} project located in {instance.location or 'N/A'} "
+        message += f"for your review in providing an updated Model and IFC files for the {instance.scope_of_work or 'project'}. "
+        
+        if instance.project_comments:
+            message += f"{instance.project_comments.strip()} "
+            
+        if is_rebid:
+            message += f"This project previously bid and is out for best and final offer bidding on {due_date_str}, "
+        else:
+            message += f"This project is out for bidding on {due_date_str}, "
+            
+        message += f"if you could review and forward your updated files to estimator@steelfabenterprises.com by {deadline_str} would be greatly appreciated.\n\n"
+        
+        link_url = f"https://caldimproducts.com/rfq/data-entry?quote_no={instance.quote_no}"
+        message += f"{link_url}\n\n"
+        message += "As a reminder, we will need Detailing Quote for the Structural & Miscellaneous and Engineering as well.\n\n"
+        message += f"Should you have any questions or need any additional information, please contact {estimator_name} at {estimator_phone} or {estimator_email}. Thanks for your help!\n"
+
+        # 2. HTML body
+        html_message = f"Good Morning –<br/><br/>"
+        html_message += f"Please see the link below for <b>the {esc_project_name} project</b> located in <b>{esc_location}</b> "
+        html_message += f"for your review in providing an updated Model and IFC files for the <b><u>{esc_scope}</u></b>. "
+        
+        if esc_comments:
+            html_message += f"{esc_comments} "
+            
+        if is_rebid:
+            html_message += f"This project previously bid and is out for best and final offer bidding on <b>{due_date_str}</b>, "
+        else:
+            html_message += f"This project is out for bidding on <b>{due_date_str}</b>, "
+            
+        html_message += f"if you could review and forward your updated files to <a href=\"mailto:estimator@steelfabenterprises.com\">estimator@steelfabenterprises.com</a> by <b>{deadline_str}</b> would be greatly appreciated.<br/><br/>"
+        
+        html_message += f'<a href="{link_url}">{link_url}</a><br/><br/>'
+        html_message += "<b><i>As a reminder, we will need Detailing Quote for the Structural & Miscellaneous and Engineering as well.</i></b><br/><br/>"
+        
+        # Link email contacts inside HTML
+        esc_estimator_name = escape(estimator_name)
+        esc_estimator_phone = escape(estimator_phone)
+        esc_estimator_email = escape(estimator_email)
+        html_message += f"Should you have any questions or need any additional information, please contact {esc_estimator_name} at {esc_estimator_phone} or <b><u><a href=\"mailto:{esc_estimator_email}\">{esc_estimator_email}</a></u></b>. Thanks for your help!<br/>"
         
         detailing_emails = 'namrutha@caldimengg.in'
         fabrication_emails = 'divya@caldimengg.in'
@@ -107,6 +194,7 @@ class BidEnquiryViewSet(viewsets.ModelViewSet):
                     settings.DEFAULT_FROM_EMAIL,
                     recipients,
                     fail_silently=False,
+                    html_message=html_message,
                 )
                 return True
             except Exception as e:

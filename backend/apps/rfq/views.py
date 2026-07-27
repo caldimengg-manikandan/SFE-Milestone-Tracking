@@ -52,7 +52,7 @@ class RFQFilter(df_filters.FilterSet):
 # RFQ MASTER VIEWSET
 # ─────────────────────────────────────────────────────────────────────────────
 
-def send_rfq_email_async(rfq_id):
+def send_rfq_email_async(rfq_id, project_link=None):
     """Function to run in a background thread to send the email."""
     try:
         rfq = RFQMaster.objects.select_related('customer', 'primary_estimator').get(id=rfq_id)
@@ -100,33 +100,121 @@ def send_rfq_email_async(rfq_id):
         recipient_name = " and ".join(list(set(recipient_names)))
         recipient_emails = list(set(recipient_emails))
             
+        import datetime
+        
         subject = f"Project Details: {rfq.quote_no} - {rfq.project_name}"
         
-        body = f"Dear {recipient_name},\n\nPlease find the below details of the project:\n\n"
-        body += f"Quote No: {rfq.quote_no}\n"
-        body += f"Project Name: {rfq.project_name}\n"
-        body += f"Scope of Work: {rfq.scope_of_work}\n"
-        if rfq.customer:
-            body += f"Customer: {rfq.customer.name}\n"
-        if rfq.primary_estimator:
-            body += f"Primary Estimator: {rfq.primary_estimator.initials}\n"
-        if rfq.bid_due_date:
-            body += f"Bid Due Date: {rfq.bid_due_date}\n"
-        if rfq.bid_amount:
-            body += f"Bid Amount: ${rfq.bid_amount:,.2f}\n"
-        if rfq.location:
-            body += f"Location: {rfq.location}\n"
-        if rfq.project_comments:
-            body += f"Comments: {rfq.project_comments}\n"
-            
-        body += "\nBest Regards,\nSFE Team"
+        # Determine estimator details
+        estimator_name = "Estimator"
+        estimator_phone = "717-464-0330"
+        estimator_email = "estimator@steelfabenterprises.com"
         
+        if rfq.primary_estimator:
+            initials = (rfq.primary_estimator.initials or "").upper().strip()
+            full_name = (rfq.primary_estimator.full_name or "").strip()
+            
+            contact_map = {
+                'AS': {
+                    'name': 'Andy Smith',
+                    'phone': '717-464-0330 x223',
+                    'email': 'asmith@steelfabenterprises.com'
+                },
+                'CR': {
+                    'name': 'Chris R.',
+                    'phone': '717-464-0330',
+                    'email': 'estimator@steelfabenterprises.com'
+                },
+            }
+            
+            primary_initials = initials.split('/')[0].strip() if '/' in initials else initials
+            if primary_initials in contact_map:
+                c = contact_map[primary_initials]
+                estimator_name = c['name']
+                estimator_phone = c['phone']
+                estimator_email = c['email']
+            elif full_name:
+                estimator_name = full_name
+                parts = full_name.lower().split()
+                if len(parts) >= 2:
+                    estimator_email = f"{parts[0][0]}{parts[1]}@steelfabenterprises.com"
+                else:
+                    estimator_email = f"{parts[0]}@steelfabenterprises.com"
+
+        # Format dates
+        due_date_str = f"{rfq.bid_due_date.strftime('%B')} {rfq.bid_due_date.day}, {rfq.bid_due_date.year}" if rfq.bid_due_date else "N/A"
+        
+        deadline_date = rfq.bid_due_date - datetime.timedelta(days=3) if rfq.bid_due_date else None
+        if deadline_date:
+            if deadline_date.weekday() == 5:    # Saturday
+                deadline_date -= datetime.timedelta(days=1)
+            elif deadline_date.weekday() == 6:  # Sunday
+                deadline_date -= datetime.timedelta(days=2)
+        deadline_str = f"{deadline_date.strftime('%B')} {deadline_date.day}, {deadline_date.year}" if deadline_date else "N/A"
+
+        from django.utils.html import escape
+        
+        esc_project_name = escape(rfq.project_name)
+        esc_location = escape(rfq.location or 'N/A')
+        esc_scope = escape(rfq.scope_of_work or 'project')
+        esc_comments = escape(rfq.project_comments.strip()) if rfq.project_comments else ''
+        
+        # 1. Plain text body
+        body = f"Good Morning –\n\n"
+        body += f"Please see the link below for the {rfq.project_name} project located in {rfq.location or 'N/A'} "
+        body += f"for your review in providing an updated Model and IFC files for the {rfq.scope_of_work or 'project'}. "
+        
+        if rfq.project_comments:
+            body += f"{rfq.project_comments.strip()} "
+            
+        if rfq.budget_type == 'Rebid':
+            prev_bid_month_year = rfq.quote_date.strftime('%B %Y') if rfq.quote_date else "previously"
+            body += f"This project previously bid in {prev_bid_month_year} and is out for best and final offer bidding on {due_date_str}, "
+        elif rfq.budget_type == 'Budget':
+            body += f"This project is out for budget pricing on {due_date_str}, "
+        else:
+            body += f"This project is out for bidding on {due_date_str}, "
+            
+        body += f"if you could review and forward your updated files to estimator@steelfabenterprises.com by {deadline_str} would be greatly appreciated.\n\n"
+        
+        link_url = project_link if project_link else f"https://caldimproducts.com/rfq/data-entry?quote_no={rfq.quote_no}"
+        body += f"{link_url}\n\n"
+        body += "As a reminder, we will need Detailing Quote for the Structural & Miscellaneous and Engineering as well.\n\n"
+        body += f"Should you have any questions or need any additional information, please contact {estimator_name} at {estimator_phone} or {estimator_email}. Thanks for your help!\n"
+
+        # 2. HTML body
+        html_body = f"Good Morning –<br/><br/>"
+        html_body += f"Please see the link below for <b>the {esc_project_name} project</b> located in <b>{esc_location}</b> "
+        html_body += f"for your review in providing an updated Model and IFC files for the <b><u>{esc_scope}</u></b>. "
+        
+        if esc_comments:
+            html_body += f"{esc_comments} "
+            
+        if rfq.budget_type == 'Rebid':
+            prev_bid_month_year = rfq.quote_date.strftime('%B %Y') if rfq.quote_date else "previously"
+            html_body += f"This project previously bid in {prev_bid_month_year} and is out for best and final offer bidding on <b>{due_date_str}</b>, "
+        elif rfq.budget_type == 'Budget':
+            html_body += f"This project is out for budget pricing on <b>{due_date_str}</b>, "
+        else:
+            html_body += f"This project is out for bidding on <b>{due_date_str}</b>, "
+            
+        html_body += f"if you could review and forward your updated files to <a href=\"mailto:estimator@steelfabenterprises.com\">estimator@steelfabenterprises.com</a> by <b>{deadline_str}</b> would be greatly appreciated.<br/><br/>"
+        
+        html_body += f'<a href="{link_url}">{link_url}</a><br/><br/>'
+        html_body += "<b><i>As a reminder, we will need Detailing Quote for the Structural & Miscellaneous and Engineering as well.</i></b><br/><br/>"
+        
+        # Link email contacts inside HTML
+        esc_estimator_name = escape(estimator_name)
+        esc_estimator_phone = escape(estimator_phone)
+        esc_estimator_email = escape(estimator_email)
+        html_body += f"Should you have any questions or need any additional information, please contact {esc_estimator_name} at {esc_estimator_phone} or <b><u><a href=\"mailto:{esc_estimator_email}\">{esc_estimator_email}</a></u></b>. Thanks for your help!<br/>"
+
         send_mail(
             subject=subject,
             message=body,
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=recipient_emails,
-            fail_silently=False
+            fail_silently=False,
+            html_message=html_body
         )
         rfq.email_sent = True
         rfq.save(update_fields=['email_sent'])
@@ -297,7 +385,8 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         if not rfq.scope_of_work:
             return Response({'detail': 'Scope of Work is not selected for this project.'}, status=400)
             
-        thread = threading.Thread(target=send_rfq_email_async, args=(rfq.id,))
+        project_link = request.data.get('project_link', '').strip()
+        thread = threading.Thread(target=send_rfq_email_async, args=(rfq.id, project_link))
         thread.start()
         
         return Response({'detail': 'Email sending initiated.'})

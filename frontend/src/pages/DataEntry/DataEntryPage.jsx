@@ -608,6 +608,16 @@ export default function DataEntryPage() {
     }
   }, [searchParams])
   const [emailTarget,     setEmailTarget]      = useState(null)
+  const [projectLink,     setProjectLink]      = useState('')
+  
+  useEffect(() => {
+    if (emailTarget) {
+      setProjectLink(`https://caldimproducts.com/rfq/data-entry?quote_no=${encodeURIComponent(emailTarget.quote_no)}`)
+    } else {
+      setProjectLink('')
+    }
+  }, [emailTarget])
+
   const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
   const [settings, setSettings] = useState({
     detailing: 'namrutha@caldimengg.in',
@@ -690,7 +700,7 @@ export default function DataEntryPage() {
 
   // Send single email mutation
   const sendEmailMutation = useMutation({
-    mutationFn: (id) => rfqAPI.sendEmail(id),
+    mutationFn: ({ id, project_link }) => rfqAPI.sendEmail(id, { project_link }),
     onSuccess: () => {
       toast.success('Email triggered successfully')
       queryClient.invalidateQueries({ queryKey: ['rfq'] })
@@ -1022,11 +1032,29 @@ export default function DataEntryPage() {
                 if (scopes.includes('Erection') && settings.erection) recs.push(`${settings.erection} (Erection)`);
                 return recs.join(' & ') || 'None';
               })()}
+              <br/><br/>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: 4, color: 'var(--text-primary)' }}>Project Link:</label>
+              <input
+                type="text"
+                value={projectLink}
+                onChange={e => setProjectLink(e.target.value)}
+                placeholder="Enter project link"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 4,
+                  border: '1px solid var(--border-default)',
+                  background: 'var(--bg-default)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                }}
+              />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn btn-ghost" onClick={() => setEmailTarget(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={() => {
-                sendEmailMutation.mutate(emailTarget.id)
+                sendEmailMutation.mutate({ id: emailTarget.id, project_link: projectLink })
                 setEmailTarget(null)
               }}>
                 Send Email
