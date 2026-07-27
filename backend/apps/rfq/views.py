@@ -275,42 +275,288 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         serializer = PrintSetupSerializer(qs, many=True)
         return Response(serializer.data)
 
+def get_next_quote_no():
+    """Auto-generate next quote number, reusing gaps in sequences of the last active month."""
+    qnos = list(RFQMaster.objects.filter(deleted_at__isnull=True).values_list('quote_no', flat=True))
+    
+    parsed = []
+    for q in qnos:
+        m = re.match(r'^(\d{2})-(\d{2})-(\d+)', q)
+        if m:
+            try:
+                yy = int(m.group(1))
+                mm = int(m.group(2))
+                seq = int(m.group(3))
+                parsed.append((yy, mm, seq))
+            except ValueError:
+                pass
+    
+    if parsed:
+        parsed.sort(key=lambda x: (x[0], x[1], x[2]))
+        last_yy, last_mm, last_seq = parsed[-1]
+        
+        # Gather all existing sequences in that specific last year and month
+        existing_seqs = {seq for (yy, mm, seq) in parsed if yy == last_yy and mm == last_mm}
+        
+        # Find the first sequence (starting from 1) that is not currently in use
+        next_seq = 1
+        while next_seq in existing_seqs:
+            next_seq += 1
+            
+        next_no = f"{last_yy:02d}-{last_mm:02d}-{next_seq:02d}"
+    else:
+        from django.utils import timezone
+        now = timezone.now()
+        next_no = f"{now.strftime('%y')}-{now.strftime('%m')}-01"
+        
+    return next_no
+
+
+class RFQMasterViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated, CanEditRFQ]
+    filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
+    filterset_class = RFQFilter
+    search_fields = ['quote_no', 'project_name', 'bid_reference', 'customer__name']
+    ordering_fields = ['quote_no', 'bid_due_date', 'quote_date', 'bid_amount', 'won_lost', 'project_name', 'created_at']
+    ordering = ['-quote_no']
+    pagination_class = None
+
+    def get_queryset(self):
+        qs = RFQMaster.objects.select_related('customer', 'primary_estimator')
+        # Exclude soft-deleted by default unless explicitly requested
+        if not self.request.query_params.get('include_deleted'):
+            qs = qs.filter(deleted_at__isnull=True)
+        return qs
+
+    def get_serializer_class(self):
+        if self.action == 'print_view':
+            return PrintSetupSerializer
+        return RFQMasterSerializer
+
+    def perform_create(self, serializer):
+        serializer.save(
+            created_by=self.request.user.username,
+            updated_by=self.request.user.username,
+        )
+
+    def perform_update(self, serializer):
+        serializer.save(updated_by=self.request.user.username)
+
+    def destroy(self, request, *args, **kwargs):
+        """Hard delete — permanently delete from DB."""
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=False, methods=['get'], url_path='print')
+    def print_view(self, request):
+        """Weekly meeting print view — filtered by bid_due_date range."""
+        qs = self.get_queryset().filter(
+            decision_to_bid__in=['Yes', 'Bid'],
+            deleted_at__isnull=True,
+        ).order_by('bid_due_date', 'customer__name')
+
+        date_from = request.query_params.get('date_from')
+        date_to = request.query_params.get('date_to')
+        if date_from:
+            qs = qs.filter(bid_due_date__gte=date_from)
+        if date_to:
+            qs = qs.filter(bid_due_date__lte=date_to)
+
+        serializer = PrintSetupSerializer(qs, many=True)
+        return Response(serializer.data)
+
     @action(detail=False, methods=['get'], url_path='next-quote-no')
     def next_quote_no(self, request):
-        """Auto-generate next quote number, reusing gaps in sequences of the last active month."""
-        qnos = list(RFQMaster.objects.filter(deleted_at__isnull=True).values_list('quote_no', flat=True))
-        
-        parsed = []
-        for q in qnos:
-            m = re.match(r'^(\d{2})-(\d{2})-(\d+)', q)
-            if m:
-                try:
-                    yy = int(m.group(1))
-                    mm = int(m.group(2))
-                    seq = int(m.group(3))
-                    parsed.append((yy, mm, seq))
-                except ValueError:
-                    pass
-        
-        if parsed:
-            parsed.sort(key=lambda x: (x[0], x[1], x[2]))
-            last_yy, last_mm, last_seq = parsed[-1]
-            
-            # Gather all existing sequences in that specific last year and month
-            existing_seqs = {seq for (yy, mm, seq) in parsed if yy == last_yy and mm == last_mm}
-            
-            # Find the first sequence (starting from 1) that is not currently in use
-            next_seq = 1
-            while next_seq in existing_seqs:
-                next_seq += 1
-                
-            next_no = f"{last_yy:02d}-{last_mm:02d}-{next_seq:02d}"
-        else:
-            from django.utils import timezone
-            now = timezone.now()
-            next_no = f"{now.strftime('%y')}-{now.strftime('%m')}-01"
-            
-        return Response({'next_quote_no': next_no})
+        return Response({'next_quote_no': get_next_quote_no()})
+
+    @action(detail=False, methods=['post'], url_path='sync-quote-mails')
+    def sync_quote_mails(self, request):
+        """
+        Connect to IMAP server, retrieve recent emails, check if quote-related,
+        parse them, and add them to RFQMaster.
+        """
+        import imaplib
+        import email
+        from email.header import decode_header
+        import sys
+        import os
+        sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+        import quote_helper
+        from projects.models import Customer
+        from django.conf import settings
+
+        # Load configurations
+        def get_setting(key, default=''):
+            try:
+                return SystemSetting.objects.get(key=key).value
+            except SystemSetting.DoesNotExist:
+                env_mapping = {
+                    'email_user': ['EMAIL_HOST_USER', 'EMAIL_USER'],
+                    'email_password': ['EMAIL_HOST_PASSWORD', 'EMAIL_PASSWORD'],
+                    'imap_server': ['IMAP_SERVER'],
+                    'imap_port': ['IMAP_PORT'],
+                }
+                for env_key in env_mapping.get(key, [key.upper()]):
+                    val = getattr(settings, env_key, os.getenv(env_key))
+                    if val:
+                        if isinstance(val, str):
+                            val = val.strip('\'"')
+                        return val
+                return default
+
+        email_user = get_setting('email_user')
+        email_password = get_setting('email_password')
+        imap_server = get_setting('imap_server', 'imap.gmail.com')
+        imap_port_str = get_setting('imap_port', '993')
+        try:
+            imap_port = int(imap_port_str)
+        except ValueError:
+            imap_port = 993
+
+        if not email_user or not email_password:
+            return Response(
+                {'detail': 'Email user or password not configured in system settings.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        imported_count = 0
+        imported_rfqs = []
+
+        try:
+            # Connect to IMAP
+            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
+            mail.login(email_user, email_password)
+            mail.select("INBOX")
+
+            # Search for emails
+            status_search, messages = mail.search(None, "ALL")
+            if status_search != "OK":
+                return Response({'detail': 'Failed to search emails on IMAP server.'}, status=500)
+
+            mail_ids = messages[0].split()
+            # Fetch last 30 emails to be fast
+            recent_mail_ids = mail_ids[-30:]
+            recent_mail_ids.reverse()
+
+            for mail_id in recent_mail_ids:
+                status_fetch, msg_data = mail.fetch(mail_id, "(RFC822)")
+                if status_fetch != "OK":
+                    continue
+
+                for response_part in msg_data:
+                    if isinstance(response_part, tuple):
+                        msg = email.message_from_bytes(response_part[1])
+                        
+                        # Extract Subject
+                        subject_header = msg["Subject"]
+                        subject = ""
+                        if subject_header:
+                            decoded = decode_header(subject_header)[0]
+                            subject_bytes, encoding = decoded
+                            if isinstance(subject_bytes, bytes):
+                                subject = subject_bytes.decode(encoding or "utf-8", errors="replace")
+                            else:
+                                subject = str(subject_bytes)
+                        
+                        # Extract From/Sender
+                        from_header = msg["From"]
+                        sender = ""
+                        if from_header:
+                            decoded = decode_header(from_header)[0]
+                            sender_bytes, encoding = decoded
+                            if isinstance(sender_bytes, bytes):
+                                sender = sender_bytes.decode(encoding or "utf-8", errors="replace")
+                            else:
+                                sender = str(sender_bytes)
+
+                        # Extract Body
+                        body = ""
+                        if msg.is_multipart():
+                            for part in msg.walk():
+                                content_type = part.get_content_type()
+                                content_disposition = str(part.get("Content-Disposition"))
+                                if content_type == "text/plain" and "attachment" not in content_disposition:
+                                    try:
+                                        body = part.get_payload(decode=True).decode(part.get_content_charset() or "utf-8", errors="replace")
+                                    except Exception:
+                                        pass
+                                    break
+                        else:
+                            try:
+                                body = msg.get_payload(decode=True).decode(msg.get_content_charset() or "utf-8", errors="replace")
+                            except Exception:
+                                pass
+
+                        subject = subject or ""
+                        body = body or ""
+
+                        # Filter: Check if quote related
+                        if not quote_helper.is_quote_related(subject, body):
+                            continue
+
+                        # Parse quote details
+                        quote_data = quote_helper.generate_quote_data(sender, subject, body)
+                        quote_id = quote_data.get("quote_id")
+
+                        if not quote_id:
+                            continue
+
+                        # Check if already imported (stored in bid_reference)
+                        if RFQMaster.objects.filter(bid_reference=quote_id).exists():
+                            continue
+
+                        # Generate next quote no
+                        next_no = get_next_quote_no()
+
+                        # Match or lookup customer
+                        cust_name = quote_data.get("customer_name")
+                        customer_obj = None
+                        if cust_name:
+                            customer_obj = Customer.objects.filter(name__iexact=cust_name.strip()).first()
+                            if not customer_obj:
+                                customer_obj = Customer.objects.create(
+                                    name=cust_name.strip()
+                                )
+
+                        # Create the RFQ Master record
+                        rfq_rec = RFQMaster.objects.create(
+                            quote_no=next_no,
+                            bid_reference=quote_id,
+                            project_name=quote_data.get("project_name") or "Quote Request",
+                            location=quote_data.get("project_location") or "N/A",
+                            bid_amount=quote_data.get("total") or 0.0,
+                            price_structure=quote_data.get("subtotal") or 0.0,
+                            project_comments=quote_helper.format_quote_txt(quote_data),
+                            won_lost="Pending",
+                            decision_to_bid="Bid",
+                            budget_type="Final",
+                            customer=customer_obj,
+                            created_by="email_sync",
+                            updated_by="email_sync"
+                        )
+                        
+                        imported_count += 1
+                        imported_rfqs.append({
+                            'id': rfq_rec.id,
+                            'quote_no': rfq_rec.quote_no,
+                            'project_name': rfq_rec.project_name,
+                            'bid_reference': rfq_rec.bid_reference
+                        })
+
+            mail.close()
+            mail.logout()
+
+        except Exception as e:
+            logger.error(f"Error during IMAP sync: {str(e)}", exc_info=True)
+            return Response({'detail': f'Error syncing email: {str(e)}'}, status=500)
+
+        return Response({
+            'success': True,
+            'imported_count': imported_count,
+            'imported_rfqs': imported_rfqs
+        })
+
 
     @action(detail=True, methods=['patch'], url_path='sebw-sync',
             permission_classes=[IsAuthenticated, CanEditRFQ])
@@ -766,8 +1012,8 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
                         else:
                             # Create new
                             rfq_inst = RFQMaster(**defaults)
-                            rfq_inst.created_by = str(request.user.username or 'excel_upload')
-                            rfq_inst.updated_by = str(request.user.username or 'excel_upload')
+                            rfq_inst.created_by = str(request.user.username or 'excel_upload')  # type: ignore
+                            rfq_inst.updated_by = str(request.user.username or 'excel_upload')  # type: ignore
                             rfq_inst.save()
             except Exception as e:
                 return Response({

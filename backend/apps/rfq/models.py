@@ -24,7 +24,7 @@ class Estimator(models.Model):
         ordering = ['initials']
 
     def __str__(self):
-        return f"{self.initials}" + (f" — {self.full_name}" if self.full_name else "")
+        return f"{self.initials}" + (f" — {self.full_name}" if self.full_name not in (None, '') else "")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -307,13 +307,13 @@ class RFQMaster(models.Model):
     @property
     def is_rebid(self):
         """Col C — TRUE if quote_no contains 'R' after the base sequence."""
-        quote_no_str = str(self.quote_no) if self.quote_no else ''
+        quote_no_str = str(self.quote_no) if self.quote_no not in (None, '') else ''
         return bool(re.search(r'\d{2}-\d{2}-\d+R', quote_no_str))
 
     @property
     def quote_no_rolled_up(self):
         """Col B — first 8 chars (strips rebid suffix)."""
-        quote_no_str = str(self.quote_no) if self.quote_no else ''
+        quote_no_str = str(self.quote_no) if self.quote_no not in (None, '') else ''
         return quote_no_str[:8]
 
     @property
