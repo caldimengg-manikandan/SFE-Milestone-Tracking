@@ -712,6 +712,27 @@ export default function DataEntryPage() {
     }
   })
 
+  // Sync quote emails mutation
+  const syncMailsMutation = useMutation({
+    mutationFn: () => rfqAPI.syncQuoteMails(),
+    onSuccess: (res) => {
+      const count = res.data?.imported_count || 0
+      if (count > 0) {
+        toast.success(`Successfully synchronized. Imported ${count} new RFQ(s).`, { duration: 4000 })
+      } else {
+        toast.success('Synchronization complete. No new quote emails found.', { duration: 3000 })
+      }
+      queryClient.invalidateQueries({ queryKey: ['rfq'] })
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.detail || 'Failed to sync quote emails')
+    }
+  })
+
+  const handleSyncMails = () => {
+    syncMailsMutation.mutate()
+  }
+
   const onCellValueChanged = useCallback((params) => {
     const { data, colDef, newValue } = params
     if (!data?.id) return
@@ -843,6 +864,18 @@ export default function DataEntryPage() {
                   {pendingEmailsCount}
                 </span>
               )}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={handleSyncMails}
+              disabled={syncMailsMutation.isPending}
+              title="Fetch and import quote-related emails to RFQ Master"
+              style={{ gap: 6 }}
+            >
+              <RefreshCw className={syncMailsMutation.isPending ? "animate-spin" : ""} style={{ width: 13, height: 13 }} />
+              {syncMailsMutation.isPending ? 'Syncing...' : 'Sync Mails'}
             </button>
           )}
           { (isManager || canEdit) && (

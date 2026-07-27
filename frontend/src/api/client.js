@@ -77,6 +77,8 @@ export const rfqAPI = {
   uploadExcel: (formData) => api.post('/rfq/rfq/upload-excel/', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },
   }),
+  // Sync quote emails
+  syncQuoteMails: () => api.post('/rfq/rfq/sync-quote-mails/'),
 }
 
 // Lookups
