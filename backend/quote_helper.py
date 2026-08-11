@@ -1,3 +1,4 @@
+import os
 import re
 import random
 import html
@@ -8,6 +9,7 @@ from email.mime.text import MIMEText
 from email.mime.base import MIMEBase
 from email import encoders
 from fpdf import FPDF
+from typing import Any, Dict
 
 # A pre-defined product catalog with standard pricing
 PRODUCT_CATALOG = {
@@ -109,17 +111,26 @@ def parse_items_and_qty(text):
         
     return items
 
-def parse_quote_details(text):
+def parse_quote_details(text: str) -> dict[str, Any]:
     """
     Parses structured quote details from emails.
     Extracts Quote ID, Date, Client Name, Project details, and item costs under Commercial Summary.
     """
-    details = {
+    details: dict[str, Any] = {
+        "bid_reference": None,
         "quote_id": None,
         "date": None,
         "customer_name": None,
         "project_name": None,
         "project_location": None,
+        "project_comments": None,
+        "budget_type": None,
+        "bid_due_date": None,
+        "bid_due_time": None,
+        "distance_travel": None,
+        "decision_to_bid": None,
+        "scope_of_work": None,
+        "primary_estimator": None,
         "line_items": [],
         "subtotal": 0.0,
         "tax": 0.0,
@@ -131,27 +142,103 @@ def parse_quote_details(text):
     text_clean = re.sub(r'<[^>]+>', '\n', text)
     text_clean = html.unescape(text_clean)
     text_clean = text_clean.replace('\r\n', '\n').replace('\r', '\n')
+    # Strip markdown asterisks to prevent formatting from disrupting regex matches
+    text_clean = text_clean.replace('*', '')
+
+    # Helper function to extract field values
+    def get_field_val(patterns):
+        for pattern in patterns:
+            m = re.search(pattern, text_clean, re.IGNORECASE)
+            if m:
+                return m.group(1).strip()
+        return None
 
     # 1. Parse Quotation Details fields
-    quote_id_m = re.search(r'Quote\s+ID\s*:\s*([A-Za-z0-9\-]+)', text_clean, re.IGNORECASE)
-    if quote_id_m:
-        details["quote_id"] = quote_id_m.group(1).strip()
+    details["bid_reference"] = get_field_val([
+        r'Bid\s+Reference\s*:\s*([#\w\-]+)',
+        r'Bid\s+Ref\s*:\s*([#\w\-]+)',
+    ])
 
-    date_m = re.search(r'(?:Quotation\s+)?Date\s*:\s*([^\n\r]+)', text_clean, re.IGNORECASE)
-    if date_m:
-        details["date"] = date_m.group(1).strip()
+    details["quote_id"] = get_field_val([
+        r'Quote\s+(?:Number|ID|Ref)\s*:\s*([#\w\-]+)',
+        r'(?:Bid\s+Reference|Quote\s+ID|Quote\s+Ref)\s*:\s*([#\w\-]+)',
+        r'Quote\s+ID\s*:\s*([^\n\r]+)'
+    ]) or details["bid_reference"]
 
-    cust_m = re.search(r'Customer\s+(?:Name)?\s*:\s*([^\n\r]+)', text_clean, re.IGNORECASE)
-    if cust_m:
-        details["customer_name"] = cust_m.group(1).strip()
+    details["date"] = get_field_val([
+        r'Quotation\s+Date\s*:\s*([^\n\r]+)',
+        r'Date\s*:\s*([^\n\r]+)'
+    ])
 
-    proj_m = re.search(r'Project\s+(?:Name)?\s*:\s*([^\n\r]+)', text_clean, re.IGNORECASE)
-    if proj_m:
-        details["project_name"] = proj_m.group(1).strip()
+    details["budget_type"] = get_field_val([
+        r'Quotation\s+Type\s*:\s*([^\n\r]+)',
+        r'Type\s*:\s*([^\n\r]+)'
+    ])
 
-    loc_m = re.search(r'Project\s+Location\s*:\s*([^\n\r]+)', text_clean, re.IGNORECASE)
-    if loc_m:
-        details["project_location"] = loc_m.group(1).strip()
+    details["customer_name"] = get_field_val([
+        r'Customer\s*(?:Name)?\s*:\s*([^\n\r]+)',
+        r'Client\s*:\s*([^\n\r]+)'
+    ])
+
+    details["project_name"] = get_field_val([
+        r'Project\s*(?:Name)?\s*:\s*([^\n\r]+)',
+        r'(?:our|upcoming|new)\s+project\s*,\s*([^\n\r,]+)',
+        r'project\s+named\s+([^\n\r,]+)',
+        r'project\s+called\s+([^\n\r,]+)',
+    ])
+
+    details["project_location"] = get_field_val([
+        r'Project\s+Location\s*:\s*([^\n\r]+)',
+        r'Location\s*:\s*([^\n\r]+)',
+        r'located\s+in\s+([^\n\r,.]+,\s*[^\n\r,.]+)', # matches "located in Bangalore, Karnataka"
+        r'located\s+in\s+([^\n\r,.]+)',
+        r'location\s+is\s+([^\n\r,.]+)'
+    ])
+
+    details["project_comments"] = get_field_val([
+        r'Project\s+Comments\s*:\s*([^\n\r]+)'
+    ])
+
+    # Parse bid due date and time, supporting combined formats
+    bid_due_val = get_field_val([
+        r'(?:Bid\s+Submission\s+Deadline|Bid\s+Due\s+Date|Due\s+Date|Submission\s+Deadline)\s*:\s*([^\n\r]+)',
+        r'Bid\s+Due\s*:\s*([^\n\r]+)',
+    ])
+    if bid_due_val:
+        parts = re.split(r',|\bat\b', bid_due_val)
+        details["bid_due_date"] = parts[0].strip()
+        if len(parts) > 1:
+            details["bid_due_time"] = parts[1].strip()
+
+    if not details.get("bid_due_date"):
+        details["bid_due_date"] = get_field_val([
+            r'Bid\s+Due\s+Date\s*:\s*([^\n\r]+)',
+            r'Due\s+Date\s*:\s*([^\n\r]+)',
+            r'Deadline\s*:\s*([^\n\r]+)'
+        ])
+
+    if not details.get("bid_due_time"):
+        details["bid_due_time"] = get_field_val([
+            r'Bid\s+Due\s+Time\s*:\s*([^\n\r]+)',
+            r'Due\s+Time\s*:\s*([^\n\r]+)',
+            r'(?:^|\n)\s*Time\s*:\s*([^\n\r]+)'
+        ])
+
+    details["distance_travel"] = get_field_val([
+        r'Distance\s*:\s*([^\n\r]+)'
+    ])
+
+    details["decision_to_bid"] = get_field_val([
+        r'Decision\s+To\s+Bid\s*:\s*([^\n\r]+)'
+    ])
+
+    details["scope_of_work"] = get_field_val([
+        r'Scope\s+of\s+Work\s*:\s*([^\n\r]+)'
+    ])
+
+    details["primary_estimator"] = get_field_val([
+        r'Primary\s+Estimator\s*:\s*([^\n\r]+)'
+    ])
 
     # 2. Match currency
     currency_m = re.search(r'(₹|\bRs\.?|\$|USD|INR)', text_clean)
@@ -164,7 +251,7 @@ def parse_quote_details(text):
     if summary_match:
         summary_section = summary_match.group(1)
 
-    exclude_keywords = ["id", "date", "customer", "project", "location", "total", "amount", "summary", "schedule", "term", "valid"]
+    exclude_keywords = ["id", "date", "customer", "project", "location", "total", "amount", "summary", "schedule", "term", "valid", "due", "distance", "decision", "scope", "estimator", "reference"]
     line_items = []
     total_val = 0.0
 
@@ -220,7 +307,9 @@ def generate_quote_data(sender, subject, body_text):
     details = parse_quote_details(body_text)
 
     # Use structured details if parsed successfully
-    if details["quote_id"] and details["line_items"]:
+    if details["quote_id"] or details["project_name"] or details["customer_name"]:
+        if not details["quote_id"]:
+            details["quote_id"] = f"QTE-{datetime.now().strftime('%Y%m%d')}-{random.randint(1000, 9999)}"
         if not details["customer_name"]:
             details["customer_name"] = sender
         if not details["date"]:
@@ -374,13 +463,21 @@ def clean_pdf_text(text):
     if not text:
         return ""
     replacements = {
+        "\u2010": "-",  # hyphen
+        "\u2011": "-",  # non-breaking hyphen
+        "\u2012": "-",  # figure dash
         "\u2013": "-",  # en-dash
         "\u2014": "-",  # em-dash
+        "\u2015": "-",  # horizontal bar
         "\u2018": "'",  # left single quote
         "\u2019": "'",  # right single quote
+        "\u201a": "'",  # single low-9 quote
+        "\u201b": "'",  # single high-reversed-9 quote
         "\u201c": '"',  # left double quote
         "\u201d": '"',  # right double quote
+        "\u201e": '"',  # double low-9 quote
         "\u2022": "*",  # bullet point
+        "\u2026": "...", # horizontal ellipsis
         "₹": "INR",     # Rupee symbol
     }
     for char, rep in replacements.items():
@@ -419,22 +516,27 @@ def generate_pdf_quote(quote_data, output_path):
     pdf.set_x(15)
     pdf.set_text_color(255, 255, 255)
     pdf.set_font("helvetica", "B", 20)
-    pdf.cell(0, 10, "SALES QUOTATION", ln=True)
+    pdf.cell(0, 10, "SALES QUOTATION")
+    pdf.ln()
     
     pdf.set_x(15)
     pdf.set_font("helvetica", "I", 9)
-    pdf.cell(0, 5, "Email Automation Engine", ln=True)
+    pdf.cell(0, 5, "Email Automation Engine")
+    pdf.ln()
     
     # Top right quote parameters
     pdf.set_y(10)
     pdf.set_x(120)
     pdf.set_font("helvetica", "B", 10)
-    pdf.cell(0, 5, f"Quote ID: {q_id}", ln=True, align="R")
+    pdf.cell(0, 5, f"Quote ID: {q_id}", align="R")
+    pdf.ln()
     pdf.set_x(120)
     pdf.set_font("helvetica", "", 10)
-    pdf.cell(0, 5, f"Date: {q_date}", ln=True, align="R")
+    pdf.cell(0, 5, f"Date: {q_date}", align="R")
+    pdf.ln()
     pdf.set_x(120)
-    pdf.cell(0, 5, "Validity: 30 Days", ln=True, align="R")
+    pdf.cell(0, 5, "Validity: 30 Days", align="R")
+    pdf.ln()
     
     pdf.ln(25)
     
@@ -448,7 +550,8 @@ def generate_pdf_quote(quote_data, output_path):
     pdf.set_x(20)
     pdf.set_text_color(17, 24, 39)
     pdf.set_font("helvetica", "B", 11)
-    pdf.cell(0, 6, "Prepared For:", ln=True)
+    pdf.cell(0, 6, "Prepared For:")
+    pdf.ln()
     
     pdf.set_x(20)
     pdf.set_font("helvetica", "", 10)
@@ -456,11 +559,13 @@ def generate_pdf_quote(quote_data, output_path):
     
     if len(client_name) > 65:
         client_name = client_name[:62] + "..."
-    pdf.cell(0, 5, f"Client Name: {client_name}", ln=True)
+    pdf.cell(0, 5, f"Client Name: {client_name}")
+    pdf.ln()
     
     if len(subject_text) > 65:
         subject_text = subject_text[:62] + "..."
-    pdf.cell(0, 5, f"Regarding: {subject_text}", ln=True)
+    pdf.cell(0, 5, f"Regarding: {subject_text}")
+    pdf.ln()
     
     # 3. Project details card if available
     has_project = bool(project_name and project_name != "Equipment Supply Inquiry")
@@ -473,11 +578,13 @@ def generate_pdf_quote(quote_data, output_path):
         
         if len(project_name) > 65:
             project_name = project_name[:62] + "..."
-        pdf.cell(0, 5, f"Project Name: {project_name}", ln=True)
+        pdf.cell(0, 5, f"Project Name: {project_name}")
+        pdf.ln()
         
         if len(project_location) > 65:
             project_location = project_location[:62] + "..."
-        pdf.cell(0, 5, f"Project Location: {project_location}", ln=True)
+        pdf.cell(0, 5, f"Project Location: {project_location}")
+        pdf.ln()
         pdf.ln(12)
     else:
         pdf.ln(15)
@@ -544,8 +651,10 @@ def generate_pdf_quote(quote_data, output_path):
     pdf.set_x(15)
     pdf.set_font("helvetica", "I", 8)
     pdf.set_text_color(156, 163, 175)
-    pdf.cell(180, 5, "This is an auto-generated quotation based on the received email inquiry.", align="C", ln=True)
-    pdf.cell(180, 5, "Thank you for your business! This quotation is valid for 30 days.", align="C", ln=True)
+    pdf.cell(180, 5, "This is an auto-generated quotation based on the received email inquiry.", align="C")
+    pdf.ln()
+    pdf.cell(180, 5, "Thank you for your business! This quotation is valid for 30 days.", align="C")
+    pdf.ln()
     
     pdf.output(output_path)
 
@@ -568,15 +677,23 @@ def send_quote_email(config, quote_data, pdf_path):
         smtp_port = 587
 
     # Target recipient (original sender of the quote request)
-    recipient_email = quote_data["customer_name"]  # Use parsed customer name
+    recipient_email = quote_data.get("customer_email") or quote_data.get("sender")
     if not recipient_email or "@" not in recipient_email:
-        recipient_email = quote_data["sender"]       # Fallback to sender header
+        recipient_email = quote_data.get("customer_name")
 
     # Parse out email address if in name format
-    m = re.search(r'<([^>]+)>', recipient_email)
-    if m:
-        recipient_email = m.group(1).strip()
-        
+    if recipient_email:
+        m = re.search(r'<([^>]+)>', recipient_email)
+        if m:
+            recipient_email = m.group(1).strip()
+        else:
+            email_m = re.search(r'[\w.+]+@[\w.-]+\.[a-zA-Z]{2,}', recipient_email)
+            if email_m:
+                recipient_email = email_m.group(0).strip()
+
+    if not recipient_email or "@" not in recipient_email:
+        raise ValueError(f"No valid recipient email address could be determined for quote {quote_data.get('quote_id')}.")
+
     print(f"Sending quotation {quote_data['quote_id']} to {recipient_email} via SMTP...")
 
     # Create message
@@ -625,17 +742,21 @@ Email Automation Engine
         raise e
 
     # Send email
+    server = smtplib.SMTP(smtp_server, smtp_port)
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(sender_email, password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
-        server.quit()
         print("Email sent successfully!")
         return True
     except Exception as smtp_err:
         print(f"SMTP error: {smtp_err}")
         raise smtp_err
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
 
 def send_custom_quote_email(config, recipient_email, subject, body_text, pdf_path):
     """Sends a custom email with a PDF attachment using SMTP."""
@@ -657,6 +778,10 @@ def send_custom_quote_email(config, recipient_email, subject, body_text, pdf_pat
     m = re.search(r'<([^>]+)>', recipient_email)
     if m:
         recipient_email = m.group(1).strip()
+    else:
+        email_m = re.search(r'[\w.+]+@[\w.-]+\.[a-zA-Z]{2,}', recipient_email)
+        if email_m:
+            recipient_email = email_m.group(0).strip()
 
     msg = MIMEMultipart()
     msg['From'] = sender_email
@@ -665,28 +790,237 @@ def send_custom_quote_email(config, recipient_email, subject, body_text, pdf_pat
     
     msg.attach(MIMEText(body_text, 'plain'))
     
-    try:
-        import os
-        with open(pdf_path, "rb") as attachment:
-            part = MIMEBase("application", "octet-stream")
-            part.set_payload(attachment.read())
-        encoders.encode_base64(part)
-        part.add_header(
-            "Content-Disposition",
-            f"attachment; filename={os.path.basename(pdf_path)}",
-        )
-        msg.attach(part)
-    except Exception as e:
-        print(f"Failed to attach PDF to email: {e}")
-        raise e
+    if pdf_path and os.path.exists(pdf_path):
+        try:
+            with open(pdf_path, "rb") as attachment:
+                part = MIMEBase("application", "octet-stream")
+                part.set_payload(attachment.read())
+            encoders.encode_base64(part)
+            part.add_header(
+                "Content-Disposition",
+                f"attachment; filename={os.path.basename(pdf_path)}",
+            )
+            msg.attach(part)
+        except Exception as e:
+            print(f"Failed to attach PDF to email: {e}")
+            raise e
 
+    server = smtplib.SMTP(smtp_server, smtp_port)
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port)
         server.starttls()
         server.login(sender_email, password)
         server.sendmail(sender_email, recipient_email, msg.as_string())
-        server.quit()
         return True
     except Exception as smtp_err:
         print(f"SMTP error: {smtp_err}")
         raise smtp_err
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+
+
+def clean_reply_content(text):
+    """
+    Cleans an email reply by:
+    1. Removing email client forwarding/reply quotation headers (e.g. 'On ... wrote:').
+    2. Stripping leading greetings (e.g. 'Hi,', 'Hello team,', 'Good morning,').
+    3. Stripping trailing sign-offs / footers (e.g. 'Thanks,', 'Best regards,', signatures).
+    4. Returning only the core technical/cost information.
+    """
+    if not text:
+        return ""
+    
+    # 1. Normalize line endings and split
+    lines = text.replace('\r\n', '\n').replace('\r', '\n').split('\n')
+    cleaned_lines = []
+    
+    # Strip thread quotes / forwarded headers
+    for line in lines:
+        stripped = line.strip()
+        if re.match(r'^(On\s+.+wrote:|From:\s*.+|Sent:\s*.+|To:\s*.+|Subject:\s*.+|---------- Forwarded message ----------)', stripped, re.IGNORECASE):
+            break
+        if stripped.startswith('>') or stripped.startswith('>>'):
+            continue
+        cleaned_lines.append(stripped)
+
+    # Remove empty lines at start and end
+    while cleaned_lines and not cleaned_lines[0]:
+        cleaned_lines.pop(0)
+    while cleaned_lines and not cleaned_lines[-1]:
+        cleaned_lines.pop()
+
+    # 2. Strip leading greetings
+    greeting_pattern = re.compile(
+        r'^(?:hi|hello|hey|dear|good\s+morning|good\s+afternoon|good\s+evening|greetings)'
+        r'(?:\s+[\w\s\.\,\-\/\&]+)?[,\:\!\-]?$',
+        re.IGNORECASE
+    )
+    while cleaned_lines and (not cleaned_lines[0] or greeting_pattern.match(cleaned_lines[0])):
+        cleaned_lines.pop(0)
+
+    # 3. Comprehensive signature, sign-off, and corporate footer detection
+    signoff_pattern = re.compile(
+        r'^(?:thanks(?:\s+and|\s*&)?\s*(?:regards|warm\s+regards)?|thank\s+you(?:\s+very\s+much|\s+all)?|'
+        r'regards|best\s+regards|warm\s+regards|kind\s+regards|sincerely|cheers|with\s+regards|best|'
+        r'sent\s+from\s+my\s+iphone|sent\s+from\s+mail\s+for\s+windows|sent\s+from\s+outlook|'
+        r'get\s+outlook\s+for\s+android|get\s+outlook\s+for\s+ios)(?:\s*,)?(?:\s+[\w\s\.\,\-]+)?$',
+        re.IGNORECASE
+    )
+
+    footer_line_pattern = re.compile(
+        r'^(?:'
+        r'--\s*|[-_=*~]{2,}|'
+        r'caldim\s+engineering.*|caldim.*|steel\s+fab\s+enterprises.*|'
+        r'das\s*\(?digitalization.*|division\s*:?|department\s*:?|'
+        r'corporate\s+office.*|registered\s+office.*|branch\s+office.*|head\s+office.*|'
+        r'plot\s+no.*|near\s+rto.*|minmac\s+center.*|arcot\s+road.*|valasaravakkam.*|'
+        r'.*(?:hosur|chennai|bangalore|bengaluru)\s*[-–\s]*\d{5,6}.*|'
+        r'(?:office\s*#?|cell\s*:|tel\s*:|phone\s*:|mobile\s*:|fax\s*:|direct\s*:).*|'
+        r'(?:email|e-mail)\s*:.*@.*|'
+        r'(?:website|web)\s*:?.*|'
+        r'(?:https?:\/\/)?(?:www\.)?(?:caldimproducts|caldimengg)\.com.*|'
+        r'(?:system\s+engineer|software\s+development|software\s+engineer|estimator|detailer|draftsman|modeler|lead\s+estimator|senior\s+estimator|project\s+manager|sales\s+manager|manager|director|vp|ceo).*|'
+        r'namrutha(?:\s+k\.?r\.?)?|divya(?:\s+[a-z]\.?)?|manikandan(?:\s+[a-z]\.?)?|thamizh(?:arasan)?|'
+        r'disclaimer:?.*|confidentiality\s+notice:?.*|privileged\s+and\s+confidential.*|this\s+email\s+and\s+any\s+files.*'
+        r')$',
+        re.IGNORECASE
+    )
+
+    # Backwards stripping of signature, corporate footers, disclaimers, and sign-offs
+    while cleaned_lines:
+        last = cleaned_lines[-1]
+        if not last or signoff_pattern.match(last) or footer_line_pattern.match(last):
+            cleaned_lines.pop()
+        else:
+            break
+
+    # Strip any remaining trailing empty lines or sign-off lines
+    while cleaned_lines:
+        last = cleaned_lines[-1]
+        if not last or signoff_pattern.match(last) or footer_line_pattern.match(last):
+            cleaned_lines.pop()
+        else:
+            break
+
+    # Final trim
+    while cleaned_lines and not cleaned_lines[0]:
+        cleaned_lines.pop(0)
+    while cleaned_lines and not cleaned_lines[-1]:
+        cleaned_lines.pop()
+
+    result = '\n'.join(cleaned_lines).strip()
+    return result if result else text.strip()
+
+
+def clean_reply_body(text):
+    """Alias for clean_reply_content."""
+    return clean_reply_content(text)
+
+
+def build_combined_email_body(quote_id, estimator_reply, detailer_reply, project_name=None, customer_name=None):
+    """
+    Compiles Estimator pricing details and Detailer drafting timeline into a unified quotation template,
+    ensuring header (Dear Customer,) and footer (Thanks & Best regards,) are common, and only the costs/details
+    are merged.
+    """
+    greeting_name = customer_name.strip() if customer_name else "Customer"
+    project_clause = f" for {project_name.strip()}" if project_name else ""
+    
+    est_clean = clean_reply_content(estimator_reply)
+    det_clean = clean_reply_content(detailer_reply)
+    
+    est_content = est_clean if est_clean else "Commercial estimation details in progress."
+    det_content = det_clean if det_clean else "Detailing & drafting schedule in progress."
+
+    return f"""Dear {greeting_name},
+
+We are pleased to provide the compiled commercial estimation and detailing quotation{project_clause} (Ref: {quote_id}).
+
+Below is the consolidated summary provided by our technical teams:
+
+=== ESTIMATION DETAILS ===
+{est_content}
+
+=== DETAILING DETAILS ===
+{det_content}
+
+Please review the details above and let us know if you require any revisions or have questions.
+
+Thanks & Best regards,
+Project Sales & Estimation Team
+Steel Fab Enterprises"""
+
+
+
+def send_combined_quote_email(recipient_email, subject, body_text, smtp_config=None, pdf_path=None):
+    """
+    Sends the compiled estimation and detailing reply to the customer via SMTP.
+    """
+    if smtp_config is None:
+        import os
+        from django.conf import settings
+        smtp_config = {
+            "email_user": getattr(settings, 'EMAIL_HOST_USER', os.getenv('EMAIL_HOST_USER', 'thamizh1700@gmail.com')).strip('\'"'),
+            "email_password": getattr(settings, 'EMAIL_HOST_PASSWORD', os.getenv('EMAIL_HOST_PASSWORD', '')).strip('\'"'),
+            "smtp_server": getattr(settings, 'EMAIL_HOST', os.getenv('EMAIL_HOST', 'smtp.gmail.com')).strip('\'"'),
+            "smtp_port": getattr(settings, 'EMAIL_PORT', int(os.getenv('EMAIL_PORT', 587))),
+        }
+
+    sender_email: str = str(smtp_config.get("email_user") or "")
+    password: str = str(smtp_config.get("email_password") or "")
+    smtp_server: str = str(smtp_config.get("smtp_server") or "smtp.gmail.com")
+    smtp_port: int = int(smtp_config.get("smtp_port") or 587)
+
+    # Clean recipients
+    if isinstance(recipient_email, list):
+        recipients = recipient_email
+    else:
+        recipients = [r.strip() for r in str(recipient_email).split(',') if r.strip()]
+
+    clean_recipients = []
+    for r in recipients:
+        m = re.search(r'<([^>]+)>', r)
+        clean_recipients.append(m.group(1).strip() if m else r.strip())
+    clean_recipients = [r for r in clean_recipients if r and '@' in r]
+
+    if not clean_recipients:
+        raise ValueError("No valid recipient email address provided.")
+
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = ", ".join(clean_recipients)
+    msg['Subject'] = subject
+
+    msg.attach(MIMEText(body_text, 'plain'))
+
+    # Optionally attach PDF if provided
+    if pdf_path:
+        import os
+        if os.path.exists(pdf_path):
+            try:
+                with open(pdf_path, "rb") as attachment:
+                    part = MIMEBase("application", "octet-stream")
+                    part.set_payload(attachment.read())
+                encoders.encode_base64(part)
+                part.add_header(
+                    "Content-Disposition",
+                    f"attachment; filename={os.path.basename(pdf_path)}",
+                )
+                msg.attach(part)
+            except Exception as e:
+                print(f"Warning: Could not attach PDF: {e}")
+
+    server = smtplib.SMTP(smtp_server, smtp_port)
+    try:
+        server.starttls()
+        server.login(sender_email, password)
+        server.sendmail(sender_email, clean_recipients, msg.as_string())
+        return True
+    finally:
+        try:
+            server.quit()
+        except Exception:
+            pass
+

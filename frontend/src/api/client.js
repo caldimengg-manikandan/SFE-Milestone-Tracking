@@ -113,3 +113,13 @@ export const systemSettingsAPI = {
   create: (data) => api.post('/rfq/settings/', data),
 }
 
+export const quoteWorkflowsAPI = {
+  list: (params) => api.get('/rfq/quote-workflows/', { params }),
+  get: (id) => api.get(`/rfq/quote-workflows/${id}/`),
+  previewCombined: (id) => api.get(`/rfq/quote-workflows/${id}/preview-combined/`),
+  combineAndSend: (id, data) => api.post(`/rfq/quote-workflows/${id}/combine-and-send/`, data),
+  syncReplies: () => api.post('/rfq/quote-workflows/sync-replies/'),
+  delete: (id) => api.delete(`/rfq/quote-workflows/${id}/`),
+}
+
+

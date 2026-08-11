@@ -221,6 +221,11 @@ def should_use_tools(query):
         if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
             return True
             
+    # RFQ listing/count search keywords (e.g., "how many RFQs", "list quotes", "find RFQ")
+    if "rfq" in query_lower or "quote" in query_lower:
+        if any(verb in query_lower for verb in ["list", "show", "get", "view", "search", "find", "lookup", "details", "how many", "count"]):
+            return True
+            
     return False
         
 def parse_json_from_text(text):

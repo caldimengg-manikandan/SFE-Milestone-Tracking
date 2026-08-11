@@ -455,3 +455,52 @@ class SystemSetting(models.Model):
 
     def __str__(self):
         return f"{self.key}: {self.value}"
+
+
+class QuoteWorkflow(models.Model):
+    class WorkflowStatus(models.TextChoices):
+        FORWARDED = 'Forwarded', 'Forwarded'
+        PARTIALLY_REPLIED = 'Partially Replied', 'Partially Replied'
+        READY = 'Ready', 'Ready'
+        COMPLETED = 'Completed', 'Completed'
+
+    quote_id = models.CharField(max_length=100, primary_key=True, help_text="Unique Quote Reference / Quote No")
+    rfq = models.ForeignKey(
+        RFQMaster,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='quote_workflows'
+    )
+    message_id = models.CharField(max_length=255, blank=True, default='')
+    subject = models.CharField(max_length=255, blank=True, default='')
+    sender = models.CharField(max_length=255, blank=True, default='', help_text="Original customer email")
+    status = models.CharField(
+        max_length=50,
+        choices=WorkflowStatus.choices,
+        default=WorkflowStatus.FORWARDED
+    )
+    
+    estimator_email = models.CharField(max_length=255, blank=True, default='')
+    estimator_replied = models.BooleanField(default=False)
+    estimator_reply_body = models.TextField(null=True, blank=True)
+    estimator_replied_at = models.DateTimeField(null=True, blank=True)
+    
+    detailer_email = models.CharField(max_length=255, blank=True, default='')
+    detailer_replied = models.BooleanField(default=False)
+    detailer_reply_body = models.TextField(null=True, blank=True)
+    detailer_replied_at = models.DateTimeField(null=True, blank=True)
+    
+    combined_body = models.TextField(null=True, blank=True)
+    sent_to_customer_at = models.DateTimeField(null=True, blank=True)
+    
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        db_table = 'rfq_quote_workflow'
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"QuoteFlow [{self.quote_id}] - {self.status}"
+

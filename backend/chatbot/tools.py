@@ -336,7 +336,7 @@ AVAILABLE_TOOLS = [
             "parameters": {
                 "type": "object",
                 "properties": {
-                    "entity": {"type": "string", "enum": ["employee", "customer", "project", "all"]},
+                    "entity": {"type": "string", "enum": ["employee", "customer", "project", "rfq", "all"]},
                     "query": {"type": "string"}
                 },
                 "required": ["query"]
@@ -353,6 +353,56 @@ AVAILABLE_TOOLS = [
                 "properties": {
                     "project_code": {"type": "string"},
                     "project": {"type": "string"}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "list_rfqs",
+            "description": "Lists RFQ master records with filter and search parameters. Access is restricted to admin, manager, and estimator roles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "won_lost": {
+                        "type": "string",
+                        "enum": ["Won", "Lost", "Pending", "all"],
+                        "description": "Filter RFQs by status. Use 'all' for no status filter."
+                    },
+                    "budget_type": {
+                        "type": "string",
+                        "enum": ["Budget", "Final", "Rebid", "all"],
+                        "description": "Filter RFQs by budget type. Use 'all' for no budget type filter."
+                    },
+                    "query": {
+                        "type": "string",
+                        "description": "Search term matching quote number, project name, or client name"
+                    },
+                    "limit": {
+                        "type": "string",
+                        "description": "Max results to return (default '10'). Pass '-1' or '0' for maximum results."
+                    }
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "get_rfq_details",
+            "description": "Retrieves the full details of a specific RFQ from the RFQ Master by its quote number or ID. Access is restricted to admin, manager, and estimator roles.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "quote_no": {
+                        "type": "string",
+                        "description": "The unique Quote Number of the RFQ (e.g. 26-05-01)"
+                    },
+                    "rfq_id": {
+                        "type": "integer",
+                        "description": "The database primary key ID of the RFQ record"
+                    }
                 }
             }
         }
