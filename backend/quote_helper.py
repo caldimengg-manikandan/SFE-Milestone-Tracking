@@ -446,7 +446,7 @@ def format_quote_html(quote_data):
                 <td>Subtotal:</td>
                 <td style="text-align: right;">{currency}{quote_data['subtotal']:.2f}</td>
             </tr>
-            {"<tr><td>Tax:</td><td style='text-align: right;'>" + currency + str(f"{quote_data['tax']:.2f}") + "</td></tr>" if quote_data.get('tax', 0.0) > 0.0 else ""}
+            {"<tr><td>Tax:</td><td style='text-align: right;'>" + currency + f"{quote_data['tax']:.2f}" + "</td></tr>" if quote_data.get('tax', 0.0) > 0.0 else ""}
             <tr class="total">
                 <td>Total:</td>
                 <td style="text-align: right;">{currency}{quote_data['total']:.2f}</td>
