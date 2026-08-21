@@ -4,7 +4,8 @@ from .views import (
     ChatSessionDetailView,
     ChatQueryView,
     DocumentUploadView,
-    ChatbotStatusView
+    ChatbotStatusView,
+    AgentConfigView
 )
 
 urlpatterns = [
@@ -13,4 +14,5 @@ urlpatterns = [
     path('chat/', ChatQueryView.as_view(), name='chatbot-query'),
     path('upload/', DocumentUploadView.as_view(), name='chatbot-upload'),
     path('status/', ChatbotStatusView.as_view(), name='chatbot-status'),
+    path('agent-config/', AgentConfigView.as_view(), name='chatbot-agent-config'),
 ]

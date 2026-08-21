@@ -170,7 +170,23 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'support@caldimengg.in').st
 MEDIA_URL = '/SFE-media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Chatbot Offline Configuration
+# Chatbot LLM Configuration
+# Defaults to local Ollama. To use the free Groq cloud API instead, set
+# OLLAMA_API_URL/OLLAMA_MODEL/LLM_API_KEY in .env — see backend/.env.example
+# for the exact values (Groq is already recognized by the cloud-detection
+# logic in chatbot/services.py because "groq" appears in its URL).
 OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434')
 OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
 LLM_API_KEY = os.getenv('LLM_API_KEY', '')
+
+# Optional fallback provider (e.g. Gemini). If set, the chatbot automatically retries a
+# request against this provider when the primary one fails for any reason (rate limit,
+# daily quota, connection issue). Leave FALLBACK_LLM_API_URL empty to disable fallback.
+FALLBACK_LLM_API_URL = os.getenv('FALLBACK_LLM_API_URL', '')
+FALLBACK_LLM_MODEL = os.getenv('FALLBACK_LLM_MODEL', '')
+FALLBACK_LLM_API_KEY = os.getenv('FALLBACK_LLM_API_KEY', '')
+
+# Local embedding model (fastembed/ONNX, no torch) used for knowledge-chunk retrieval and
+# tool selection. Downloads once from HF Hub and caches on disk - no network needed after that.
+EMBEDDING_MODEL_NAME = os.getenv('EMBEDDING_MODEL_NAME', 'BAAI/bge-small-en-v1.5')
+EMBEDDING_MODEL_CACHE_DIR = os.getenv('EMBEDDING_MODEL_CACHE_DIR', os.path.join(BASE_DIR, '.embedding_cache'))

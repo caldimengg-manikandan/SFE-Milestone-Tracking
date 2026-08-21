@@ -1,9 +1,8 @@
 import os
-import pypdf
 from django.core.management.base import BaseCommand, CommandError
 from django.core.files import File
-from chatbot.models import KnowledgeDocument, KnowledgeChunk
-from chatbot.services import ingest_pdf_document
+from chatbot.models import KnowledgeDocument
+from chatbot.services import ingest_pdf_document, ingest_text_content
 
 class Command(BaseCommand):
     help = 'Ingests and indexes a workflow PDF, Markdown, or Text file into the local database for the chatbot'
@@ -25,10 +24,9 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.WARNING(f"Starting ingestion process for: {title}..."))
 
-        # 1. Deactivate previous active documents to keep search context clean
-        KnowledgeDocument.objects.all().update(is_active=False)
-
-        # 2. Save document record to the database
+        # Save document record to the database. Multiple knowledge documents can be active
+        # and retrievable at once now (retrieval ranks chunks across all of them), so this
+        # deliberately does NOT deactivate other documents the way it used to.
         try:
             with open(file_path, 'rb') as f:
                 django_file = File(f, name=os.path.basename(file_path))
@@ -40,12 +38,14 @@ class Command(BaseCommand):
         except Exception as e:
             raise CommandError(f"Failed to save document record: {str(e)}")
 
-        # 3. Parse and Index the text chunks
+        # Parse, chunk, embed and index
         try:
             if ext == '.pdf':
                 chunk_count = ingest_pdf_document(doc.id)
             else:
-                chunk_count = self.ingest_text_document(doc, file_path)
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                chunk_count = ingest_text_content(doc, content)
 
             self.stdout.write(self.style.SUCCESS(
                 f"Successfully ingested and indexed '{title}'!\n"
@@ -55,31 +55,3 @@ class Command(BaseCommand):
             # Clean up document record if ingestion fails
             doc.delete()
             raise CommandError(f"Ingestion failed: {str(e)}")
-
-    def ingest_text_document(self, doc, file_path):
-        """
-        Parses Markdown or Text files. Splits content by markdown headers ('## ' or '### ')
-        to preserve context of entire screens and subheaders together in a single chunk.
-        """
-        import re
-        with open(file_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-
-        # Split by sections starting with '## ' or '### ' at the beginning of a line
-        sections = re.split(r'\n(?=## |### )', content)
-        chunks_to_create = []
-        chunk_index = 0
-
-        for sec_idx, section in enumerate(sections):
-            chunk_content = section.strip()
-            if len(chunk_content) > 30:
-                chunks_to_create.append(KnowledgeChunk(
-                    document=doc,
-                    text=chunk_content,
-                    page_number=sec_idx + 1,
-                    chunk_index=chunk_index
-                ))
-                chunk_index += 1
-
-        KnowledgeChunk.objects.bulk_create(chunks_to_create)
-        return len(chunks_to_create)

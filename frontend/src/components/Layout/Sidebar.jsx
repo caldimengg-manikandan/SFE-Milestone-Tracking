@@ -30,6 +30,7 @@ import {
   TrendingUp,
   CalendarCheck,
   Shield,
+  Bot,
 } from 'lucide-react';
 
 /* ─── Navigation Config ─── */
@@ -99,6 +100,7 @@ const navSections = [
       { name: 'Settings', path: 'settings', icon: Settings, moduleKey: 'settings' },
       { name: 'Announcement', path: 'announcements', icon: Megaphone, moduleKey: 'announcements' },
       { name: 'User Access', path: '/user-access', icon: Shield, adminOnly: true },
+      { name: 'Agent Settings', path: '/agent-settings', icon: Bot, adminOnly: true },
     ],
   },
 ];

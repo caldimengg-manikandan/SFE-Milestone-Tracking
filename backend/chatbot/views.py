@@ -6,8 +6,10 @@ from rest_framework import status
 from rest_framework import permissions
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
-from .models import ChatSession, ChatMessage, KnowledgeDocument, KnowledgeChunk
-from .services import ingest_pdf_document, get_chatbot_response
+from .models import ChatSession, ChatMessage, KnowledgeDocument, KnowledgeChunk, AgentConfig
+from .services import ingest_pdf_document, get_chatbot_response, get_effective_model
+from .tools import AVAILABLE_TOOLS
+from .tool_handlers import TOOL_HANDLERS
 
 class IsChatbotAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -137,9 +139,6 @@ class DocumentUploadView(APIView):
             return Response({"error": "Only PDF files are supported"}, status=status.HTTP_400_BAD_REQUEST)
 
         title = request.data.get('title', file_obj.name)
-        
-        # Deactivate previous active documents to keep search context clean
-        KnowledgeDocument.objects.all().update(is_active=False)
 
         # Save document
         doc = KnowledgeDocument.objects.create(
@@ -161,6 +160,72 @@ class DocumentUploadView(APIView):
             # Rollback document if ingestion fails
             doc.delete()
             return Response({"error": f"Ingestion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class AgentConfigView(APIView):
+    """
+    Admin-only endpoint to view/edit the agent's persona, enabled tools, and model override.
+    """
+    permission_classes = [IsChatbotAdmin]
+
+    def get(self, request):
+        config = AgentConfig.get_solo()
+        all_tool_names = [t['function']['name'] for t in AVAILABLE_TOOLS]
+        enabled_tools = all_tool_names if (config.enabled_tools is None or len(config.enabled_tools) == 0) else config.enabled_tools
+
+        return Response({
+            "persona_instructions": config.persona_instructions,
+            "enabled_tools": enabled_tools,
+            "model_override": config.model_override,
+            "effective_model": get_effective_model(),
+            "available_tools": [
+                {"name": t['function']['name'], "description": t['function'].get('description', '')}
+                for t in AVAILABLE_TOOLS
+            ],
+            "updated_at": config.updated_at,
+        })
+
+    def put(self, request):
+        config = AgentConfig.get_solo()
+
+        if "persona_instructions" in request.data:
+            config.persona_instructions = request.data.get("persona_instructions") or ""
+
+        if "enabled_tools" in request.data:
+            requested_tools = request.data.get("enabled_tools")
+            if isinstance(requested_tools, list):
+                all_tool_names = set(t['function']['name'] for t in AVAILABLE_TOOLS)
+                valid_requested = set(name for name in requested_tools if name in TOOL_HANDLERS or name in all_tool_names)
+                if valid_requested >= all_tool_names or len(valid_requested) == len(all_tool_names):
+                    config.enabled_tools = None
+                else:
+                    config.enabled_tools = list(valid_requested)
+
+        if "model_override" in request.data:
+            requested_model = (request.data.get("model_override") or "").strip()
+            # Guard against pasting an API key into this field by mistake (e.g. Groq keys
+            # start with "gsk_", OpenAI-style keys with "sk-") — this would otherwise silently
+            # break every chatbot response with a confusing "model not found" error.
+            if requested_model and (
+                requested_model.startswith("gsk_") or requested_model.startswith("sk-") or " " in requested_model
+            ):
+                return Response(
+                    {"error": "That doesn't look like a valid model name (it looks like an API key or contains spaces). "
+                              "The API key belongs in the LLM_API_KEY environment variable, not here."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            config.model_override = requested_model
+
+        config.updated_by = request.user
+        config.save()
+
+        return Response({
+            "message": "Agent configuration saved.",
+            "persona_instructions": config.persona_instructions,
+            "enabled_tools": config.enabled_tools if config.enabled_tools is not None else [t['function']['name'] for t in AVAILABLE_TOOLS],
+            "model_override": config.model_override,
+            "effective_model": get_effective_model(),
+        })
+
 
 class ChatbotStatusView(APIView):
     permission_classes = [IsAuthenticated]
@@ -208,7 +273,7 @@ class ChatbotStatusView(APIView):
         return Response({
             "ollama_connected": ollama_online,
             "ollama_url": ollama_url,
-            "model_configured": getattr(settings, 'OLLAMA_MODEL', 'llama3.2'),
+            "model_configured": get_effective_model(),
             "is_cloud": is_cloud,
             "active_document": {
                 "title": active_doc.title if active_doc else None,

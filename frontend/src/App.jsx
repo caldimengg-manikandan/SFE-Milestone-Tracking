@@ -28,6 +28,7 @@ import BidEnquiry from './pages/Bids/BidEnquiry';
 import InternalBidSchedule from './pages/Bids/InternalBidSchedule';
 import HolidayCalendar from './pages/Bids/HolidayCalendar';
 import UserAccess from './pages/UserAccess';
+import AgentSettings from './pages/AgentSettings';
 
 // ── Estimation Erection Imports ──────────────────────────────────────────────
 import EstimationErectionLayout from './pages/EstimationErection/EstimationErectionLayout';
@@ -136,6 +137,7 @@ export default function App() {
           <Route path="settings" element={<ProtectedRoute moduleKey="settings"><Settings /></ProtectedRoute>} />
           <Route path="announcements" element={<ProtectedRoute moduleKey="announcements"><Announcements /></ProtectedRoute>} />
           <Route path="user-access" element={<ProtectedRoute adminOnly={true}><UserAccess /></ProtectedRoute>} />
+          <Route path="agent-settings" element={<ProtectedRoute adminOnly={true}><AgentSettings /></ProtectedRoute>} />
           <Route path="help" element={<PlaceholderPage title="Help & Support" />} />
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>

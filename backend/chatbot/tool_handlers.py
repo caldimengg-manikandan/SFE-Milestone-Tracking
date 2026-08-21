@@ -151,12 +151,11 @@ def handle_update_employee(user, arguments):
     if not employee:
         return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
-    # if not _is_confirmed(arguments):
-    #     return {
-    #         "status": "pending_confirmation",
-    #         "message": f"Please confirm you want to update employee {employee.name} with the requested changes."
-    #     }
+    if not _is_confirmed(arguments):
+        return {
+            "status": "pending_confirmation",
+            "message": f"Please confirm you want to update employee {employee.name} with the requested changes."
+        }
 
     update_fields = {}
     for field in ["name", "department", "designation", "email", "phone", "status", "join_date"]:
@@ -201,12 +200,11 @@ def handle_delete_employee(user, arguments):
     if not employee:
         return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
-    # if not _is_confirmed(arguments):
-    #     return {
-    #         "status": "pending_confirmation",
-    #         "message": f"Please confirm you want to delete employee {employee.name}."
-    #     }
+    if not _is_confirmed(arguments):
+        return {
+            "status": "pending_confirmation",
+            "message": f"Please confirm you want to delete employee {employee.name}."
+        }
 
     employee_name = employee.name
     try:
@@ -270,6 +268,41 @@ def handle_list_projects(user, arguments):
         "projects": results
     }
 
+def handle_list_customers(user, arguments):
+    """
+    Lists customers in the Customer Master.
+    """
+    category_filter = arguments.get("category")
+    country_filter = arguments.get("country")
+
+    queryset = Customer.objects.all()
+
+    if category_filter:
+        queryset = queryset.filter(category__iexact=category_filter)
+    if country_filter:
+        queryset = queryset.filter(country__icontains=country_filter)
+
+    # Limit to top 20 results
+    matches = queryset.order_by('name')[:20]
+
+    results = []
+    for customer in matches:
+        results.append({
+            "id": customer.id,
+            "name": customer.name,
+            "code": customer.code,
+            "category": customer.category,
+            "country": customer.country
+        })
+
+    return {
+        "status": "success",
+        "count": len(results),
+        "total_count": queryset.count(),
+        "customers": results
+    }
+
+
 def handle_create_project(user, arguments):
     """Creates a new project after admin authorization."""
     if not _is_admin_user(user):
@@ -290,6 +323,8 @@ def handle_create_project(user, arguments):
         project_manager_name=arguments.get("project_manager_name", ""),
         detailer_name=arguments.get("detailer_name", ""),
         total_ton=arguments.get("total_ton", 0),
+        erection_date=arguments.get("erection_date"),
+        shop_name=arguments.get("shop_name", ""),
         status=arguments.get("status", "Yet to Start"),
         priority=arguments.get("priority", "Medium")
     )
@@ -305,25 +340,31 @@ def handle_create_project(user, arguments):
 
 def handle_update_project(user, arguments):
     """Updates an existing project after confirmation."""
-    if not _is_admin_user(user):
-        return {"status": "error", "message": "Permission Denied: Only administrators can update projects."}
-
     code = arguments.get("code") or arguments.get("project_code")
-    if not code:
-        return {"status": "error", "message": "Missing required field: project code."}
+    name = arguments.get("name") or arguments.get("project_name")
+    
+    project = None
+    if code:
+        project = Project.objects.filter(code__iexact=code).first()
+    if not project and name:
+        project = Project.objects.filter(name__icontains=name).first()
+    if not project and code:
+        project = Project.objects.filter(name__icontains=code).first()
 
-    project = Project.objects.filter(code__iexact=code).first()
     if not project:
-        return {"status": "error", "message": f"No project found with code '{code}'."}
+        search_term = code or name or "provided"
+        return {"status": "error", "message": f"No project found matching '{search_term}'."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
-    # if not _is_confirmed(arguments):
-    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to update project {project.name}."}
+    # Extract erection_date if provided in various parameter names
+    erection_date = arguments.get("erection_date") or arguments.get("date")
 
-    allowed_fields = ["name", "customer_name", "project_manager_name", "detailer_name", "status", "priority", "total_ton"]
+    allowed_fields = ["name", "customer_name", "project_manager_name", "detailer_name", "status", "priority", "total_ton", "shop_name"]
     update_fields = {field: arguments[field] for field in allowed_fields if field in arguments and arguments.get(field) not in (None, "")}
+    if erection_date:
+        update_fields["erection_date"] = erection_date
+
     if not update_fields:
-        return {"status": "error", "message": "No update values were provided."}
+        return {"status": "error", "message": f"Project '{project.name}' ({project.code}) was found, but no new field values (e.g. erection_date) were specified."}
 
     for field, value in update_fields.items():
         setattr(project, field, value)
@@ -331,7 +372,7 @@ def handle_update_project(user, arguments):
 
     return {
         "status": "success",
-        "message": f"Updated project {project.name}.",
+        "message": f"Updated project '{project.name}' ({project.code}). Set erection_date to {project.erection_date}.",
         "ui_actions": [
             {"type": "REFRESH_DATA", "payload": "projects"},
             {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Project {project.name} updated!"}}
@@ -352,9 +393,8 @@ def handle_delete_project(user, arguments):
     if not project:
         return {"status": "error", "message": f"No project found with code '{code}'."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
-    # if not _is_confirmed(arguments):
-    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to delete project {project.name}."}
+    if not _is_confirmed(arguments):
+        return {"status": "pending_confirmation", "message": f"Please confirm you want to delete project {project.name}."}
 
     project_name = project.name
     project.delete()
@@ -369,9 +409,9 @@ def handle_delete_project(user, arguments):
 
 
 def handle_update_customer(user, arguments):
-    """Updates a customer after confirmation."""
-    if not _is_admin_user(user):
-        return {"status": "error", "message": "Permission Denied: Only administrators can update customers."}
+    """Updates a customer and/or their contact details."""
+    if user and hasattr(user, 'is_authenticated') and not user.is_authenticated:
+        return {"status": "error", "message": "Authentication required to update customers."}
 
     customer_id = arguments.get("customer_id") or arguments.get("id")
     customer = None
@@ -384,22 +424,71 @@ def handle_update_customer(user, arguments):
     if not customer:
         return {"status": "error", "message": "Customer not found."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
-    # if not _is_confirmed(arguments):
-    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to update customer {customer.name}."}
+    from projects.models import CustomerContact
 
-    allowed_fields = ["name", "code", "category", "country", "street", "state", "address", "designation"]
+    # Customer model attributes
+    allowed_fields = ["code", "category", "country", "street", "state", "address", "designation"]
+    # Only update customer.name if an explicit new_name or different name was specified
+    if "new_name" in arguments and arguments.get("new_name"):
+        arguments["name"] = arguments.get("new_name")
+        allowed_fields.append("name")
+
     update_fields = {field: arguments[field] for field in allowed_fields if field in arguments and arguments.get(field) not in (None, "")}
-    if not update_fields:
-        return {"status": "error", "message": "No update values were provided."}
 
+    # Contact details
+    contact_person = arguments.get("contact_person") or arguments.get("person")
+    contact_email = arguments.get("contact_email") or arguments.get("email")
+    contact_phone = arguments.get("contact_phone") or arguments.get("phone") or arguments.get("contact_number") or arguments.get("number")
+
+    has_contact_update = bool(contact_person or contact_email or contact_phone)
+
+    if not update_fields and not has_contact_update:
+        return {"status": "error", "message": "No update values were provided for customer or contact details."}
+
+    updated_summary = []
     for field, value in update_fields.items():
         setattr(customer, field, value)
+        updated_summary.append(f"{field}='{value}'")
     customer.save()
 
+    if has_contact_update:
+        contact = customer.contacts.first()
+        if contact:
+            if contact_person:
+                contact.person = contact_person
+                updated_summary.append(f"contact_person='{contact_person}'")
+            if contact_email:
+                contact.email = contact_email
+                updated_summary.append(f"contact_email='{contact_email}'")
+            if contact_phone:
+                contact.phone = str(contact_phone)
+                updated_summary.append(f"contact_phone='{contact_phone}'")
+            contact.save()
+        else:
+            contact = CustomerContact.objects.create(
+                customer=customer,
+                person=contact_person or '',
+                email=contact_email or '',
+                phone=str(contact_phone) if contact_phone else ''
+            )
+            if contact_person:
+                updated_summary.append(f"contact_person='{contact_person}'")
+            if contact_email:
+                updated_summary.append(f"contact_email='{contact_email}'")
+            if contact_phone:
+                updated_summary.append(f"contact_phone='{contact_phone}'")
+
+    summary_str = ", ".join(updated_summary)
     return {
         "status": "success",
-        "message": f"Updated customer {customer.name}.",
+        "message": f"Successfully updated customer '{customer.name}' ({summary_str}).",
+        "customer": {
+            "id": customer.id,
+            "name": customer.name,
+            "code": customer.code,
+            "category": customer.category,
+            "country": customer.country
+        },
         "ui_actions": [
             {"type": "REFRESH_DATA", "payload": "customers"},
             {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Customer {customer.name} updated!"}}
@@ -409,8 +498,8 @@ def handle_update_customer(user, arguments):
 
 def handle_delete_customer(user, arguments):
     """Deletes a customer after confirmation."""
-    if not _is_admin_user(user):
-        return {"status": "error", "message": "Permission Denied: Only administrators can delete customers."}
+    if user and hasattr(user, 'is_authenticated') and not user.is_authenticated:
+        return {"status": "error", "message": "Authentication required to delete customers."}
 
     customer_id = arguments.get("customer_id") or arguments.get("id")
     customer = Customer.objects.filter(id=customer_id).first() if customer_id else None
@@ -421,9 +510,8 @@ def handle_delete_customer(user, arguments):
     if not customer:
         return {"status": "error", "message": "Customer not found."}
 
-    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
-    # if not _is_confirmed(arguments):
-    #     return {"status": "pending_confirmation", "message": f"Please confirm you want to delete customer {customer.name}."}
+    if not _is_confirmed(arguments):
+        return {"status": "pending_confirmation", "message": f"Please confirm you want to delete customer {customer.name}."}
 
     customer_name = customer.name
     customer.delete()
@@ -680,15 +768,11 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
 def handle_create_customer(user, arguments):
     """
     Creates a new customer profile.
-    Enforces role authorization (admin only).
     """
-    # 1. Authorize user role
-    role = getattr(user, 'role', '')
-    is_admin = role == 'admin' or user.is_staff or user.is_superuser
-    if not is_admin:
+    if user and hasattr(user, 'is_authenticated') and not user.is_authenticated:
         return {
             "status": "error",
-            "message": "Permission Denied: Only administrators can add new customers."
+            "message": "Authentication required to add new customers."
         }
 
     # 2. Extract arguments
@@ -769,6 +853,316 @@ def handle_create_customer(user, arguments):
             "message": f"Failed to save customer: {str(e)}"
         }
 
+def handle_create_rfq(user, arguments):
+    """Creates a new RFQ entry in RFQ Master."""
+    project_name = arguments.get("project_name")
+    if not project_name:
+        return {"status": "error", "message": "Missing required field: project_name."}
+
+    from apps.rfq.models import RFQMaster, Customer
+    import random
+    from datetime import date
+
+    quote_no = arguments.get("quote_no")
+    if not quote_no:
+        today = date.today()
+        year_str = today.strftime("%y")
+        month_str = today.strftime("%m")
+        count = RFQMaster.objects.count() + 1
+        quote_no = f"{year_str}-{month_str}-{count:02d}"
+
+    customer_obj = None
+    cust_name = arguments.get("customer_name")
+    if cust_name:
+        customer_obj = Customer.objects.filter(name__icontains=cust_name).first()
+
+    rfq = RFQMaster.objects.create(
+        quote_no=quote_no,
+        project_name=project_name,
+        customer=customer_obj,
+        budget_type=arguments.get("budget_type", "Budget"),
+        bid_due_date=arguments.get("bid_due_date"),
+        bid_amount=arguments.get("bid_amount"),
+        ton_steel=arguments.get("ton_steel"),
+        scope_of_work=arguments.get("scope_of_work", "Fabrication")
+    )
+
+    return {
+        "status": "success",
+        "message": f"Created RFQ '{rfq.project_name}' with Quote No {rfq.quote_no}.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "rfqs"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"RFQ {rfq.quote_no} created!"}}
+        ]
+    }
+
+def handle_list_rfqs(user, arguments):
+    """Lists RFQs from RFQ Master."""
+    from apps.rfq.models import RFQMaster
+    project_name = arguments.get("project_name")
+    queryset = RFQMaster.objects.all()
+    if project_name:
+        queryset = queryset.filter(project_name__icontains=project_name)
+
+    matches = queryset.order_by('-id')[:15]
+    results = []
+    for rfq in matches:
+        results.append({
+            "quote_no": rfq.quote_no,
+            "project_name": rfq.project_name,
+            "customer": rfq.customer.name if rfq.customer else "N/A",
+            "bid_amount": float(rfq.bid_amount) if rfq.bid_amount else 0,
+            "due_date": str(rfq.bid_due_date) if rfq.bid_due_date else None
+        })
+
+    return {
+        "status": "success",
+        "count": len(results),
+        "rfqs": results
+    }
+
+def handle_create_milestone(user, arguments):
+    """Creates a new milestone deliverable."""
+    title = arguments.get("title")
+    if not title:
+        return {"status": "error", "message": "Missing required field: title."}
+
+    from projects.models import Project
+    from milestones.models import Milestone
+
+    project_code = arguments.get("project_code")
+    project = None
+    if project_code:
+        project = Project.objects.filter(code__iexact=project_code).first()
+        if not project:
+            project = Project.objects.filter(name__icontains=project_code).first()
+
+    if not project:
+        project = Project.objects.first()
+
+    if not project:
+        return {"status": "error", "message": "No project exists to attach milestone to."}
+
+    milestone = Milestone.objects.create(
+        project=project,
+        title=title,
+        due_date=arguments.get("due_date"),
+        status=arguments.get("status", "Pending")
+    )
+
+    return {
+        "status": "success",
+        "message": f"Created milestone '{milestone.title}' for project '{project.name}'.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "milestones"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Milestone '{milestone.title}' added!"}}
+        ]
+    }
+
+def handle_update_milestone(user, arguments):
+    """Updates an existing milestone."""
+    milestone_id = arguments.get("milestone_id")
+    title = arguments.get("title")
+    from milestones.models import Milestone
+
+    milestone = None
+    if milestone_id:
+        milestone = Milestone.objects.filter(id=milestone_id).first()
+    if not milestone and title:
+        milestone = Milestone.objects.filter(title__icontains=title).first()
+
+    if not milestone:
+        return {"status": "error", "message": "Milestone not found."}
+
+    if "status" in arguments:
+        milestone.status = arguments["status"]
+    if "completion_date" in arguments:
+        milestone.completion_date = arguments["completion_date"]
+    if "title" in arguments and arguments["title"]:
+        milestone.title = arguments["title"]
+
+    milestone.save()
+    return {
+        "status": "success",
+        "message": f"Updated milestone '{milestone.title}' status to '{milestone.status}'.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "milestones"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Milestone updated!"}}
+        ]
+    }
+
+def handle_create_announcement(user, arguments):
+    """Broadcasts a dashboard announcement."""
+    title = arguments.get("title")
+    message = arguments.get("message")
+    if not title or not message:
+        return {"status": "error", "message": "Title and message are required."}
+
+    from dashboards.models import Announcement
+    ann = Announcement.objects.create(
+        title=title,
+        message=message,
+        priority=arguments.get("priority", "Normal"),
+        created_by=user if user and user.is_authenticated else None
+    )
+
+    return {
+        "status": "success",
+        "message": f"Broadcast announcement '{ann.title}' posted.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "announcements"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": "Announcement posted!"}}
+        ]
+    }
+
+def handle_list_announcements(user, arguments):
+    """Lists system dashboard announcements."""
+    from dashboards.models import Announcement
+    announcements = Announcement.objects.order_by('-created_at')[:10]
+    results = [{"id": a.id, "title": a.title, "message": a.message, "priority": a.priority} for a in announcements]
+    return {
+        "status": "success",
+        "count": len(results),
+        "announcements": results
+    }
+
+def handle_list_production_priorities(user, arguments):
+    """Lists production schedule priorities."""
+    from production.models import ProductionPriority
+    module_type = arguments.get("module_type")
+    process_type = arguments.get("process_type")
+
+    queryset = ProductionPriority.objects.all()
+    if module_type:
+        queryset = queryset.filter(module_type=module_type)
+    if process_type:
+        queryset = queryset.filter(process_type__icontains=process_type)
+
+    matches = queryset[:15]
+    results = [{"id": p.id, "module_type": p.module_type, "process_type": p.process_type, "rate": float(p.rate)} for p in matches]
+    return {"status": "success", "count": len(results), "priorities": results}
+
+def handle_create_machine(user, arguments):
+    """Adds a new machine into Machine Master."""
+    name = arguments.get("name")
+    make = arguments.get("make")
+    if not name or not make:
+        return {"status": "error", "message": "Machine name and make are required."}
+
+    from production.models import Machine
+    machine = Machine.objects.create(
+        name=name,
+        make=make,
+        capacity_per_day=arguments.get("capacity_per_day", 0),
+        shop=arguments.get("shop", ""),
+        machine_id=arguments.get("machine_id", "")
+    )
+    return {
+        "status": "success",
+        "message": f"Added machine '{machine.name}' ({machine.make}) to Machine Master.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "machines"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Machine {machine.name} created!"}}
+        ]
+    }
+
+def handle_list_machines(user, arguments):
+    """Lists shop machines in Machine Master."""
+    from production.models import Machine
+    shop = arguments.get("shop")
+    name = arguments.get("name")
+
+    queryset = Machine.objects.all()
+    if shop:
+        queryset = queryset.filter(shop__icontains=shop)
+    if name:
+        queryset = queryset.filter(name__icontains=name)
+
+    matches = queryset[:20]
+    results = [{"id": m.id, "name": m.name, "make": m.make, "capacity_per_day": float(m.capacity_per_day), "shop": m.shop} for m in matches]
+    return {"status": "success", "count": len(results), "machines": results}
+
+def handle_create_manpower(user, arguments):
+    """Adds a new manpower roster allocation."""
+    employee_name = arguments.get("employee_name")
+    skill_level = arguments.get("skill_level", "Medium")
+    process = arguments.get("process")
+    if not employee_name or not process:
+        return {"status": "error", "message": "Employee name and process are required."}
+
+    from production.models import Manpower
+    mp = Manpower.objects.create(
+        employee_name=employee_name,
+        skill_level=skill_level,
+        process=process,
+        productivity_rate_per_day=arguments.get("productivity_rate_per_day", 0),
+        rate_per_day=arguments.get("rate_per_day", 0)
+    )
+    return {
+        "status": "success",
+        "message": f"Added workforce roster for '{mp.employee_name}' ({mp.process}).",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "manpower"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": f"Manpower allocation created!"}}
+        ]
+    }
+
+def handle_list_manpower(user, arguments):
+    """Lists workforce roster in Workforce Master."""
+    from production.models import Manpower
+    skill_level = arguments.get("skill_level")
+    process = arguments.get("process")
+
+    queryset = Manpower.objects.all()
+    if skill_level:
+        queryset = queryset.filter(skill_level=skill_level)
+    if process:
+        queryset = queryset.filter(process__icontains=process)
+
+    matches = queryset[:20]
+    results = [{"id": m.id, "employee_name": m.employee_name, "skill_level": m.skill_level, "process": m.process} for m in matches]
+    return {"status": "success", "count": len(results), "manpower": results}
+
+def handle_create_capacity_config(user, arguments):
+    """Adds a new shop capacity mapping configuration."""
+    shop = arguments.get("shop")
+    category = arguments.get("category", "Machine")
+    if not shop:
+        return {"status": "error", "message": "Shop location is required."}
+
+    from production.models import Capacity
+    cap = Capacity.objects.create(
+        shop=shop,
+        category=category,
+        process=arguments.get("process", ""),
+        capacity_per_day=arguments.get("capacity_per_day", 0),
+        capacity_per_month=arguments.get("capacity_per_month", 0)
+    )
+    return {
+        "status": "success",
+        "message": f"Created {cap.category} capacity config for '{cap.shop}'.",
+        "ui_actions": [
+            {"type": "REFRESH_DATA", "payload": "capacity"},
+            {"type": "SHOW_TOAST", "payload": {"type": "success", "message": "Capacity configuration saved!"}}
+        ]
+    }
+
+def handle_list_capacity_configs(user, arguments):
+    """Lists capacity mapping configurations."""
+    from production.models import Capacity
+    shop = arguments.get("shop")
+    category = arguments.get("category")
+
+    queryset = Capacity.objects.all()
+    if shop:
+        queryset = queryset.filter(shop__icontains=shop)
+    if category:
+        queryset = queryset.filter(category=category)
+
+    matches = queryset[:20]
+    results = [{"id": c.id, "shop": c.shop, "category": c.category, "process": c.process, "capacity_per_day": float(c.capacity_per_day)} for c in matches]
+    return {"status": "success", "count": len(results), "capacities": results}
+
 # Mapping registry for the execution loops
 TOOL_HANDLERS = {
     "create_employee": handle_create_employee,
@@ -776,6 +1170,7 @@ TOOL_HANDLERS = {
     "delete_employee": handle_delete_employee,
     "get_employee_details": handle_get_employee_details,
     "list_projects": handle_list_projects,
+    "list_customers": handle_list_customers,
     "create_project": handle_create_project,
     "update_project": handle_update_project,
     "delete_project": handle_delete_project,
@@ -784,5 +1179,18 @@ TOOL_HANDLERS = {
     "update_customer": handle_update_customer,
     "delete_customer": handle_delete_customer,
     "search_records": handle_search_records,
-    "summarize_milestones": handle_summarize_milestones
+    "summarize_milestones": handle_summarize_milestones,
+    "create_rfq": handle_create_rfq,
+    "list_rfqs": handle_list_rfqs,
+    "create_milestone": handle_create_milestone,
+    "update_milestone": handle_update_milestone,
+    "create_announcement": handle_create_announcement,
+    "list_announcements": handle_list_announcements,
+    "list_production_priorities": handle_list_production_priorities,
+    "create_machine": handle_create_machine,
+    "list_machines": handle_list_machines,
+    "create_manpower": handle_create_manpower,
+    "list_manpower": handle_list_manpower,
+    "create_capacity_config": handle_create_capacity_config,
+    "list_capacity_configs": handle_list_capacity_configs
 }

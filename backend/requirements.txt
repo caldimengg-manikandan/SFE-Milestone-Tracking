@@ -13,4 +13,6 @@ Pillow>=10.3.0
 python-dateutil
 pypdf
 rank-bm25
-fpdf2
+fpdf2
+numpy>=1.26,<3.0
+fastembed>=0.4
