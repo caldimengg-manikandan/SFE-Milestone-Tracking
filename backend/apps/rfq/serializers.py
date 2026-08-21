@@ -1,6 +1,6 @@
 from datetime import datetime, date
 from rest_framework import serializers
-from .models import RFQMaster, Estimator, MonthlyBidGoal, SystemSetting
+from .models import RFQMaster, Estimator, MonthlyBidGoal, SystemSetting, QuoteWorkflow
 from projects.models import Customer
 
 
@@ -302,3 +302,41 @@ class PrintSetupSerializer(serializers.ModelSerializer):
             'primary_estimator_initials', 'sent_to_jd', 'sent_to_detailing',
             'sent_to_erection', 'scope_of_work', 'est_sqft_ton',
         ]
+
+
+class QuoteWorkflowSerializer(serializers.ModelSerializer):
+    rfq_quote_no = serializers.CharField(source='rfq.quote_no', read_only=True, default='')
+    project_name = serializers.CharField(source='rfq.project_name', read_only=True, default='')
+    customer_name = serializers.CharField(source='rfq.customer.name', read_only=True, default='')
+    clean_sender = serializers.SerializerMethodField()
+    is_ready = serializers.SerializerMethodField()
+
+    def get_clean_sender(self, obj):
+        if obj.sender:
+            import re
+            m = re.search(r'<([^>]+)>', obj.sender)
+            if m: return m.group(1).strip()
+            m = re.search(r'[\w\.\+\-]+@[\w\.\-]+\.[a-zA-Z]{2,}', obj.sender)
+            if m: return m.group(0).strip()
+            return obj.sender.strip()
+        if obj.rfq and obj.rfq.customer:
+            contact = obj.rfq.customer.contacts.filter(email__isnull=False).exclude(email='').first()
+            if contact and contact.email:
+                return contact.email.strip()
+        return ""
+
+    def get_is_ready(self, obj):
+        return bool(obj.estimator_replied and obj.detailer_replied)
+
+    class Meta:
+        model = QuoteWorkflow
+        fields = [
+            'quote_id', 'rfq', 'rfq_quote_no', 'project_name', 'customer_name',
+            'message_id', 'subject', 'sender', 'clean_sender', 'status',
+            'estimator_email', 'estimator_replied', 'estimator_reply_body', 'estimator_replied_at',
+            'detailer_email', 'detailer_replied', 'detailer_reply_body', 'detailer_replied_at',
+            'combined_body', 'sent_to_customer_at', 'is_ready',
+            'created_at', 'updated_at',
+        ]
+
+

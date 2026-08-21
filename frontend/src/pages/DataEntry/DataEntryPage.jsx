@@ -4,11 +4,12 @@ import { AgGridReact } from 'ag-grid-react'
 import { ModuleRegistry, AllCommunityModule } from 'ag-grid-community'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
-import { rfqAPI, customersAPI, estimatorsAPI, systemSettingsAPI } from '../../api/client'
+import { rfqAPI, customersAPI, estimatorsAPI, systemSettingsAPI, quoteWorkflowsAPI } from '../../api/client'
 import { useAuthStore } from '../../store/authStore'
-import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase, Mail, ChevronDown } from 'lucide-react'
+import { Plus, Search, Download, RefreshCw, Copy, Trash2, FileSpreadsheet, Briefcase, Mail, ChevronDown, Sparkles } from 'lucide-react'
 import RFQFormModal from './RFQFormModal'
 import ExcelUploadModal from './ExcelUploadModal'
+import QuoteWorkflowsModal from './QuoteWorkflowsModal'
 import { formatCurrency, formatDate } from '../../utils/formatters'
 
 import 'ag-grid-community/styles/ag-grid.css'
@@ -608,12 +609,33 @@ export default function DataEntryPage() {
     }
   }, [searchParams])
   const [emailTarget,     setEmailTarget]      = useState(null)
+  const [projectLink,     setProjectLink]      = useState('')
+  
+  useEffect(() => {
+    if (emailTarget) {
+      setProjectLink(`https://caldimproducts.com/rfq/data-entry?quote_no=${encodeURIComponent(emailTarget.quote_no)}`)
+    } else {
+      setProjectLink('')
+    }
+  }, [emailTarget])
+
   const [showBulkEmailConfirm, setShowBulkEmailConfirm] = useState(false)
+  const [showQuoteWorkflows, setShowQuoteWorkflows] = useState(false)
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(true)
+  const [isAutoSyncing, setIsAutoSyncing] = useState(false)
   const [settings, setSettings] = useState({
     detailing: 'namrutha@caldimengg.in',
     fabrication: 'divya@caldimengg.in',
     erection: 'divya@caldimengg.in'
   })
+
+  // Quote Workflows Query for notification badges
+  const { data: workflows = [] } = useQuery({
+    queryKey: ['quote-workflows'],
+    queryFn: () => quoteWorkflowsAPI.list().then(res => res.data),
+    refetchInterval: 15000,
+  })
+  const readyWorkflowsCount = workflows.filter(w => w.status === 'Ready' || (w.estimator_replied && w.detailer_replied && w.status !== 'Completed')).length
 
   useEffect(() => {
     systemSettingsAPI.list().then(res => {
@@ -625,12 +647,43 @@ export default function DataEntryPage() {
     }).catch(err => console.error("Error loading system settings", err))
   }, [])
 
-  // Fetch data
+  // Background Auto-Sync Quote Mails every 30 seconds
+  useEffect(() => {
+    if (!autoSyncEnabled || !canEdit) return
+
+    const runAutoSync = async () => {
+      try {
+        setIsAutoSyncing(true)
+        const res = await rfqAPI.syncQuoteMails()
+        const importedCount = res.data?.imported_count || 0
+        const syncedReplies = res.data?.synced_replies_count || 0
+
+        if (importedCount > 0 || syncedReplies > 0) {
+          if (importedCount > 0) {
+            toast.success(`Auto-sync: Imported ${importedCount} new RFQ(s) from email`, { duration: 4000 })
+          }
+          queryClient.invalidateQueries({ queryKey: ['rfq'] })
+          queryClient.invalidateQueries({ queryKey: ['quote-workflows'] })
+        }
+      } catch (err) {
+        console.debug('Auto email sync background notice:', err)
+      } finally {
+        setIsAutoSyncing(false)
+      }
+    }
+
+    // Interval every 30 seconds
+    const intervalId = setInterval(runAutoSync, 30000)
+    return () => clearInterval(intervalId)
+  }, [autoSyncEnabled, canEdit, queryClient])
+
+  // Fetch data with 30s auto-refresh
   const { data: rfqData, isLoading, refetch } = useQuery({
     queryKey: ['rfq', wonLostFilter],
     queryFn: () => rfqAPI.list(
       wonLostFilter !== 'all' ? { won_lost: wonLostFilter } : {}
     ).then(r => r.data.results || r.data),
+    refetchInterval: autoSyncEnabled ? 30000 : false,
   })
 
   const { data: customers = [] } = useQuery({
@@ -690,7 +743,7 @@ export default function DataEntryPage() {
 
   // Send single email mutation
   const sendEmailMutation = useMutation({
-    mutationFn: (id) => rfqAPI.sendEmail(id),
+    mutationFn: ({ id, project_link }) => rfqAPI.sendEmail(id, { project_link }),
     onSuccess: () => {
       toast.success('Email triggered successfully')
       queryClient.invalidateQueries({ queryKey: ['rfq'] })
@@ -717,12 +770,16 @@ export default function DataEntryPage() {
     mutationFn: () => rfqAPI.syncQuoteMails(),
     onSuccess: (res) => {
       const count = res.data?.imported_count || 0
+      const replies = res.data?.synced_replies_count || 0
       if (count > 0) {
         toast.success(`Successfully synchronized. Imported ${count} new RFQ(s).`, { duration: 4000 })
+      } else if (replies > 0) {
+        toast.success(`Successfully synchronized. Updated ${replies} reply workflow(s).`, { duration: 3500 })
       } else {
         toast.success('Synchronization complete. No new quote emails found.', { duration: 3000 })
       }
       queryClient.invalidateQueries({ queryKey: ['rfq'] })
+      queryClient.invalidateQueries({ queryKey: ['quote-workflows'] })
     },
     onError: (err) => {
       toast.error(err.response?.data?.detail || 'Failed to sync quote emails')
@@ -870,12 +927,65 @@ export default function DataEntryPage() {
             <button
               className="btn btn-secondary btn-sm"
               onClick={handleSyncMails}
-              disabled={syncMailsMutation.isPending}
+              disabled={syncMailsMutation.isPending || isAutoSyncing}
               title="Fetch and import quote-related emails to RFQ Master"
               style={{ gap: 6 }}
             >
-              <RefreshCw className={syncMailsMutation.isPending ? "animate-spin" : ""} style={{ width: 13, height: 13 }} />
-              {syncMailsMutation.isPending ? 'Syncing...' : 'Sync Mails'}
+              <RefreshCw className={syncMailsMutation.isPending || isAutoSyncing ? "animate-spin" : ""} style={{ width: 13, height: 13 }} />
+              {syncMailsMutation.isPending ? 'Syncing...' : isAutoSyncing ? 'Auto-Syncing...' : 'Sync Mails'}
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setAutoSyncEnabled(prev => !prev)}
+              title={autoSyncEnabled ? "Auto-sync is active (every 30s). Click to pause." : "Auto-sync is paused. Click to enable 30s auto-sync."}
+              style={{
+                gap: 6,
+                borderColor: autoSyncEnabled ? 'rgba(16, 185, 129, 0.4)' : undefined,
+                background: autoSyncEnabled ? 'rgba(16, 185, 129, 0.08)' : undefined,
+              }}
+            >
+              <span
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: '50%',
+                  backgroundColor: autoSyncEnabled ? '#10b981' : '#9ca3af',
+                  display: 'inline-block',
+                  boxShadow: autoSyncEnabled ? '0 0 6px #10b981' : 'none',
+                }}
+                className={autoSyncEnabled ? "animate-pulse" : ""}
+              />
+              <span style={{ fontSize: '0.72rem', fontWeight: 600, color: autoSyncEnabled ? '#10b981' : '#6b7280' }}>
+                Auto-Sync: {autoSyncEnabled ? '30s' : 'Off'}
+              </span>
+            </button>
+          )}
+          {canEdit && (
+            <button
+              className="btn btn-secondary btn-sm"
+              onClick={() => setShowQuoteWorkflows(true)}
+              title="Manage combined quote reply workflows and dispatch to customers"
+              style={{
+                gap: 6,
+                background: readyWorkflowsCount > 0 ? 'rgba(79, 70, 229, 0.18)' : undefined,
+                borderColor: readyWorkflowsCount > 0 ? '#6366f1' : undefined,
+                color: readyWorkflowsCount > 0 ? '#a5b4fc' : undefined,
+                fontWeight: 600,
+              }}
+            >
+              <Sparkles style={{ width: 13, height: 13, color: readyWorkflowsCount > 0 ? '#10b981' : undefined }} />
+              Quote Workflows
+              {readyWorkflowsCount > 0 ? (
+                <span className="badge badge-success" style={{ height: 16, width: 'auto', minWidth: 16, padding: '0 5px', fontSize: '0.62rem', marginLeft: 2, background: '#10b981', color: '#fff', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {readyWorkflowsCount} Ready
+                </span>
+              ) : workflows.length > 0 ? (
+                <span className="badge badge-secondary" style={{ height: 16, width: 'auto', minWidth: 16, padding: '0 5px', fontSize: '0.62rem', marginLeft: 2, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {workflows.length}
+                </span>
+              ) : null}
             </button>
           )}
           { (isManager || canEdit) && (
@@ -1055,11 +1165,29 @@ export default function DataEntryPage() {
                 if (scopes.includes('Erection') && settings.erection) recs.push(`${settings.erection} (Erection)`);
                 return recs.join(' & ') || 'None';
               })()}
+              <br/><br/>
+              <label style={{ display: 'block', fontWeight: 'bold', marginBottom: 4, color: 'var(--text-primary)' }}>Project Link:</label>
+              <input
+                type="text"
+                value={projectLink}
+                onChange={e => setProjectLink(e.target.value)}
+                placeholder="Enter project link"
+                style={{
+                  width: '100%',
+                  padding: '8px 10px',
+                  borderRadius: 4,
+                  border: '1px solid var(--border-default)',
+                  background: 'var(--bg-default)',
+                  color: 'var(--text-primary)',
+                  fontSize: '0.85rem',
+                  outline: 'none',
+                }}
+              />
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
               <button className="btn btn-ghost" onClick={() => setEmailTarget(null)}>Cancel</button>
               <button className="btn btn-primary" onClick={() => {
-                sendEmailMutation.mutate(emailTarget.id)
+                sendEmailMutation.mutate({ id: emailTarget.id, project_link: projectLink })
                 setEmailTarget(null)
               }}>
                 Send Email
@@ -1092,6 +1220,12 @@ export default function DataEntryPage() {
           </div>
         </div>
       )}
+
+      {/* Quote Workflows & Combined Dispatch Modal */}
+      <QuoteWorkflowsModal
+        isOpen={showQuoteWorkflows}
+        onClose={() => setShowQuoteWorkflows(false)}
+      />
     </div>
   )
 }

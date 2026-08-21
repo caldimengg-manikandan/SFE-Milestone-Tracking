@@ -5,6 +5,7 @@ from employees.models import Employee
 from projects.models import Project, Customer
 from milestones.models import Milestone
 from employees.serializers import EmployeeSerializer
+from apps.rfq.models import RFQMaster
 
 
 def _is_admin_user(user) -> bool:
@@ -17,6 +18,13 @@ def _is_confirmed(arguments: dict[str, Any]) -> bool:
     if isinstance(confirm_value, str):
         return confirm_value.strip().lower() in {"true", "yes", "1", "confirm", "confirmed"}
     return bool(confirm_value)
+
+
+def _is_rfq_authorized(user) -> bool:
+    if not user:
+        return False
+    role = getattr(user, 'role', '')
+    return role in {'admin', 'manager', 'estimator'} or getattr(user, 'is_staff', False) or getattr(user, 'is_superuser', False)
 
 
 def handle_create_employee(user, arguments):
@@ -151,6 +159,7 @@ def handle_update_employee(user, arguments):
     if not employee:
         return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
 
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested update)
     if not _is_confirmed(arguments):
         return {
             "status": "pending_confirmation",
@@ -200,6 +209,10 @@ def handle_delete_employee(user, arguments):
     if not employee:
         return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
 
+<<<<<<< HEAD
+=======
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
+>>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
     if not _is_confirmed(arguments):
         return {
             "status": "pending_confirmation",
@@ -510,6 +523,10 @@ def handle_delete_customer(user, arguments):
     if not customer:
         return {"status": "error", "message": "Customer not found."}
 
+<<<<<<< HEAD
+=======
+    # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
+>>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
     if not _is_confirmed(arguments):
         return {"status": "pending_confirmation", "message": f"Please confirm you want to delete customer {customer.name}."}
 
@@ -545,7 +562,126 @@ def handle_search_records(user, arguments):
         for project in Project.objects.filter(Q(name__icontains=query) | Q(code__icontains=query) | Q(customer_name__icontains=query)).order_by('name')[:10]:
             results.append({"entity": "project", "id": project.code, "name": project.name, "status": project.status, "priority": project.priority})
 
+    if entity in {"rfq", "rfqs", "quote", "quotes", "all"}:
+        if _is_rfq_authorized(user):
+            for rfq in RFQMaster.objects.filter(deleted_at__isnull=True).filter(Q(quote_no__icontains=query) | Q(project_name__icontains=query) | Q(customer__name__icontains=query)).order_by('-id')[:10]:
+                results.append({"entity": "rfq", "id": rfq.id, "quote_no": rfq.quote_no, "project_name": rfq.project_name, "won_lost": rfq.won_lost})
+        elif entity in {"rfq", "rfqs", "quote", "quotes"}:
+            return {
+                "status": "error",
+                "message": "Permission Denied: You are not authorized to search RFQs."
+            }
+
     return {"status": "success", "count": len(results), "results": results}
+
+
+def handle_list_rfqs(user, arguments):
+    """Lists RFQ records from the database with filtering."""
+    if not _is_rfq_authorized(user):
+        return {
+            "status": "error",
+            "message": "Permission Denied: You are not authorized to view RFQ information."
+        }
+    
+    won_lost = arguments.get("won_lost")
+    budget_type = arguments.get("budget_type")
+    query = arguments.get("query")
+    
+    limit = arguments.get("limit")
+    if limit is None:
+        limit = 10
+    else:
+        try:
+            limit = int(limit)
+            if limit <= 0:
+                limit = 1000
+        except ValueError:
+            limit = 10
+    
+    queryset = RFQMaster.objects.filter(deleted_at__isnull=True)
+    if won_lost and won_lost.lower() != "all":
+        queryset = queryset.filter(won_lost=won_lost)
+    if budget_type and budget_type.lower() != "all":
+        queryset = queryset.filter(budget_type=budget_type)
+    if query:
+        queryset = queryset.filter(
+            Q(quote_no__icontains=query) |
+            Q(project_name__icontains=query) |
+            Q(customer__name__icontains=query)
+        )
+        
+    count = queryset.count()
+    rfqs = []
+    for rfq in queryset.order_by('-id')[:limit]:
+        rfqs.append({
+            "id": rfq.id,
+            "quote_no": rfq.quote_no,
+            "project_name": rfq.project_name,
+            "customer": rfq.customer.name if rfq.customer else None,
+            "won_lost": rfq.won_lost,
+            "budget_type": rfq.budget_type,
+            "bid_due_date": str(rfq.bid_due_date) if rfq.bid_due_date else None,
+            "bid_amount": float(rfq.bid_amount) if rfq.bid_amount else 0.0,
+            "total_tonnage": float(rfq.total_tonnage) if rfq.total_tonnage else 0.0
+        })
+        
+    return {
+        "status": "success",
+        "total_matching_records": count,
+        "records_returned": len(rfqs),
+        "results": rfqs
+    }
+
+
+def handle_get_rfq_details(user, arguments):
+    """Retrieves full details of a specific RFQ by quote_no or ID."""
+    if not _is_rfq_authorized(user):
+        return {
+            "status": "error",
+            "message": "Permission Denied: You are not authorized to view RFQ details."
+        }
+
+    quote_no = arguments.get("quote_no")
+    rfq_id = arguments.get("rfq_id") or arguments.get("id")
+
+    rfq = None
+    if rfq_id:
+        rfq = RFQMaster.objects.filter(id=rfq_id, deleted_at__isnull=True).first()
+    elif quote_no:
+        rfq = RFQMaster.objects.filter(quote_no=quote_no, deleted_at__isnull=True).first()
+
+    if not rfq:
+        return {
+            "status": "error",
+            "message": "RFQ not found."
+        }
+
+    return {
+        "status": "success",
+        "rfq": {
+            "id": rfq.id,
+            "quote_no": rfq.quote_no,
+            "project_name": rfq.project_name,
+            "won_lost": rfq.won_lost,
+            "budget_type": rfq.budget_type,
+            "bid_reference": rfq.bid_reference,
+            "bid_due_date": str(rfq.bid_due_date) if rfq.bid_due_date else None,
+            "bid_due_time": str(rfq.bid_due_time) if rfq.bid_due_time else None,
+            "location": rfq.location,
+            "distance_travel": float(rfq.distance_travel) if rfq.distance_travel else None,
+            "customer": rfq.customer.name if rfq.customer else None,
+            "primary_estimator": rfq.primary_estimator.name if rfq.primary_estimator else None,
+            "scope_of_work": rfq.scope_of_work,
+            "total_tonnage": float(rfq.total_tonnage) if rfq.total_tonnage else 0.0,
+            "ton_steel": float(rfq.ton_steel) if rfq.ton_steel else 0.0,
+            "ton_joist": float(rfq.ton_joist) if rfq.ton_joist else 0.0,
+            "bid_amount": float(rfq.bid_amount) if rfq.bid_amount else 0.0,
+            "quoted_profit": float(rfq.quoted_profit) if rfq.quoted_profit else 0.0,
+            "sfe_job_no": rfq.sfe_job_no,
+            "created_at": str(rfq.created_at) if rfq.created_at else None,
+            "updated_at": str(rfq.updated_at) if rfq.updated_at else None
+        }
+    }
 
 
 def handle_summarize_milestones(user, arguments):
@@ -1180,6 +1316,7 @@ TOOL_HANDLERS = {
     "delete_customer": handle_delete_customer,
     "search_records": handle_search_records,
     "summarize_milestones": handle_summarize_milestones,
+<<<<<<< HEAD
     "create_rfq": handle_create_rfq,
     "list_rfqs": handle_list_rfqs,
     "create_milestone": handle_create_milestone,
@@ -1193,4 +1330,8 @@ TOOL_HANDLERS = {
     "list_manpower": handle_list_manpower,
     "create_capacity_config": handle_create_capacity_config,
     "list_capacity_configs": handle_list_capacity_configs
+=======
+    "list_rfqs": handle_list_rfqs,
+    "get_rfq_details": handle_get_rfq_details
+>>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
 }

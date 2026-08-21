@@ -274,6 +274,49 @@ def get_effective_model():
     return config.model_override or getattr(settings, 'OLLAMA_MODEL', 'llama3.2')
         
 def parse_json_from_text(text, allowed_tools=None):
+    # Employee creation keywords (e.g., "add an employee", "create employee")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
+            return True
+            
+    # Employee details search keywords (e.g., "details of employee", "find emp")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["search", "find", "lookup", "details", "get", "show", "view"]):
+            return True
+
+    # Employee delete/update keywords (e.g., "delete employee", "remove employee", "update employee")
+    if "employee" in query_lower or "emp" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
+            return True
+
+    # Project listing keywords (e.g., "view projects", "list projects")
+    if "project" in query_lower or "proj" in query_lower:
+        if any(verb in query_lower for verb in ["list", "show", "get", "what", "active", "view"]):
+            return True
+
+    # Project delete/update keywords (e.g., "delete project", "remove project", "update project")
+    if "project" in query_lower or "proj" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
+            return True
+
+    # Customer creation keywords (e.g., "add customer", "create customer")
+    if "customer" in query_lower or "cust" in query_lower:
+        if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
+            return True
+
+    # Customer delete/update keywords (e.g., "delete customer", "remove customer", "update customer")
+    if "customer" in query_lower or "cust" in query_lower:
+        if any(verb in query_lower for verb in ["delete", "remove", "update", "modify", "change", "edit"]):
+            return True
+            
+    # RFQ listing/count search keywords (e.g., "how many RFQs", "list quotes", "find RFQ")
+    if "rfq" in query_lower or "quote" in query_lower:
+        if any(verb in query_lower for verb in ["list", "show", "get", "view", "search", "find", "lookup", "details", "how many", "count"]):
+            return True
+            
+    return False
+        
+def parse_json_from_text(text):
     """
     Tries to extract and parse a JSON object from text.
     Supports markdown blocks, backticks, and XML-style tag wrappers.

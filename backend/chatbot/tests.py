@@ -3,6 +3,7 @@ from django.contrib.auth import get_user_model
 from employees.models import Employee
 from projects.models import Project, Customer
 from milestones.models import Milestone
+from apps.rfq.models import RFQMaster
 from chatbot.tool_handlers import (
     handle_create_employee,
     handle_get_employee_details,
@@ -11,7 +12,9 @@ from chatbot.tool_handlers import (
     handle_update_employee,
     handle_delete_employee,
     handle_search_records,
-    handle_summarize_milestones
+    handle_summarize_milestones,
+    handle_list_rfqs,
+    handle_get_rfq_details
 )
 
 User = get_user_model()
@@ -284,3 +287,92 @@ class ChatbotToolHandlersTestCase(TestCase):
         self.assertTrue(should_use_tools("add a new employee named Ramesh"))
         self.assertTrue(should_use_tools("find employee Suresh"))
         self.assertTrue(should_use_tools("list active projects"))
+
+    def test_list_rfqs_authorized(self):
+        # Create an estimator user
+        estimator = User.objects.create_user(
+            username="estimator_test",
+            email="estimator@test.com",
+            password="testpassword"
+        )
+        estimator.role = 'estimator'
+        estimator.save()
+
+        # Create a test RFQ
+        rfq = RFQMaster.objects.create(
+            quote_no="26-05-01",
+            project_name="Test Warehouse",
+            won_lost="Pending",
+            budget_type="Budget"
+        )
+
+        # Test list_rfqs for authorized user
+        result = handle_list_rfqs(estimator, {})
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["total_matching_records"], 1)
+        self.assertEqual(result["results"][0]["quote_no"], "26-05-01")
+
+    def test_list_rfqs_unauthorized(self):
+        # Test regular user is denied
+        result = handle_list_rfqs(self.regular_user, {})
+        self.assertEqual(result["status"], "error")
+        self.assertIn("Permission Denied", result["message"])
+
+    def test_get_rfq_details_success(self):
+        # Create a manager user
+        manager = User.objects.create_user(
+            username="manager_test",
+            email="manager@test.com",
+            password="testpassword"
+        )
+        manager.role = 'manager'
+        manager.save()
+
+        rfq = RFQMaster.objects.create(
+            quote_no="26-05-02",
+            project_name="Test Hangar",
+            won_lost="Won",
+            budget_type="Final"
+        )
+
+        # Get details by quote_no
+        result = handle_get_rfq_details(manager, {"quote_no": "26-05-02"})
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["rfq"]["project_name"], "Test Hangar")
+
+    def test_search_records_includes_rfqs(self):
+        # Search for RFQs using the search_records tool as an authorized admin user
+        rfq = RFQMaster.objects.create(
+            quote_no="26-05-03",
+            project_name="Admin Office",
+            won_lost="Pending"
+        )
+
+        result = handle_search_records(self.admin_user, {"entity": "rfq", "query": "Office"})
+        self.assertEqual(result["status"], "success")
+        self.assertEqual(result["results"][0]["quote_no"], "26-05-03")
+
+    def test_search_records_excludes_rfqs_for_unauthorized(self):
+        rfq = RFQMaster.objects.create(
+            quote_no="26-05-04",
+            project_name="Secure Office",
+            won_lost="Pending"
+        )
+
+        # Direct search should return permission denied
+        result1 = handle_search_records(self.regular_user, {"entity": "rfq", "query": "Office"})
+        self.assertEqual(result1["status"], "error")
+        self.assertIn("Permission Denied", result1["message"])
+
+        # Search all should succeed but not include rfq
+        result2 = handle_search_records(self.regular_user, {"entity": "all", "query": "Office"})
+        self.assertEqual(result2["status"], "success")
+        # Check that no entity in results is "rfq"
+        for item in result2["results"]:
+            self.assertNotEqual(item["entity"], "rfq")
+
+    def test_should_use_tools_for_rfq(self):
+        from chatbot.services import should_use_tools
+        self.assertTrue(should_use_tools("how many RFQs in the system"))
+        self.assertTrue(should_use_tools("list all quotes"))
+        self.assertTrue(should_use_tools("get details for RFQ 26-05-01"))
