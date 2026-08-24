@@ -273,7 +273,22 @@ def get_effective_model():
     config = AgentConfig.get_solo()
     return config.model_override or getattr(settings, 'OLLAMA_MODEL', 'llama3.2')
         
-def parse_json_from_text(text, allowed_tools=None):
+def should_use_tools(user_message):
+    """
+    Checks if a user's message is likely requesting an action or data query that requires tools.
+    """
+    if not user_message:
+        return False
+    query_lower = user_message.lower()
+
+    # Informational queries should NOT trigger tools
+    if any(query_lower.startswith(prefix) for prefix in ["how to", "how do i", "how can i", "explain", "what is"]):
+        return False
+
+    # Navigation queries
+    if any(verb in query_lower for verb in ["navigate", "go to", "open "]):
+        return True
+
     # Employee creation keywords (e.g., "add an employee", "create employee")
     if "employee" in query_lower or "emp" in query_lower:
         if any(verb in query_lower for verb in ["add", "create", "new", "register", "insert"]):
@@ -316,7 +331,7 @@ def parse_json_from_text(text, allowed_tools=None):
             
     return False
         
-def parse_json_from_text(text):
+def parse_json_from_text(text, allowed_tools=None):
     """
     Tries to extract and parse a JSON object from text.
     Supports markdown blocks, backticks, and XML-style tag wrappers.

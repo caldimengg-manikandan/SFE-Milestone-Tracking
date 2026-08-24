@@ -408,17 +408,11 @@ AVAILABLE_TOOLS = [
         "type": "function",
         "function": {
             "name": "list_rfqs",
-            "description": "Lists RFQs from RFQ Master filtered by project name, quote number, or outcome status.",
-            "parameters": {
-                "type": "object",
-                "properties": {
-                    "project_name": {"type": "string"},
-                    "status": {"type": "string", "enum": ["Won", "Lost", "Pending"]}
-            "name": "list_rfqs",
             "description": "Lists RFQ master records with filter and search parameters. Access is restricted to admin, manager, and estimator roles.",
             "parameters": {
                 "type": "object",
                 "properties": {
+                    "project_name": {"type": "string", "description": "Filter by project name"},
                     "won_lost": {
                         "type": "string",
                         "enum": ["Won", "Lost", "Pending", "all"],
@@ -607,6 +601,13 @@ AVAILABLE_TOOLS = [
                 "properties": {
                     "shop": {"type": "string"},
                     "category": {"type": "string", "enum": ["Machine", "Manual"]}
+                }
+            }
+        }
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "get_rfq_details",
             "description": "Retrieves the full details of a specific RFQ from the RFQ Master by its quote number or ID. Access is restricted to admin, manager, and estimator roles.",
             "parameters": {

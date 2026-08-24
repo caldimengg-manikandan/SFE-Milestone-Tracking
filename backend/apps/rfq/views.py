@@ -507,7 +507,21 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
 
         email_user = get_setting('email_user')
         email_password = get_setting('email_password')
-        imap_server = get_setting('imap_server', 'imap.gmail.com')
+        imap_server = get_setting('imap_server')
+
+        if not imap_server:
+            email_host = str(getattr(settings, 'EMAIL_HOST', os.getenv('EMAIL_HOST', ''))).lower()
+            if 'zoho.in' in email_host:
+                imap_server = 'imap.zoho.in'
+            elif 'zoho.com' in email_host:
+                imap_server = 'imap.zoho.com'
+            elif 'outlook' in email_host or 'office365' in email_host:
+                imap_server = 'outlook.office365.com'
+            elif email_host.startswith('smtp.'):
+                imap_server = email_host.replace('smtp.', 'imap.')
+            else:
+                imap_server = 'imap.gmail.com'
+
         imap_port_str = get_setting('imap_port', '993')
         try:
             imap_port = int(imap_port_str)
@@ -525,9 +539,31 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
         synced_replies_count = 0
 
         try:
-            # Connect to IMAP
-            mail = imaplib.IMAP4_SSL(imap_server, imap_port)
-            mail.login(email_user, email_password)
+            # Connect to IMAP with fallback support for Zoho servers
+            zoho_candidates = []
+            if 'zoho' in str(imap_server).lower():
+                zoho_servers = ['imap.zoho.com', 'imap.zoho.in', 'imappro.zoho.in', 'imappro.zoho.com']
+                zoho_candidates = [imap_server] + [s for s in zoho_servers if s != imap_server]
+            else:
+                zoho_candidates = [imap_server]
+
+            login_success = False
+            last_err = None
+            for server_candidate in zoho_candidates:
+                try:
+                    logger.info(f"Connecting to IMAP server: {server_candidate}:{imap_port}")
+                    mail = imaplib.IMAP4_SSL(server_candidate, imap_port)
+                    mail.login(email_user, email_password)
+                    imap_server = server_candidate
+                    login_success = True
+                    break
+                except imaplib.IMAP4.error as err:
+                    last_err = err
+                    logger.warning(f"IMAP login failed on {server_candidate}: {err}")
+
+            if not login_success:
+                raise last_err if last_err else imaplib.IMAP4.error("IMAP connection failed")
+
             mail.select("INBOX")
 
             # Search for emails
@@ -920,8 +956,14 @@ class RFQMasterViewSet(viewsets.ModelViewSet):
             mail.close()
             mail.logout()
 
+        except imaplib.IMAP4.error as err:
+            logger.warning(f"IMAP sync authentication failed for '{email_user}' on {imap_server}: {err}")
+            user_hint = ""
+            if "zoho" in str(imap_server).lower() or "zoho" in str(email_user).lower():
+                user_hint = " Please verify IMAP access is enabled in Zoho Mail Settings (Settings -> Mail Accounts -> IMAP Access) and use a Zoho App-Specific Password if 2-Factor Authentication (2FA) is enabled."
+            return Response({'detail': f'IMAP login failed for {email_user}.{user_hint}'}, status=400)
         except Exception as e:
-            logger.error(f"Error during IMAP sync: {str(e)}", exc_info=True)
+            logger.error(f"Error during IMAP sync: {str(e)}")
             return Response({'detail': f'Error syncing email: {str(e)}'}, status=500)
 
         return Response({
@@ -1530,19 +1572,33 @@ def start_quote_sync_background_daemon():
     import time
     def _worker():
         time.sleep(10)  # Initial delay after server boot
+        consecutive_auth_failures = 0
         while True:
+            # Respect env toggle to disable background polling if requested
+            if str(os.getenv('ENABLE_BACKGROUND_IMAP_SYNC', 'true')).lower() in ('false', '0', 'no', 'off'):
+                time.sleep(300)
+                continue
+
             try:
                 viewset = RFQMasterViewSet()
-                # Run sync with a mock request
                 class MockRequest:
                     GET = {}
                     data = {}
                 viewset.request = MockRequest()
                 viewset.format_kwarg = None
-                viewset.sync_quote_mails(viewset.request)
+                res = viewset.sync_quote_mails(viewset.request)
+                if hasattr(res, 'data') and isinstance(res.data, dict) and 'IMAP login failed' in str(res.data.get('detail', '')):
+                    consecutive_auth_failures += 1
+                else:
+                    consecutive_auth_failures = 0
             except Exception as e:
                 logger.debug(f"Background quote sync cycle error: {e}")
-            time.sleep(45)  # Poll every 45 seconds
+
+            # Back off polling interval if authentication fails repeatedly
+            if consecutive_auth_failures >= 2:
+                time.sleep(600)  # Back off 10 mins on persistent auth failure
+            else:
+                time.sleep(45)  # Normal polling interval
 
     t = threading.Thread(target=_worker, daemon=True, name="QuoteWorkflowBackgroundSync")
     t.start()

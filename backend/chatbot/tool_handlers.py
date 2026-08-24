@@ -209,10 +209,7 @@ def handle_delete_employee(user, arguments):
     if not employee:
         return {"status": "error", "message": f"No employee found with ID '{emp_id}'."}
 
-<<<<<<< HEAD
-=======
     # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
->>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
     if not _is_confirmed(arguments):
         return {
             "status": "pending_confirmation",
@@ -523,10 +520,7 @@ def handle_delete_customer(user, arguments):
     if not customer:
         return {"status": "error", "message": "Customer not found."}
 
-<<<<<<< HEAD
-=======
     # Skip confirmation for chatbot-initiated actions (user already explicitly requested deletion)
->>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
     if not _is_confirmed(arguments):
         return {"status": "pending_confirmation", "message": f"Please confirm you want to delete customer {customer.name}."}
 
@@ -583,9 +577,11 @@ def handle_list_rfqs(user, arguments):
             "message": "Permission Denied: You are not authorized to view RFQ information."
         }
     
-    won_lost = arguments.get("won_lost")
+    project_name = arguments.get("project_name")
+    status = arguments.get("status")
+    won_lost = arguments.get("won_lost") or status
     budget_type = arguments.get("budget_type")
-    query = arguments.get("query")
+    query = arguments.get("query") or project_name
     
     limit = arguments.get("limit")
     if limit is None:
@@ -1032,30 +1028,6 @@ def handle_create_rfq(user, arguments):
         ]
     }
 
-def handle_list_rfqs(user, arguments):
-    """Lists RFQs from RFQ Master."""
-    from apps.rfq.models import RFQMaster
-    project_name = arguments.get("project_name")
-    queryset = RFQMaster.objects.all()
-    if project_name:
-        queryset = queryset.filter(project_name__icontains=project_name)
-
-    matches = queryset.order_by('-id')[:15]
-    results = []
-    for rfq in matches:
-        results.append({
-            "quote_no": rfq.quote_no,
-            "project_name": rfq.project_name,
-            "customer": rfq.customer.name if rfq.customer else "N/A",
-            "bid_amount": float(rfq.bid_amount) if rfq.bid_amount else 0,
-            "due_date": str(rfq.bid_due_date) if rfq.bid_due_date else None
-        })
-
-    return {
-        "status": "success",
-        "count": len(results),
-        "rfqs": results
-    }
 
 def handle_create_milestone(user, arguments):
     """Creates a new milestone deliverable."""
@@ -1316,9 +1288,9 @@ TOOL_HANDLERS = {
     "delete_customer": handle_delete_customer,
     "search_records": handle_search_records,
     "summarize_milestones": handle_summarize_milestones,
-<<<<<<< HEAD
     "create_rfq": handle_create_rfq,
     "list_rfqs": handle_list_rfqs,
+    "get_rfq_details": handle_get_rfq_details,
     "create_milestone": handle_create_milestone,
     "update_milestone": handle_update_milestone,
     "create_announcement": handle_create_announcement,
@@ -1330,8 +1302,4 @@ TOOL_HANDLERS = {
     "list_manpower": handle_list_manpower,
     "create_capacity_config": handle_create_capacity_config,
     "list_capacity_configs": handle_list_capacity_configs
-=======
-    "list_rfqs": handle_list_rfqs,
-    "get_rfq_details": handle_get_rfq_details
->>>>>>> be18609c00b1ef822917a89eadeeb7c7a419da8f
 }
