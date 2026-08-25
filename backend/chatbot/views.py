@@ -8,8 +8,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.parsers import MultiPartParser, FormParser
 from .models import ChatSession, ChatMessage, KnowledgeDocument, KnowledgeChunk, AgentConfig
 from .services import ingest_pdf_document, get_chatbot_response, get_effective_model
-from .tools import AVAILABLE_TOOLS
-from .tool_handlers import TOOL_HANDLERS
+from .tool_catalog import AVAILABLE_TOOLS, DEFAULT_ENABLED_TOOL_NAMES
 
 class IsChatbotAdmin(permissions.BasePermission):
     def has_permission(self, request, view):
@@ -140,12 +139,18 @@ class DocumentUploadView(APIView):
 
         title = request.data.get('title', file_obj.name)
 
-        # Save document
-        doc = KnowledgeDocument.objects.create(
-            title=title,
-            file=file_obj,
-            is_active=True
+        # Re-uploading the same title (e.g. a corrected PDF) updates that document in
+        # place instead of creating a new row - the old unconditional .create() here was
+        # one of the two sources (with import_workflow.py) of the duplicate-document
+        # ingestion bug that left many superseded, still-active documents being retrieved
+        # side by side.
+        doc, created = KnowledgeDocument.objects.get_or_create(
+            title=title, defaults={'is_active': True}
         )
+        doc.is_active = True
+        if doc.file:
+            doc.file.delete(save=False)
+        doc.file.save(file_obj.name, file_obj, save=True)
 
         # Extract & Index
         try:
@@ -157,8 +162,11 @@ class DocumentUploadView(APIView):
                 "chunks_created": chunk_count
             }, status=status.HTTP_201_CREATED)
         except Exception as e:
-            # Rollback document if ingestion fails
-            doc.delete()
+            # Only delete the document record if THIS request created it - if it already
+            # existed and only this re-ingestion failed, deleting it would destroy a
+            # previously-working document over a transient error.
+            if created:
+                doc.delete()
             return Response({"error": f"Ingestion failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class AgentConfigView(APIView):
@@ -170,7 +178,7 @@ class AgentConfigView(APIView):
     def get(self, request):
         config = AgentConfig.get_solo()
         all_tool_names = [t['function']['name'] for t in AVAILABLE_TOOLS]
-        enabled_tools = all_tool_names if (config.enabled_tools is None or len(config.enabled_tools) == 0) else config.enabled_tools
+        enabled_tools = sorted(DEFAULT_ENABLED_TOOL_NAMES) if (config.enabled_tools is None or len(config.enabled_tools) == 0) else config.enabled_tools
 
         return Response({
             "persona_instructions": config.persona_instructions,
@@ -194,7 +202,7 @@ class AgentConfigView(APIView):
             requested_tools = request.data.get("enabled_tools")
             if isinstance(requested_tools, list):
                 all_tool_names = set(t['function']['name'] for t in AVAILABLE_TOOLS)
-                valid_requested = set(name for name in requested_tools if name in TOOL_HANDLERS or name in all_tool_names)
+                valid_requested = set(name for name in requested_tools if name in all_tool_names)
                 if valid_requested >= all_tool_names or len(valid_requested) == len(all_tool_names):
                     config.enabled_tools = None
                 else:

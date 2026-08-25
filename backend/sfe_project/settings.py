@@ -176,7 +176,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # for the exact values (Groq is already recognized by the cloud-detection
 # logic in chatbot/services.py because "groq" appears in its URL).
 OLLAMA_API_URL = os.getenv('OLLAMA_API_URL', 'http://localhost:11434')
-OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'llama3.2')
+OLLAMA_MODEL = os.getenv('OLLAMA_MODEL', 'openai/gpt-oss-120b')
 LLM_API_KEY = os.getenv('LLM_API_KEY', '')
 
 # Optional fallback provider (e.g. Gemini). If set, the chatbot automatically retries a

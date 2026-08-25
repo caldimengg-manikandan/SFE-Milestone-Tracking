@@ -181,7 +181,7 @@ def retrieve_relevant_context(query, limit=5, alpha=0.5):
     (pre-backfill) simply contribute 0 to the dense side rather than breaking retrieval.
     Returns a list of dicts: {"chunk": chunk, "score": score}.
     """
-    chunks = list(KnowledgeChunk.objects.filter(document__is_active=True))
+    chunks = list(KnowledgeChunk.objects.filter(document__is_active=True).select_related('document'))
     if not chunks:
         return []
 
@@ -204,6 +204,36 @@ def retrieve_relevant_context(query, limit=5, alpha=0.5):
 
     combined = alpha * _normalize_scores(dense_scores) + (1 - alpha) * _normalize_scores(bm25_scores)
 
+    # Boost chunks where section headers or content contain exact key phrases or module synonyms from query
+    query_lower = query.lower()
+    phrase_boost = []
+
+    boost_terms = {
+        'erection estimation': ['erection takeoff', 'erection', 'field labor', 'crew days', 'crane days', 'truck unloading'],
+        'erection takeoff': ['erection takeoff', 'erection estimation', 'ironworker', 'crane days', 'trucking'],
+        'process master': ['process master', 'process route', 'fabrication processes'],
+        'steel budget': ['steel budget', 'budget rate', 'framing steel'],
+        'field moment': ['field moment', 'fmc', 'flange moment', 'weld hours'],
+        'estimation summary': ['estimation summary', '16-cost-code', 'cost code'],
+        'milestone': ['milestone', 'deliverable', 'due date'],
+        'rfq': ['rfq', 'bid enquiry', 'quote workflow'],
+        'production priority': ['production priority', 'priority schedule', 'machine master', 'workforce master'],
+        'capacity': ['capacity config', 'future capacity', 'throughput limit']
+    }
+
+    for c in chunks:
+        boost = 0.0
+        if c.document.source == 'generated':
+            boost += 0.08
+        c_text_lower = c.text[:800].lower()
+        for key_phrase, synonyms in boost_terms.items():
+            if key_phrase in query_lower or any(s in query_lower for s in synonyms):
+                if key_phrase in c_text_lower or any(s in c_text_lower for s in synonyms):
+                    boost += 0.35
+        phrase_boost.append(boost)
+
+    combined = combined + np.array(phrase_boost, dtype=np.float32)
+
     scored_chunks = sorted(zip(combined, chunks), key=lambda x: x[0], reverse=True)
 
     results = []
@@ -215,18 +245,29 @@ def retrieve_relevant_context(query, limit=5, alpha=0.5):
             })
     return results
 
-def select_relevant_tools(query, filtered_tools):
+def select_relevant_tools(query, filtered_tools, chat_session=None):
     """
     Dynamically filters AVAILABLE_TOOLS so we only pass relevant tools
     to Groq/LLM for the current query. Keeps payload size compact to prevent rate limits.
+    In multi-turn threads, checks recent chat_session history so parameter follow-ups retain tools.
     """
     if not filtered_tools:
         return None
 
     query_lower = query.lower().strip()
 
-    # Informational / How-To queries should NOT trigger navigate_to_page!
-    is_informational = any(kw in query_lower for kw in ["how to", "how do", "how can", "explain", "what is", "steps to", "guide for", "how add"])
+    # In a multi-turn conversation, combine recent chat context if user provides follow-up parameters (like "name: Manikandan, code: 009" or "yes" or "confirm")
+    full_context_query = query_lower
+    if chat_session:
+        try:
+            recent_msgs = list(ChatMessage.objects.filter(session=chat_session).order_by('-timestamp')[:4])
+            past_texts = " ".join([m.text.lower() for m in recent_msgs if m.text])
+            full_context_query = f"{past_texts} {query_lower}"
+        except Exception:
+            pass
+
+    is_action_request = any(kw in full_context_query for kw in ["add", "create", "register", "insert", "new", "delete", "remove", "update", "set", "modify", "change", "save", "name:", "code:"])
+    is_informational = any(kw in query_lower for kw in ["how to", "how do", "how can", "explain", "what is", "steps to", "guide for"]) and not is_action_request
 
     selected = []
 
@@ -241,24 +282,32 @@ def select_relevant_tools(query, filtered_tools):
             selected.append(tool)
             continue
 
-        # Match intent keywords for CRUD actions
-        if any(kw in query_lower for kw in ["employee", "staff", "worker"]) and "employee" in name:
+        # Match intent keywords for CRUD actions against full_context_query
+        if any(kw in full_context_query for kw in ["employee", "staff", "worker"]) and "employee" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["project", "erection", "ton"]) and "project" in name:
+        elif any(kw in full_context_query for kw in ["project", "erection", "ton", "priority", "status", "manager", "erection date"]) and "project" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["customer", "client"]) and "customer" in name:
+        elif any(kw in full_context_query for kw in ["update", "change", "set", "modify", "edit"]) and ("update" in name or "project" in name):
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["rfq", "quote", "bid"]) and "rfq" in name:
+        elif any(kw in full_context_query for kw in ["customer", "client"]) and "customer" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["milestone", "due", "deliverable"]) and "milestone" in name:
+        elif any(kw in full_context_query for kw in ["rfq", "quote", "bid"]) and "rfq" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["announcement", "alert", "post"]) and "announcement" in name:
+        elif any(kw in full_context_query for kw in ["milestone", "due", "deliverable"]) and "milestone" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["machine", "equipment"]) and "machine" in name:
+        elif any(kw in full_context_query for kw in ["announcement", "alert", "post"]) and "announcement" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["manpower", "workforce", "roster"]) and "manpower" in name:
+        elif any(kw in full_context_query for kw in ["machine", "equipment"]) and "machine" in name:
             selected.append(tool)
-        elif any(kw in query_lower for kw in ["capacity", "throughput"]) and "capacity" in name:
+        elif any(kw in full_context_query for kw in ["manpower", "workforce", "roster"]) and "manpower" in name:
+            selected.append(tool)
+        elif any(kw in full_context_query for kw in ["capacity", "throughput"]) and "capacity" in name:
+            selected.append(tool)
+        elif any(kw in full_context_query for kw in ["detailer", "detailing vendor", "detailing firm"]) and "detailer" in name:
+            selected.append(tool)
+        elif any(kw in full_context_query for kw in ["holiday"]) and "holiday" in name:
+            selected.append(tool)
+        elif any(kw in full_context_query for kw in ["structural schedule", "ofa", "bfa", "rts date", "seq no", "sequence"]) and "structural_schedule" in name:
             selected.append(tool)
 
     # If the user is asking an informational "how-to" question and no action tools matched, pass NO tools so LLM gives a full text explanation
@@ -530,7 +579,7 @@ def call_llm_with_fallback(messages, tools=None, model=None):
         candidate_models = []
         if fallback_model:
             candidate_models.append(fallback_model)
-        for m in ['llama-3.1-8b-instant', 'gemma2-9b-it', 'mixtral-8x7b-32768', 'llama3-70b-8192']:
+        for m in ['qwen/qwen3.6-27b', 'openai/gpt-oss-20b', 'groq/compound-mini']:
             if m not in candidate_models and m != primary_model:
                 candidate_models.append(m)
 
@@ -563,22 +612,21 @@ def get_chatbot_response(chat_session, user_query, user=None):
     6. Save messages & metadata to database.
     """
     # 0. Load admin-configured agent behavior
-    from .tools import AVAILABLE_TOOLS
+    from .tool_catalog import AVAILABLE_TOOLS, ALL_TOOL_NAMES, DEFAULT_ENABLED_TOOL_NAMES, dispatch_tool
     agent_config = AgentConfig.get_solo()
     effective_model = agent_config.model_override or getattr(settings, 'OLLAMA_MODEL', 'llama3.2')
-    all_tool_names = {t['function']['name'] for t in AVAILABLE_TOOLS}
-    allowed_tool_names = all_tool_names if agent_config.enabled_tools is None else set(agent_config.enabled_tools)
+    allowed_tool_names = DEFAULT_ENABLED_TOOL_NAMES if agent_config.enabled_tools is None else set(agent_config.enabled_tools)
     filtered_tools = [t for t in AVAILABLE_TOOLS if t['function']['name'] in allowed_tool_names]
 
-    # 1. Retrieve local context chunks (top 3 chunks, truncated to 500 chars to keep prompt token count light)
-    search_results = retrieve_relevant_context(user_query, limit=3)
+    # 1. Retrieve local context chunks (top 6 chunks, full text up to 3000 chars to ensure complete explanations & examples)
+    search_results = retrieve_relevant_context(user_query, limit=6)
 
     # Build context string and track citations
     context_parts = []
     citations = []
     for res in search_results:
         chunk = res["chunk"]
-        chunk_snippet = chunk.text[:500] + ("..." if len(chunk.text) > 500 else "")
+        chunk_snippet = chunk.text[:3000] + ("..." if len(chunk.text) > 3000 else "")
         context_parts.append(f"[Content (Source: Page {chunk.page_number})]:\n{chunk_snippet}")
         citation = {
             "page": chunk.page_number,
@@ -657,15 +705,13 @@ def get_chatbot_response(chat_session, user_query, user=None):
     # 4. Generate Answer via Ollama (With Agent Tools)
     ui_actions = []
     try:
-        from .tool_handlers import TOOL_HANDLERS
-
         # Check if using a Cloud API configuration
         ollama_url = getattr(settings, 'OLLAMA_API_URL', 'http://localhost:11434')
         api_key = getattr(settings, 'LLM_API_KEY', '')
         is_cloud = "groq" in ollama_url or "together" in ollama_url or "openai" in ollama_url or api_key != ''
 
-        # Dynamically select only top 4-5 relevant tools for this prompt to minimize token count
-        tools_to_pass = select_relevant_tools(user_query, filtered_tools)
+        # Dynamically select top 4-5 relevant tools for this prompt (evaluating chat_session context for follow-up turns)
+        tools_to_pass = select_relevant_tools(user_query, filtered_tools, chat_session=chat_session)
         ollama_res, model_used, used_fallback = call_llm_with_fallback(ollama_messages, tools=tools_to_pass, model=effective_model)
         tool_calls = ollama_res.get('tool_calls', [])
         bot_response = ollama_res.get('content', '')
@@ -687,6 +733,14 @@ def get_chatbot_response(chat_session, user_query, user=None):
             # Append Ollama's response containing the tool call to history
             ollama_messages.append(ollama_res)
 
+            # Set when any tool call comes back pending_confirmation - the summarization
+            # pass below re-asks the LLM to phrase a natural-language reply from the raw
+            # tool JSON, and a weaker model can flip "please confirm" into a false "done!"
+            # (observed live with llama-3.1-8b-instant on a generated create_* tool).
+            # Confirmation wording is safety-critical, so it must reach the user verbatim
+            # instead of being reworded, exactly like the fallback-text/navigation cases below.
+            has_pending_confirmation = False
+
             for tool_call in tool_calls:
                 function_info = tool_call.get('function', {})
                 func_name = function_info.get('name')
@@ -697,10 +751,19 @@ def get_chatbot_response(chat_session, user_query, user=None):
                     try:
                         func_args = json.loads(func_args)
                     except Exception:
-                        pass
+                        func_args = {}
+
+                if not isinstance(func_args, dict):
+                    func_args = {}
+
+                # If user's prompt is a direct affirmative confirmation ("yes", "confirm", etc.), enforce confirm=True
+                clean_query = user_query.strip().lower()
+                affirmative_words = {"yes", "confirm", "confirmed", "yep", "yeah", "proceed", "go ahead", "do it", "sure", "yes confirm", "confirm creation", "confirm deletion", "confirm update"}
+                if clean_query in affirmative_words or clean_query.startswith("yes") or clean_query.startswith("confirm"):
+                    func_args["confirm"] = True
 
                 # Execute handler (only if the tool is currently enabled by the admin config)
-                if func_name in TOOL_HANDLERS and func_name not in allowed_tool_names:
+                if func_name in ALL_TOOL_NAMES and func_name not in allowed_tool_names:
                     disabled_result = {
                         "status": "error",
                         "message": f"The '{func_name}' action is currently disabled by the administrator."
@@ -715,14 +778,18 @@ def get_chatbot_response(chat_session, user_query, user=None):
                         if tool_call.get('id'):
                             tool_msg["tool_call_id"] = tool_call.get('id')
                         ollama_messages.append(tool_msg)
-                elif func_name in TOOL_HANDLERS:
-                    result = TOOL_HANDLERS[func_name](user, func_args)
+                elif func_name in ALL_TOOL_NAMES:
+                    result = dispatch_tool(func_name, user, func_args)
                     # Extract any UI actions returned by the handler
                     if isinstance(result, dict) and "ui_actions" in result:
                         ui_actions.extend(result["ui_actions"])
-                    
-                    if is_fallback_text_call or func_name == "navigate_to_page":
-                        # Direct message response from tool handler for text fallbacks and navigation redirects
+
+                    if isinstance(result, dict) and result.get('status') == 'pending_confirmation':
+                        has_pending_confirmation = True
+
+                    if is_fallback_text_call or func_name == "navigate_to_page" or has_pending_confirmation:
+                        # Direct message response from tool handler for text fallbacks,
+                        # navigation redirects, and confirmation prompts (verbatim - see note above)
                         bot_response = result.get('message', 'Action executed successfully.')
                     else:
                         # Append execution output as a 'tool' role message
@@ -745,12 +812,13 @@ def get_chatbot_response(chat_session, user_query, user=None):
                             tool_msg["tool_call_id"] = tool_call.get('id')
                         ollama_messages.append(tool_msg)
 
-            # Summarize only if it wasn't a direct text call or a navigation redirect that actually executed
+            # Summarize only if it wasn't a direct text call, a navigation redirect that
+            # actually executed, or a pending confirmation prompt (must reach the user verbatim)
             is_navigation = any(
                 tc.get('function', {}).get('name') == 'navigate_to_page' and 'navigate_to_page' in allowed_tool_names
                 for tc in tool_calls
             )
-            if not is_fallback_text_call and not is_navigation:
+            if not is_fallback_text_call and not is_navigation and not has_pending_confirmation:
                 try:
                     if used_fallback:
                         fallback_url = getattr(settings, 'FALLBACK_LLM_API_URL', '')
@@ -770,8 +838,8 @@ def get_chatbot_response(chat_session, user_query, user=None):
     except Exception as e:
         err_msg = str(e)
         parsed_name, parsed_args = parse_json_from_text(err_msg, allowed_tools=allowed_tool_names)
-        if parsed_name and parsed_name in TOOL_HANDLERS:
-            result = TOOL_HANDLERS[parsed_name](user, parsed_args or {})
+        if parsed_name and parsed_name in ALL_TOOL_NAMES:
+            result = dispatch_tool(parsed_name, user, parsed_args or {})
             if isinstance(result, dict) and "ui_actions" in result:
                 ui_actions.extend(result["ui_actions"])
             bot_response = result.get('message', 'Action executed successfully.')
@@ -780,9 +848,9 @@ def get_chatbot_response(chat_session, user_query, user=None):
         elif "rate limit" in err_msg.lower() or "429" in err_msg or "tpd" in err_msg.lower() or "tpm" in err_msg.lower():
             bot_response = (
                 "⚠️ **Groq Cloud API Rate Limit Reached**\n\n"
-                "The daily token limit for your free Groq API tier (`llama-3.3-70b-versatile`) has been temporarily reached.\n\n"
+                "The daily token limit for your free Groq API tier (`openai/gpt-oss-120b`) has been temporarily reached.\n\n"
                 "**How to continue using the assistant right now:**\n"
-                "1. **Switch Model**: Go to **Agent Settings** (`/settings`) and select a lighter model like `llama-3.1-8b-instant` or `gemma2-9b-it`.\n"
+                "1. **Switch Model**: Go to **Agent Settings** (`/settings`) and select `openai/gpt-oss-20b` or `qwen/qwen3.6-27b`.\n"
                 "2. **Use Local Ollama**: Set `OLLAMA_API_URL=http://localhost:11434` in `backend/.env` for unlimited local requests.\n"
                 "3. **Wait for Reset**: Groq's daily free quota automatically resets every 24 hours (or in ~1 hour)."
             )

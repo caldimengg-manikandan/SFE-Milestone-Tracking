@@ -12,7 +12,9 @@ import {
   Settings,
   Sparkles,
   BookOpen,
-  CheckCircle2
+  CheckCircle2,
+  GripHorizontal,
+  Move
 } from 'lucide-react';
 import chatbotAPI from '../../services/chatbot';
 import { useNavigate } from 'react-router-dom';
@@ -39,8 +41,88 @@ export default function ChatbotWidget() {
   const [uploadSuccess, setUploadSuccess] = useState(false);
 
   const messagesEndRef = useRef(null);
+  const windowRef = useRef(null);
   const user = JSON.parse(sessionStorage.getItem('user') || '{}');
   const isAdmin = user.is_staff || user.role === 'admin' || user.is_superuser;
+
+  // Window Drag & Positioning State
+  const [position, setPosition] = useState(null); // null = default bottom-right alignment
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({ startX: 0, startY: 0, initialLeft: 0, initialTop: 0 });
+
+  const handleMouseDown = (e) => {
+    if (e.button !== 0) return;
+    if (e.target.closest('button') || e.target.closest('input') || e.target.closest('a')) return;
+
+    if (windowRef.current) {
+      const rect = windowRef.current.getBoundingClientRect();
+      dragRef.current = {
+        startX: e.clientX,
+        startY: e.clientY,
+        initialLeft: rect.left,
+        initialTop: rect.top,
+      };
+      setIsDragging(true);
+    }
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      if (!isDragging) return;
+      const deltaX = e.clientX - dragRef.current.startX;
+      const deltaY = e.clientY - dragRef.current.startY;
+      
+      let newLeft = dragRef.current.initialLeft + deltaX;
+      let newTop = dragRef.current.initialTop + deltaY;
+
+      const windowWidth = windowRef.current ? windowRef.current.offsetWidth : 400;
+      const windowHeight = windowRef.current ? windowRef.current.offsetHeight : 600;
+
+      const maxLeft = Math.max(10, window.innerWidth - windowWidth - 10);
+      const maxTop = Math.max(10, window.innerHeight - windowHeight - 10);
+
+      newLeft = Math.max(10, Math.min(newLeft, maxLeft));
+      newTop = Math.max(10, Math.min(newTop, maxTop));
+
+      setPosition({ x: newLeft, y: newTop });
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+    };
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  const snapToCorner = (corner) => {
+    const width = windowRef.current ? windowRef.current.offsetWidth : 400;
+    const height = windowRef.current ? windowRef.current.offsetHeight : 600;
+
+    switch (corner) {
+      case 'bottom-right':
+        setPosition(null);
+        break;
+      case 'bottom-left':
+        setPosition({ x: 20, y: Math.max(10, window.innerHeight - height - 80) });
+        break;
+      case 'top-right':
+        setPosition({ x: Math.max(10, window.innerWidth - width - 20), y: 20 });
+        break;
+      case 'top-left':
+        setPosition({ x: 20, y: 20 });
+        break;
+      default:
+        setPosition(null);
+    }
+  };
 
   // Fetch sessions & status on mount
   useEffect(() => {
@@ -246,28 +328,92 @@ export default function ChatbotWidget() {
         )}
       </button>
 
-      {/* ── Main Chat Panel (Slide Up Card) ── */}
+      {/* ── Main Chat Panel (Slide Up Card / Draggable Modal) ── */}
       {isOpen && (
-        <div className="absolute bottom-[72px] right-0 w-[400px] h-[600px] max-w-[calc(100vw-2rem)] bg-white rounded-2xl shadow-2xl border border-slate-200/80 flex flex-col overflow-hidden animate-slide-up">
-          {/* Header */}
-          <header className="px-4 py-3 bg-gradient-to-r from-slate-900 to-slate-950 text-white flex items-center justify-between shrink-0 shadow-md">
+        <div
+          ref={windowRef}
+          style={position ? {
+            position: 'fixed',
+            left: `${position.x}px`,
+            top: `${position.y}px`,
+            bottom: 'auto',
+            right: 'auto',
+          } : undefined}
+          className={`
+            ${position ? '' : 'absolute bottom-[72px] right-0'}
+            w-[400px] h-[600px] max-w-[calc(100vw-2rem)] max-h-[calc(100vh-5rem)]
+            bg-white rounded-2xl shadow-2xl border border-slate-200/80
+            flex flex-col overflow-hidden animate-slide-up
+            ${isDragging ? 'select-none opacity-95 shadow-amber-500/30 ring-2 ring-amber-500/40' : ''}
+          `}
+        >
+          {/* Header (Draggable Handle) */}
+          <header
+            onMouseDown={handleMouseDown}
+            className={`
+              px-4 py-3 bg-gradient-to-r from-slate-900 via-slate-900 to-slate-950 text-white
+              flex items-center justify-between shrink-0 shadow-md cursor-grab active:cursor-grabbing select-none
+            `}
+            title="Click & drag header to move window anywhere"
+          >
             <div className="flex items-center gap-2.5">
               <div className="p-1.5 bg-gradient-to-br from-amber-400 to-orange-500 rounded-lg shadow-inner">
                 <Sparkles className="w-4 h-4 text-white" />
               </div>
               <div>
-                <h3 className="text-sm font-bold tracking-wide">Steel Fab Assist</h3>
+                <div className="flex items-center gap-1.5">
+                  <h3 className="text-sm font-bold tracking-wide">Steel Fab Assist</h3>
+                  <GripHorizontal className="w-4 h-4 text-slate-400 opacity-75 hover:opacity-100 transition-opacity" title="Drag to move" />
+                </div>
                 <p className="text-[10px] text-slate-400 flex items-center gap-1">
                   <span className={`w-1.5 h-1.5 rounded-full ${systemStatus?.ollama_connected ? 'bg-emerald-400' : 'bg-red-400'}`} />
-                  {systemStatus?.is_cloud ? 'Cloud' : 'Offline'} ({systemStatus?.model_configured || 'llama3.2'})
+                  {systemStatus?.is_cloud ? 'Cloud' : 'Offline'} ({systemStatus?.model_configured || 'openai/gpt-oss-120b'})
                 </p>
               </div>
             </div>
             
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1">
+              {/* Quick Corner Snap Controls */}
+              <div className="flex items-center gap-0.5 bg-slate-800/80 p-0.5 rounded-lg border border-slate-700/60 mr-1" title="Snap window to side/corner">
+                <button
+                  type="button"
+                  onClick={() => snapToCorner('top-left')}
+                  className="px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  title="Move to Top-Left"
+                >
+                  ↖
+                </button>
+                <button
+                  type="button"
+                  onClick={() => snapToCorner('top-right')}
+                  className="px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  title="Move to Top-Right"
+                >
+                  ↗
+                </button>
+                <button
+                  type="button"
+                  onClick={() => snapToCorner('bottom-left')}
+                  className="px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  title="Move to Bottom-Left"
+                >
+                  ↙
+                </button>
+                <button
+                  type="button"
+                  onClick={() => snapToCorner('bottom-right')}
+                  className="px-1.5 py-0.5 text-[9px] font-bold text-slate-400 hover:text-white hover:bg-slate-700 rounded transition-colors"
+                  title="Move to Bottom-Right"
+                >
+                  ↘
+                </button>
+              </div>
+
               <button
+                type="button"
                 onClick={() => setIsOpen(false)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-colors"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+                title="Close"
               >
                 <X className="w-4 h-4" />
               </button>

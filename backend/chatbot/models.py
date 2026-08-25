@@ -2,10 +2,22 @@ from django.db import models
 from django.conf import settings
 
 class KnowledgeDocument(models.Model):
+    SOURCE_CHOICES = (
+        ('manual', 'Manual'),
+        ('generated', 'Generated'),
+    )
     title = models.CharField(max_length=255)
     file = models.FileField(upload_to='chatbot_docs/')
     uploaded_at = models.DateTimeField(auto_now_add=True)
     is_active = models.BooleanField(default=True)
+    source = models.CharField(
+        max_length=20, choices=SOURCE_CHOICES, default='manual',
+        help_text="'generated' documents are produced by generate_app_knowledge from live code introspection."
+    )
+    content_hash = models.CharField(
+        max_length=64, blank=True, default='',
+        help_text="sha256 of the last-ingested text, used by generate_app_knowledge to skip re-embedding when nothing changed."
+    )
 
     def __str__(self):
         return self.title

@@ -99,8 +99,9 @@ def build_tool_schema(tool_name, description, serializer_class, http_method, ext
     that aren't part of the serializer at all.
     """
     is_write = http_method.upper() in ('POST', 'PUT', 'PATCH')
-    properties = {}
-    required = []
+    from typing import Any
+    properties: dict[str, Any] = {}
+    required: list[str] = []
 
     for name, (schema, is_required) in (extra_params or {}).items():
         properties[name] = schema
@@ -129,7 +130,13 @@ def build_tool_schema(tool_name, description, serializer_class, http_method, ext
                 if isinstance(field, serializers.ChoiceField):
                     properties[field_name] = _field_to_json_schema(field)
 
-    parameters = {"type": "object", "properties": properties}
+    if is_write or http_method.upper() == 'DELETE':
+        properties["confirm"] = {
+            "type": "boolean",
+            "description": "Set to true after the user explicitly confirms the creation, update, or deletion request."
+        }
+
+    parameters: dict[str, Any] = {"type": "object", "properties": properties}
     if required:
         parameters["required"] = required
 

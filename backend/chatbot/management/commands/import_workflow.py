@@ -24,17 +24,22 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.WARNING(f"Starting ingestion process for: {title}..."))
 
-        # Save document record to the database. Multiple knowledge documents can be active
-        # and retrievable at once now (retrieval ranks chunks across all of them), so this
-        # deliberately does NOT deactivate other documents the way it used to.
+        # Multiple knowledge documents (with distinct titles) can be active and retrievable
+        # at once (retrieval ranks chunks across all of them) - but re-running this command
+        # with the SAME title must update that document in place, not create a new row each
+        # time (the old unconditional .create() here is exactly how media/chatbot_docs/
+        # ended up with 10+ near-duplicate sfe_application_workflow_<random>.md files, all
+        # still is_active=True and all still competing in every retrieval).
         try:
+            doc, created = KnowledgeDocument.objects.get_or_create(
+                title=title, defaults={'is_active': True}
+            )
+            doc.is_active = True
+            if doc.file:
+                doc.file.delete(save=False)
             with open(file_path, 'rb') as f:
                 django_file = File(f, name=os.path.basename(file_path))
-                doc = KnowledgeDocument.objects.create(
-                    title=title,
-                    file=django_file,
-                    is_active=True
-                )
+                doc.file.save(os.path.basename(file_path), django_file, save=True)
         except Exception as e:
             raise CommandError(f"Failed to save document record: {str(e)}")
 
@@ -52,6 +57,9 @@ class Command(BaseCommand):
                 f"Created {chunk_count} context chunks in the database."
             ))
         except Exception as e:
-            # Clean up document record if ingestion fails
-            doc.delete()
+            # Only delete the document record if THIS run created it - if it already
+            # existed (re-ingesting the same title) and only this ingestion pass failed,
+            # deleting it would destroy a previously-working document over a transient error.
+            if created:
+                doc.delete()
             raise CommandError(f"Ingestion failed: {str(e)}")

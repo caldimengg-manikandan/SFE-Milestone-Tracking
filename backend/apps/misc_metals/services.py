@@ -34,6 +34,14 @@ def stair_material_lbs(
 ) -> Decimal:
     """
     Compute raw material lbs for a stair flight, summing all components.
+
+    `coef` (26.2/21.2/41.4/42.84 lbs) is the per-riser stringer+stringer-hardware unit
+    weight for the selected AISC channel/angle stringer configuration ("picket_rail" /
+    "mesh_rail" / "heavy_rail" / "ts_rail" - heavier rail configs use heavier stringer
+    stock, hence the higher coefficients). The remaining per-linear-foot multipliers
+    (17.00 picket, 6.81 mesh, 2.27 grabrail/wallrail) are the standard AISC unit weights
+    (lbs/ft) of the hardware itself, and `landing_coef` (18.00 heavy vs 15.00 standard)
+    is the lbs/landing weight of the landing framing for that same rail-weight class.
     """
     risers = Decimal(str(num_risers or 0))
     quantity = Decimal(str(qty or 1))

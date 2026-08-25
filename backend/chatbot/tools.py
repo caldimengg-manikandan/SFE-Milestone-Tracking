@@ -191,7 +191,7 @@ AVAILABLE_TOOLS = [
                     "shop_name": {"type": "string", "description": "Assigned fabrication shop name"},
                     "total_ton": {"type": "number"},
                     "status": {"type": "string", "enum": ["Yet to Start", "In Progress", "Planning", "Completed"]},
-                    "priority": {"type": "string", "enum": ["Low", "Medium", "High"]}
+                    "priority": {"type": "string", "enum": ["Low", "Medium", "High", "Critical"]}
                 }
             }
         }

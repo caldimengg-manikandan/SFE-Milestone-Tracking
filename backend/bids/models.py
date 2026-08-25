@@ -180,6 +180,14 @@ class BidEnquiry(models.Model):
         ordering = ['-created_at']
 
     def calculate_values(self):
+        """
+        Recomputes the auto-calculated bidding-efficiency fields (total tonnage,
+        pieces/ton, tons/sqft, cost/ton, cost/sqft, and average monthly fab/erect hours
+        with derived end-months) from the estimator-entered inputs above. These feed the
+        Estimation Summary and Dollar Dashboard views so they always reflect the latest
+        entered pricing/tonnage without a separate recalculation step. Called automatically
+        from save() below - never needs to be invoked manually.
+        """
         # 1. Total Tonnage
         ton_steel_dec = Decimal(str(self.ton_steel or 0.0))
         ton_joist_dec = Decimal(str(self.ton_joist or 0.0))

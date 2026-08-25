@@ -167,6 +167,14 @@ def cleanup_production_items(sender, instance, **kwargs):
 
 # ─── RATE CONFIG ADAPTER ───
 class RateConfigAdapter:
+    """
+    Centralizes the estimation/erection rate assumptions used across Steel Budget,
+    Estimation Summary, Erection Takeoff, FMC, and Misc Metals calculations for one
+    project. Each rate first checks the project's own `estimation_data` JSON (entered on
+    the Estimation Model screen under `bidEnquiry`/`estimationSections`) and falls back
+    to a fixed company-default constant when the project hasn't overridden it - so every
+    project can use its own negotiated rates without needing a schema change.
+    """
     def __init__(self, project):
         self.project = project
         self.est_data = project.estimation_data or {}
@@ -184,78 +192,97 @@ class RateConfigAdapter:
 
     @property
     def cost_code_labor_rate(self):
+        """Fixed $/hr labor rate used to convert labor hours into $ across all 16 Schedule-of-Values cost codes."""
         return Decimal('21.00')
 
     @property
     def scrap_rate(self):
+        """Steel scrap allowance as a fraction of material weight (project override `bidEnquiry.scrapPercent`, default 5%)."""
         return self._get_dec(self.bid_enquiry, 'scrapPercent', 5.0) / Decimal('100.0')
 
     @property
     def bolt_unit_price(self):
+        """$/piece price for structural bolts (project override `bidEnquiry.boltRate`, default $1.75)."""
         return self._get_dec(self.bid_enquiry, 'boltRate', 1.75)
 
     @property
     def paint_unit_price(self):
+        """$/gallon price for shop paint (project override `bidEnquiry.paintRate`, default $22.20)."""
         return self._get_dec(self.bid_enquiry, 'paintRate', 22.20)
 
     @property
     def galv_unit_price(self):
+        """$/lb price for hot-dip galvanizing (project override `bidEnquiry.galvanizingRate`, default $0.40)."""
         return self._get_dec(self.bid_enquiry, 'galvanizingRate', 0.40)
 
     @property
     def use_tax_rate(self):
+        """Material use-tax rate applied to buyout material costs (project override `bidEnquiry.taxPercent`, default 6%)."""
         return self._get_dec(self.bid_enquiry, 'taxPercent', 6.0) / Decimal('100.0')
 
     @property
     def shop_labor_rate(self):
+        """$/hr shop fabrication labor billing rate (project override `estimationSections.hourlyLaborRate`, default $60.00)."""
         return self._get_dec(self.est_sections, 'hourlyLaborRate', 60.0)
 
     @property
     def shipping_hourly_rate(self):
+        """$/hr trucking/shipping labor rate (project override `estimationSections.shippingRate`, default $195.00)."""
         return self._get_dec(self.est_sections, 'shippingRate', 195.0)
 
     @property
     def overhead_rate(self):
+        """Company overhead allocation as a fraction of direct cost (project override `estimationSections.overheadPercent`, default 12%)."""
         return self._get_dec(self.est_sections, 'overheadPercent', 12.0) / Decimal('100.0')
 
     @property
     def profit_rate(self):
+        """Target profit margin as a fraction of total cost (project override `estimationSections.profitPercent`, default 10%)."""
         return self._get_dec(self.est_sections, 'profitPercent', 10.0) / Decimal('100.0')
 
     @property
     def labor_billing_rate(self):
+        """$/hr miscellaneous labor billing rate for non-shop work (project override `estimationSections.miscellaneousLaborRate`, default $85.00)."""
         return self._get_dec(self.est_sections, 'miscellaneousLaborRate', 85.0)
 
     @property
     def erection_markup(self):
+        """Cost multiplier applied to sublet erection costs (project override `estimationSections.miscellaneousErectionMultiplier`, default 1.12x = 12% markup)."""
         return self._get_dec(self.est_sections, 'miscellaneousErectionMultiplier', 1.12)
 
     @property
     def joist_deck_markup(self):
+        """Cost multiplier applied to sublet joist/deck costs (project override `estimationSections.miscellaneousJoistDeckMultiplier`, default 1.12x = 12% markup)."""
         return self._get_dec(self.est_sections, 'miscellaneousJoistDeckMultiplier', 1.12)
 
     @property
     def other_buyout_markup(self):
+        """Cost multiplier applied to other sublet/buyout costs (project override `estimationSections.miscellaneousOtherCostMultiplier`, default 1.12x = 12% markup)."""
         return self._get_dec(self.est_sections, 'miscellaneousOtherCostMultiplier', 1.12)
 
     @property
     def efficiency_factor(self):
+        """Crew efficiency derate applied to theoretical labor hours to account for real-world productivity loss (project override `estimationSections.efficiency_factor`, default 0.50)."""
         return self._get_dec(self.est_sections, 'efficiency_factor', 0.50)
-        
+
     @property
     def flange_constant(self):
+        """Fixed AISC divisor (in²/hr) converting a W-shape flange's bolt-area (width x thickness) into shop welding hours for Field Moment Connections - see apps.field_moment_conn.services.compute_fmc_row."""
         return Decimal('4.38')
-        
+
     @property
     def field_factor(self):
+        """Fixed 1.40x multiplier applied to FMC shop weld hours to get field weld hours - accounts for out-of-position field welding, scaffolding/safety-harness setup, and fit-up versus controlled shop conditions."""
         return Decimal('1.40')
-        
+
     @property
     def material_lbs_rate(self):
+        """Fixed $/lb material cost rate for miscellaneous metals (stairs, rails, misc items) - see apps.misc_metals.services."""
         return Decimal('0.55')
-        
+
     @property
     def stair_labor_rate(self):
+        """Fixed $/hr shop+field labor rate for miscellaneous-metals stair fabrication - see apps.misc_metals.services.compute_stair_flight."""
         return Decimal('65.00')
 
 

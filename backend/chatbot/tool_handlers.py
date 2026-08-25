@@ -711,6 +711,70 @@ def handle_summarize_milestones(user, arguments):
     }
 
 
+# Backend page-name enum -> frontend router path. Module-level (not a local inside
+# handle_navigate_to_page) so the chatbot knowledge generator can import this exact dict
+# and document the real navigable pages without ever disagreeing with what the tool itself uses.
+PAGE_ROUTES = {
+    "dashboard": "/dashboard",
+    "employee_master": "/employees",
+    "customer_master": "/customers",
+    "detailer_master": "/detailers",
+    "project_master": "/projects",
+    "steel_budget": "/steel-budget/input",
+    "structural_schedules": "/structural/plan-tracking",
+    "production_schedules": "/production/priority-schedule",
+    "rfq_entry": "/rfq/data-entry",
+    "rfq_master": "/rfq",
+    "rfq": "/rfq",
+    "dollar_dashboard": "/rfq/dollar-dashboard",
+    "erection_takeoff": "/estimation-erection/erection-takeoff",
+    "field_moment_connections": "/estimation-erection/fmc",
+    "internal_bid_schedule": "/bids/schedule",
+    "holiday_calendar": "/bids/holidays",
+    "estimation_summary": "/estimation-summary",
+    "estimation": "/estimation-erection",
+    "steel_budget_result": "/steel-budget/result",
+    "plan_creation": "/structural/plan-creation",
+    "process_master_settings": "/production/master-settings",
+    "capacity_configuration": "/production/capacity-mapping/capacity",
+    "machine_master": "/production/capacity-mapping/machine",
+    "workforce_master": "/production/capacity-mapping/manpower",
+    "settings": "/settings",
+    "announcements": "/announcements",
+    "user_access": "/user-access"
+}
+
+FRIENDLY_PAGE_NAMES = {
+    "dashboard": "Dashboard",
+    "employee_master": "Employee Master",
+    "customer_master": "Customer Master",
+    "detailer_master": "Detailer Master",
+    "project_master": "Project Master",
+    "steel_budget": "Steel Budget worksheet",
+    "structural_schedules": "Structural Tracking Schedule",
+    "production_schedules": "Production Priority Schedule",
+    "rfq_entry": "RFQ Data Entry",
+    "rfq_master": "RFQ Master",
+    "rfq": "RFQ Master",
+    "dollar_dashboard": "Dollar Dashboard",
+    "erection_takeoff": "Erection Takeoff module",
+    "field_moment_connections": "Field Moment Connections (FMC) dashboard",
+    "internal_bid_schedule": "Internal Bid Schedule",
+    "holiday_calendar": "Holiday Calendar",
+    "estimation_summary": "Estimation Summary",
+    "estimation": "Estimation",
+    "steel_budget_result": "Steel Budget Result",
+    "plan_creation": "Plan Creation",
+    "process_master_settings": "Process Master Settings",
+    "capacity_configuration": "Capacity Configuration",
+    "machine_master": "Machine Master",
+    "workforce_master": "Workforce Master",
+    "settings": "Settings",
+    "announcements": "Announcements",
+    "user_access": "User Access"
+}
+
+
 def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, Any]:
     """
     Processes navigation requests.
@@ -812,76 +876,16 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
                 page_name = norm_name
     
     # Map backend enum to frontend router paths
-    page_routes = {
-        "dashboard": "/dashboard",
-        "employee_master": "/employees",
-        "customer_master": "/customers",
-        "detailer_master": "/detailers",
-        "project_master": "/projects",
-        "steel_budget": "/steel-budget/input",
-        "structural_schedules": "/structural/plan-tracking",
-        "production_schedules": "/production/priority-schedule",
-        "rfq_entry": "/rfq/data-entry",
-        "rfq_master": "/rfq",
-        "rfq": "/rfq",
-        "dollar_dashboard": "/rfq/dollar-dashboard",
-        "erection_takeoff": "/estimation-erection/erection-takeoff",
-        "field_moment_connections": "/estimation-erection/fmc",
-        "internal_bid_schedule": "/bids/schedule",
-        "holiday_calendar": "/bids/holidays",
-        "estimation_summary": "/estimation-summary",
-        "estimation": "/estimation-erection",
-        "steel_budget_result": "/steel-budget/result",
-        "plan_creation": "/structural/plan-creation",
-        "process_master_settings": "/production/master-settings",
-        "capacity_configuration": "/production/capacity-mapping/capacity",
-        "machine_master": "/production/capacity-mapping/machine",
-        "workforce_master": "/production/capacity-mapping/manpower",
-        "settings": "/settings",
-        "announcements": "/announcements",
-        "user_access": "/user-access"
-    }
-
-    route_path = page_routes.get(page_name)
+    route_path = PAGE_ROUTES.get(page_name)
     if not route_path:
         return {
             "status": "error",
             "message": f"Unsupported or unknown page target: '{page_name}'"
         }
 
-    friendly_names = {
-        "dashboard": "Dashboard",
-        "employee_master": "Employee Master",
-        "customer_master": "Customer Master",
-        "detailer_master": "Detailer Master",
-        "project_master": "Project Master",
-        "steel_budget": "Steel Budget worksheet",
-        "structural_schedules": "Structural Tracking Schedule",
-        "production_schedules": "Production Priority Schedule",
-        "rfq_entry": "RFQ Data Entry",
-        "rfq_master": "RFQ Master",
-        "rfq": "RFQ Master",
-        "dollar_dashboard": "Dollar Dashboard",
-        "erection_takeoff": "Erection Takeoff module",
-        "field_moment_connections": "Field Moment Connections (FMC) dashboard",
-        "internal_bid_schedule": "Internal Bid Schedule",
-        "holiday_calendar": "Holiday Calendar",
-        "estimation_summary": "Estimation Summary",
-        "estimation": "Estimation",
-        "steel_budget_result": "Steel Budget Result",
-        "plan_creation": "Plan Creation",
-        "process_master_settings": "Process Master Settings",
-        "capacity_configuration": "Capacity Configuration",
-        "machine_master": "Machine Master",
-        "workforce_master": "Workforce Master",
-        "settings": "Settings",
-        "announcements": "Announcements",
-        "user_access": "User Access"
-    }
-
     return {
         "status": "success",
-        "message": f"Navigating to {friendly_names.get(page_name, page_name)}.",
+        "message": f"Navigating to {FRIENDLY_PAGE_NAMES.get(page_name, page_name)}.",
         "ui_actions": [
             {
                 "type": "NAVIGATE",
@@ -891,7 +895,7 @@ def handle_navigate_to_page(user: Any, arguments: dict[str, Any]) -> dict[str, A
                 "type": "SHOW_TOAST",
                 "payload": {
                     "type": "success",
-                    "message": f"Opened {friendly_names.get(page_name, page_name)}"
+                    "message": f"Opened {FRIENDLY_PAGE_NAMES.get(page_name, page_name)}"
                 }
             }
         ]
